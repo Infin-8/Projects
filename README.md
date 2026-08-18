@@ -1,5 +1,3 @@
-# Projects
-
 ## Apps
 
 <table>
