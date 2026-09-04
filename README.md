@@ -13,8 +13,30 @@ Cognitive Wellness Training. Master the board. Master the mind. Challenge the wo
   <tr>
     <td width="120"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
     <td>
-      <strong>STEADYWATCH™ Handheld</strong><br>
-      An atomic clock multi-tool with biometric credential enrollment, OIDC approval, harmonic visualization, and stability measurement. Free on the App Store.<br>
+      <strong>STEADYWATCH™ Handheld</strong>
+<br>
+ATOMIC
+                                                                                                                           
+Precision clock synchronized to atomic time standards via NTP.                                     
+<br>                                                             
+HARMONIC                                                                                                                          
+                                                                                                                                    
+Real-time frequency spectrum and tuner. Tune and sample: music, ambient sound, natural noise.
+<br>
+QUANTUM                                                                                                                           
+         
+Post-quantum credential key generator.  — not a pseudo-random number generator, not a software simulation.
+<br>                                                                                                                                      
+VAULT
+       
+Post-Quantum Credential key storage.
+<br>
+APPROVE                                                                                                                           
+                                                                                                                                      
+Biometric OIDC authorization. OpenID Connect made simple. 
+<br>
+Free on the App Store.
+<br>
       <a href="https://apps.apple.com/us/app/steadywatch-handheld/id6755752518">Download on the App Store</a> · <a href="https://steady-watch.com">Website</a>
     </td>
   </tr>
