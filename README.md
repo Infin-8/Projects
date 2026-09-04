@@ -14,6 +14,8 @@ Cognitive Wellness Training. Master the board. Master the mind. Challenge the wo
     <td width="120"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
     <td>
       <strong>STEADYWATCH™ Handheld</strong>
+<br>
+ATOMIC
 <br>                                                                                                                           
 Precision clock synchronized to atomic time standards via NTP.                                     
 <br>                                                             
