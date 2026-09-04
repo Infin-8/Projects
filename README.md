@@ -14,25 +14,23 @@ Cognitive Wellness Training. Master the board. Master the mind. Challenge the wo
     <td width="120"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
     <td>
       <strong>STEADYWATCH™ Handheld</strong>
-<br>
-ATOMIC
-                                                                                                                           
+<br>                                                                                                                           
 Precision clock synchronized to atomic time standards via NTP.                                     
 <br>                                                             
 HARMONIC                                                                                                                          
-                                                                                                                                    
+<br>                                                                                                                                    
 Real-time frequency spectrum and tuner. Tune and sample: music, ambient sound, natural noise.
 <br>
 QUANTUM                                                                                                                           
-         
+<br>         
 Post-quantum credential key generator.  — not a pseudo-random number generator, not a software simulation.
 <br>                                                                                                                                      
 VAULT
-       
+<br>       
 Post-Quantum Credential key storage.
 <br>
 APPROVE                                                                                                                           
-                                                                                                                                      
+<br>                                                                                                                                     
 Biometric OIDC authorization. OpenID Connect made simple. 
 <br>
 Free on the App Store.
