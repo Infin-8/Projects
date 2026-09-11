@@ -7,7 +7,7 @@
       <strong>KaizenDoku</strong>
 <br>
 KaizenDoku is the Sudoku experience designed for players to enjoy solo, or side-by-side with a friend.
-
+<br>
 Team up in Co-op and solve a board together or race against the clock in Time-Attack. Every multiplayer match is fully supported by Apple Game Center, so your wins, best-time, and progress are posted on Game Center leaderboards and backed by Game Center achievements. Share and compare with all your friends!
 
 Single player logs mindfulness sessions —  a continuous improvement practice inspired by the Kaizen philosophy. KaizenDoku logs your mindful minutes directly to Apple Health, turning your daily puzzle solving skill into a measurable wellness practice.
