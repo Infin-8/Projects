@@ -2,7 +2,7 @@
 
 <table>
   <tr>
-    <td width="120" valign="top"><img src="assets/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
     <td valign="top">
       <strong>KaizenDoku</strong><br>
       KaizenDoku is the Sudoku experience designed for players to enjoy solo, or side-by-side with a friend.
@@ -17,7 +17,7 @@
     </td>
   </tr>
   <tr>
-    <td width="120" valign="top"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
     <td valign="top">
       <strong>STEADYWATCH™ Handheld</strong>
       <br><br>
