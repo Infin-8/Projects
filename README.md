@@ -4,7 +4,8 @@
   <tr>
     <td width="120" align="center" valign="middle"><img src="assets/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
     <td valign="top">
-      <strong>KaizenDoku</strong><br>
+      <strong>KaizenDoku</strong>
+      <br><br>
       KaizenDoku is the Sudoku experience designed for players to enjoy solo, or side-by-side with a friend.
       <br><br>
       Team up directly in iMessages and solve a board together or race against the clock in solo time-attack! Every multiplayer match is fully supported by Apple Game Center, so your wins, best-time, and progress are posted on Game Center leaderboards and backed by Game Center achievements. Share and compare with all your friends!
