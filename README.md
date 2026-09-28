@@ -22,7 +22,7 @@
     <td width="120" align="center" valign="middle"><img src="assets/steadywatch-icon.png" width="100" alt="SteadyWatch icon"></td>
     <td valign="top">
       <strong>STEADYWATCH™ HANDHELD</strong><br>
-      Atomic Clock Multi-tool
+      Atomic Clock Multi-Tool
       <br><br>
       <strong>ATOMIC</strong><br>
       Precision clock synchronized to atomic time standards via NTP.
