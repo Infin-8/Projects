@@ -5,7 +5,7 @@
     <td width="120" align="center" valign="middle"><img src="assets/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
     <td valign="top">
       <strong>KaizenDoku</strong><br>
-      Cognitive Wellness Training
+      Sudoku With Friends
       <br><br>
       KaizenDoku is the Sudoku experience designed for players to enjoy solo, or side-by-side with a friend.
       <br><br>
