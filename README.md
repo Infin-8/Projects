@@ -45,3 +45,33 @@
     </td>
   </tr>
 </table>
+
+## Platform
+
+<table>
+  <tr>
+    <td width="120" align="center" valign="middle"><img src="assets/steadywatch-icon.png" width="100" alt="STEADYWATCH Platform icon"></td>
+    <td valign="top">
+      <strong>STEADYWATCH™ PLATFORM</strong><br>
+      Entropy as a Service (EaaS)
+      <br><br>
+      Quantum hardware provides the randomness; hybrid classical + post-quantum cryptography provides the security. Every product surface produces <strong>QES-256</strong> keys — 32-byte, IBM Quantum hardware-derived, each linked to a verifiable job ID.
+      <br><br>
+      <strong>Q-RNG</strong><br>
+      Quantum random number generation API backed by IBM Quantum hardware.
+      <br><br>
+      <strong>OIDC</strong><br>
+      Biometric identity provider. RFC 8628 device flow with Face ID approval via STEADYWATCH™ Handheld.
+      <br><br>
+      <strong>SHQKD</strong><br>
+      Zero-trust hybrid key exchange — X25519 + ML-KEM-768 (NIST FIPS 203), combined via HKDF. The relay server never sees the derived key.
+      <br><br>
+      <strong>QCAP STACK</strong><br>
+      IBM <strong>Q</strong>uantum · <strong>C</strong>loudflare · <strong>A</strong>pple Secure Enclave · Raspberry <strong>P</strong>i
+      <br><br>
+      Live production demo.
+      <br>
+      <a href="https://steady-watch.com">Website</a> · <a href="https://steady-watch.com/qrng.html">Q-RNG Demo</a> · <a href="https://steady-watch.com/oidc.html">OIDC Demo</a> · <a href="https://steady-watch.com/status.html">Live Status</a>
+    </td>
+  </tr>
+</table>
