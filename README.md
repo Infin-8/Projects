@@ -31,10 +31,10 @@
       Real-time frequency spectrum and tuner. Tune and sample: music, ambient sound, natural noise.
       <br><br>
       <strong>QUANTUM</strong><br>
-      Post-quantum credential key generator — not a pseudo-random number generator, not a software simulation.
+      Face ID–gated credential key generator. Keys are bound to your device's Secure Enclave and seeded from STEADYWATCH™ Platform quantum entropy.
       <br><br>
       <strong>VAULT</strong><br>
-      Post-Quantum Credential key storage.
+      Quantum-seeded credential key storage.
       <br><br>
       <strong>APPROVE</strong><br>
       Biometric OIDC authorization. OpenID Connect made simple.
