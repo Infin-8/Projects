@@ -34,7 +34,7 @@
       Face ID–gated credential key generator. Keys are bound to your device's Secure Enclave and seeded from STEADYWATCH™ Platform quantum entropy.
       <br><br>
       <strong>VAULT</strong><br>
-      Post-Quantum Credential key storage.
+      Quantum-seeded credential key storage.
       <br><br>
       <strong>APPROVE</strong><br>
       Biometric OIDC authorization. OpenID Connect made simple.
