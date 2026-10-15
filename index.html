@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Infin-8 Gallery</title>
+<meta name="description" content="Walk through a Mario 64-style castle gallery of Infin-8's projects: KaizenDoku, STEADYWATCH Handheld and the STEADYWATCH Platform.">
+<meta property="og:title" content="The Infin-8 Gallery">
+<meta property="og:description" content="Walk up to a painting and step inside to see the project.">
+<meta property="og:image" content="https://infin-8.github.io/Projects/assets/gallery-preview.png">
+<meta property="og:url" content="https://infin-8.github.io/Projects/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: full-bleed WebGL hall; HUD pinned to edges; project "inside the painting" opens as a full overlay */
+:root {
+  --night: #120d18;      /* hall shadow / page ground */
+  --stone: #2a2230;      /* panel surface */
+  --gilt: #d9a441;       /* frame gold, the one accent */
+  --gilt-dim: #8a6a2e;
+  --parchment: #f1e6cf;  /* text on dark */
+  --muted: #b7a98f;
+  --display: "Young Serif", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--night); color: var(--parchment); font-family: var(--body); overflow: hidden; touch-action: none; }
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+
+.hud { position: fixed; pointer-events: none; z-index: 2; }
+.hud > * { pointer-events: auto; }
+#top {
+  top: 0; left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  padding-top: calc(28px + env(safe-area-inset-top, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: 36px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--night) 0%, color-mix(in srgb, var(--night) 92%, transparent) 72%, transparent 100%);
+  text-shadow: 0 1px 2px var(--night);
+}
+#top > * { pointer-events: none; }
+#title { min-width: 0; max-width: 100%; }
+#title h1 { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3.2vw, 34px); line-height: 1.25; padding-block: 2px; margin: 0; color: var(--gilt); text-shadow: 0 2px 0 #000a; letter-spacing: .01em; overflow-wrap: anywhere; }
+#title a.listlink { color: var(--gilt); pointer-events: auto; text-underline-offset: 3px; }
+#title p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); max-width: 46ch; }
+#controls {
+  min-width: 0; max-width: 100%; text-align: left;
+  font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.7; letter-spacing: .04em;
+}
+@media (max-width: 560px) { .dir-btn { font-size: 11px; padding: 8px 9px; letter-spacing: .03em; } }
+#controls kbd { font-family: var(--mono); border: 1px solid var(--gilt-dim); border-radius: 3px; padding: 0 4px; color: var(--parchment); }
+@media (max-width: 640px), (pointer: coarse) { #controls .desk { display: none; } }
+@media (min-width: 641px) and (pointer: fine) { #controls .touch { display: none; } }
+
+#directory {
+  bottom: 0; left: 0; right: 0; padding-top: 32px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--night) 85%, transparent), transparent);
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.dir-btn {
+  flex: 0 1 auto; min-width: 0; white-space: nowrap;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--night) 75%, transparent); color: var(--parchment);
+  border: 1px solid var(--gilt-dim); border-radius: 2px; padding: 8px 12px; cursor: pointer;
+}
+.dir-btn:hover, .dir-btn:focus-visible { border-color: var(--gilt); color: var(--gilt); outline: none; }
+
+#prompt {
+  left: 0; right: 0; margin-inline: auto; width: fit-content;
+  max-width: min(520px, calc(100vw - 2 * max(16px, env(safe-area-inset-left, 0px))));
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 4px; justify-items: center; text-align: center;
+  font-family: var(--display); font-size: 18px; line-height: 1.25; color: var(--parchment);
+  background: color-mix(in srgb, var(--night) 82%, transparent); border: 1px solid var(--gilt);
+  padding: 10px 18px; border-radius: 2px; cursor: pointer;
+  text-wrap: balance; overflow-wrap: anywhere;
+}
+#prompt span { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gilt); }
+
+#stick { position: fixed; z-index: 3; width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--gilt-dim); background: color-mix(in srgb, var(--night) 40%, transparent); pointer-events: none; transform: translate(-50%, -50%); }
+#stick i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px; border-radius: 50%; background: var(--gilt); opacity: .7; }
+
+#flash { position: fixed; inset: 0; z-index: 4; background: var(--parchment); opacity: 0; pointer-events: none; transition: opacity .35s; }
+
+#room {
+  position: fixed; inset: 0; z-index: 5; overflow-y: auto;
+  background: var(--room-bg, var(--stone)); color: var(--room-fg, var(--parchment));
+  padding-block: calc(24px + env(safe-area-inset-top, 0px)) calc(32px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  animation: roomIn .5s ease-out;
+}
+@keyframes roomIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+.room-inner { max-width: 760px; margin: 0 auto; display: grid; gap: 24px; }
+.room-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.room-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--room-accent, var(--gilt)); }
+#exit { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; background: transparent; color: inherit; border: 1px solid currentColor; padding: 8px 12px; border-radius: 2px; cursor: pointer; }
+#exit:focus-visible { outline: 2px solid var(--room-accent, var(--gilt)); outline-offset: 2px; }
+#room canvas.art { width: 100%; max-width: var(--art-max, 100%); justify-self: center; height: auto; border: 6px solid var(--gilt); box-shadow: 0 0 0 2px #0006, 0 20px 40px #0008; }
+#room h2 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 6vw, 48px); margin: 0; line-height: 1.05; text-wrap: balance; overflow-wrap: anywhere; }
+.tagline { font-size: 18px; margin: 6px 0 0; color: var(--room-accent, var(--gilt)); }
+.desc { font-size: 16px; line-height: 1.6; max-width: 65ch; margin: 0; }
+.modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.modules li { border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent); padding-top: 10px; min-width: 0; }
+.modules b { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: var(--room-accent, var(--gilt)); margin-bottom: 4px; }
+.modules span { font-size: 14px; line-height: 1.5; }
+.stack { font-family: var(--mono); font-size: 12px; opacity: .8; line-height: 1.8; }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.links a { font-family: var(--mono); font-size: 13px; color: inherit; text-decoration: none; border: 1px solid var(--room-accent, var(--gilt)); padding: 10px 14px; border-radius: 2px; }
+.links a:hover, .links a:focus-visible { background: var(--room-accent, var(--gilt)); color: var(--room-bg, var(--stone)); outline: none; }
+
+#loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 6; font-family: var(--display); color: var(--gilt); font-size: 20px; background: var(--night); }
+</style>
+
+</head>
+<body>
+<canvas id="scene" tabindex="0" aria-label="3D gallery. Use the project buttons at the bottom to visit each painting."></canvas>
+
+<header class="hud" id="top">
+<div id="title">
+  <h1>The Infin-8 Gallery</h1>
+  <p>Walk up to a painting and step inside to see the project. <a class="listlink" href="https://github.com/Infin-8/Projects#apps">Prefer a list?</a></p>
+</div>
+<div id="controls">
+  <div class="desk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look</div>
+  <div class="desk"><kbd>E</kbd> or click a painting to enter</div>
+  <div class="touch">Left thumb walks · drag to look</div>
+  <div class="touch">Tap a painting to enter</div>
+</div>
+</header>
+<nav class="hud" id="directory" aria-label="Paintings"></nav>
+<div class="hud" id="prompt" hidden></div>
+<div id="stick" hidden><i></i></div>
+<div id="flash"></div>
+<section id="room" hidden aria-modal="true" role="dialog"></section>
+<div id="loading">Opening the gallery…</div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">The gallery needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Projects (from github.com/Infin-8/Projects) ---------- */
+const PROJECTS = [
+  {
+    id: 'kaizendoku', name: 'KaizenDoku', tagline: 'Sudoku. With Friends.', wing: 'Apps',
+    desc: 'Sudoku for solo play or head-to-head with a friend. Co-op matches run inside iMessage, and time-attack mode tracks your solo best times. Results post to Game Center leaderboards and achievements, and mindful minutes log to Apple Health. Every board is generated from IBM Quantum hardware entropy through the STEADYWATCH™ Platform (QES-256).',
+    modules: [['CO-OP','Matches played inside iMessage'],['TIME ATTACK','Solo best times'],['GAME CENTER','Leaderboards and achievements'],['HEALTH','Mindful minutes logged']],
+    stack: 'iMessage · Game Center · Apple Health · QES-256 boards',
+    links: [['App Store','https://apps.apple.com/us/app/kaizendoku/id6748037311'],['kaizendoku.com','https://kaizendoku.com']],
+    theme: { bg: '#1b1b1b', fg: '#e8ffe8', accent: '#00ff66' }, logo: 'assets/kaizendoku-icon.png',
+    pos: [-7.92, 3.2, -3.5], rotY: Math.PI / 2, size: [3.7, 3.7]
+  },
+  {
+    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Atomic Clock Multi-Tool', wing: 'Apps',
+    desc: 'Five instruments in one app, from an NTP-synced atomic clock to Face ID-approved sign-ins.',
+    modules: [['ATOMIC','Clock synced to atomic time standards via NTP'],['HARMONIC','Real-time frequency spectrum and tuner'],['QUANTUM','Face ID-gated key generator bound to the Secure Enclave, seeded from platform quantum entropy'],['VAULT','Quantum-seeded credential storage'],['APPROVE','Biometric OIDC authorization']],
+    stack: 'NTP · Face ID · Secure Enclave · OIDC',
+    links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
+    theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png',
+    pos: [7.92, 3.2, -3.5], rotY: -Math.PI / 2, size: [3.7, 3.7]
+  },
+  {
+    id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
+    desc: 'Quantum-derived randomness and security as a service. Every product produces 32-byte QES-256 keys, each tied to a verifiable IBM Quantum job ID.',
+    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with Face ID in Handheld'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
+    links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
+    theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
+    pos: [0, 3.4, -14.92], rotY: 0, size: [6.4, 4.4]
+  }
+];
+
+/* ---------- Painting art (canvas) ---------- */
+const W = 1024, H = 768;
+function mk(w = W, h = H) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+// Square portrait: the app icon, full bleed, with a thin inner mat line
+function drawLogo(c, img) {
+  const g = c.getContext('2d');
+  if (img) g.drawImage(img, 0, 0, c.width, c.height);
+  g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(5, 5, c.width - 10, c.height - 10);
+}
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+const keyHex = (() => { const b = new Uint8Array(32); crypto.getRandomValues(b); return [...b].map(x => x.toString(16).padStart(2, '0')).join(''); })();
+function drawPlatform(c, img) {
+  const g = c.getContext('2d');
+  const bg = g.createRadialGradient(W * .3, H * .45, 40, W * .3, H * .45, 600);
+  bg.addColorStop(0, '#1c1f5a'); bg.addColorStop(1, '#07071a');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  // stars
+  for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(230,230,255,${(i * 37 % 100) / 140})`; g.fillRect((i * 263) % W, (i * 151) % H, 2, 2); }
+  // the STEADYWATCH icon, hung inside the painting
+  if (img) {
+    g.save(); rr(g, 50, 144, 470, 470, 40); g.shadowColor = '#000'; g.shadowBlur = 40; g.fillStyle = '#000'; g.fill(); g.restore();
+    g.save(); rr(g, 50, 144, 470, 470, 40); g.clip(); g.drawImage(img, 50, 144, 470, 470); g.restore();
+    g.strokeStyle = '#8ea2ff'; g.lineWidth = 2; rr(g, 50, 144, 470, 470, 40); g.stroke();
+  }
+  // text block
+  g.textAlign = 'left'; g.fillStyle = '#e6e6ff';
+  // shrink the title until it fits the right column (560 → 984, inside the frame)
+  let ts = 50; do { g.font = `${ts}px "Young Serif", Georgia, serif`; } while (g.measureText('STEADYWATCH™').width > 424 && --ts > 20);
+  g.fillText('STEADYWATCH™', 560, 150);
+  g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('PLATFORM · EaaS', 562, 194);
+  g.font = '600 20px "IBM Plex Mono", monospace'; g.fillStyle = '#e6e6ff';
+  ['Q-RNG', 'OIDC', 'SHQKD', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
+  g.fillStyle = '#8ea2ff'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('32-byte key (illustration)', 562, 470);
+  g.fillStyle = '#e6e6ff'; g.font = '20px "IBM Plex Mono", monospace';
+  for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
+  g.fillStyle = '#5b6bc9'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('X25519 + ML-KEM-768 → HKDF', 562, 660);
+}
+const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, platform: drawPlatform };
+
+/* ---------- Environment textures ---------- */
+function floorTex() {
+  const c = mk(512, 512), g = c.getContext('2d');
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    g.fillStyle = (x + y) % 2 ? '#b9ab92' : '#6e6258'; g.fillRect(x * 128, y * 128, 128, 128);
+    g.strokeStyle = '#00000033'; g.lineWidth = 2; g.strokeRect(x * 128 + 1, y * 128 + 1, 126, 126);
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
+}
+function wallTex() {
+  const c = mk(512, 512), g = c.getContext('2d');
+  g.fillStyle = '#d8c8a8'; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = '#b8a584'; g.lineWidth = 3;
+  for (let row = 0; row < 8; row++) {
+    const y = row * 64; g.beginPath(); g.moveTo(0, y); g.lineTo(512, y); g.stroke();
+    for (let x = (row % 2) * 64; x < 512; x += 128) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 64); g.stroke(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function carpetTex() {
+  const c = mk(128, 512), g = c.getContext('2d');
+  g.fillStyle = '#9b1c22'; g.fillRect(0, 0, 128, 512);
+  g.fillStyle = '#d9a441'; g.fillRect(0, 0, 10, 512); g.fillRect(118, 0, 10, 512);
+  g.fillStyle = '#7d141a'; g.fillRect(16, 0, 4, 512); g.fillRect(108, 0, 4, 512);
+  const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 6); return t;
+}
+function plaqueTex(p) {
+  const c = mk(512, 128), g = c.getContext('2d');
+  g.fillStyle = '#c8933a'; g.fillRect(0, 0, 512, 128);
+  g.strokeStyle = '#7a5520'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
+  g.fillStyle = '#2a1b08'; g.textAlign = 'center';
+  g.font = '34px "Young Serif", Georgia, serif'; g.fillText(p.name.replace('STEADYWATCH™ ', 'SW™ '), 256, 58);
+  g.font = '20px "IBM Plex Mono", monospace'; g.fillText(p.tagline, 256, 96);
+  return new THREE.CanvasTexture(c);
+}
+
+/* ---------- Ripple shader (the SM64 bit) ---------- */
+const vert = `
+uniform float uTime; uniform float uAmp; uniform vec2 uHit; uniform float uAspect;
+varying vec2 vUv; varying float vWave;
+void main(){
+  vUv = uv; vec3 p = position;
+  float d = distance(uv * vec2(uAspect,1.0), uHit * vec2(uAspect,1.0));
+  float w = sin(d*38.0 - uTime*7.0) * exp(-d*2.2) * uAmp;
+  p.z += w; vWave = w;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
+}`;
+const frag = `
+uniform sampler2D map; uniform float uGlow;
+varying vec2 vUv; varying float vWave;
+void main(){
+  vec2 uv = vUv + vec2(vWave*0.35, vWave*0.25);
+  vec4 c = texture2D(map, clamp(uv, 0.001, 0.999));
+  c.rgb += vWave * 1.8 + uGlow;
+  gl_FragColor = vec4(c.rgb, 1.0);
+}`;
+
+/* ---------- Scene ---------- */
+const canvas = document.getElementById('scene');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) {
+  document.getElementById('loading').innerHTML = 'This browser can\'t draw the 3D gallery. <a style="color:var(--gilt)" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a>';
+  return;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x120d18);
+scene.fog = new THREE.Fog(0x120d18, 16, 40);
+const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
+
+const ROOM = { x: 8, zMin: -15, zMax: 12, h: 7.5 };
+const len = ROOM.zMax - ROOM.zMin, midZ = (ROOM.zMax + ROOM.zMin) / 2;
+
+scene.add(new THREE.HemisphereLight(0xfff0d8, 0x2a1830, 0.55));
+const sun = new THREE.DirectionalLight(0xffe2b0, 0.35); sun.position.set(3, 10, 6); scene.add(sun);
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ map: floorTex() }));
+floor.rotation.x = -Math.PI / 2; floor.position.z = midZ; scene.add(floor);
+const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, len - 2), new THREE.MeshLambertMaterial({ map: carpetTex() }));
+carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, 0.01, midZ + 1); scene.add(carpet);
+
+const wt = wallTex();
+function wall(w, h, x, z, ry) {
+  const t = wt.clone(); t.needsUpdate = true; t.repeat.set(w / 4, h / 4);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t }));
+  m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
+}
+wall(len, ROOM.h, -ROOM.x, midZ, Math.PI / 2);
+wall(len, ROOM.h, ROOM.x, midZ, -Math.PI / 2);
+wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMin, 0);
+wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMax, Math.PI);
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x3a2a3a }));
+ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(ceil);
+
+// wainscot + columns
+const trimMat = new THREE.MeshLambertMaterial({ color: 0x5a3a2a });
+[[-ROOM.x + 0.06, 0], [ROOM.x - 0.06, 0]].forEach(([x]) => {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, len), trimMat); b.position.set(x, 0.55, midZ); scene.add(b);
+});
+const colMat = new THREE.MeshLambertMaterial({ color: 0xe6d6b8 });
+const capMat = new THREE.MeshLambertMaterial({ color: 0xd9a441 });
+for (const z of [-11, -0.2, 6]) for (const x of [-ROOM.x + 0.5, ROOM.x - 0.5]) {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, ROOM.h, 20), colMat); c.position.set(x, ROOM.h / 2, z); scene.add(c);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), capMat); cap.position.set(x, ROOM.h - 0.15, z); scene.add(cap);
+  const base = cap.clone(); base.position.y = 0.15; scene.add(base);
+}
+
+/* ---------- Paintings ---------- */
+const paintings = [];
+const frameMat = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.7, roughness: 0.35 });
+function buildPaintings() {
+  PROJECTS.forEach(p => {
+    const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo]);
+    const tex = new THREE.CanvasTexture(art); tex.anisotropy = 8;
+    const uniforms = { map: { value: tex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: p.size[0] / p.size[1] } };
+    const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag });
+    const [w, h] = p.size;
+    const group = new THREE.Group();
+    group.position.set(...p.pos); group.rotation.y = p.rotY; scene.add(group);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h, 96, 72), mat);
+    mesh.position.z = 0.06; mesh.userData.project = p; group.add(mesh);
+    const ft = 0.28, fd = 0.18;
+    [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, fd), frameMat); f.position.set(x, y, 0.09); group.add(f);
+    });
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: plaqueTex(p) }));
+    plaque.position.set(0, -h / 2 - 0.75, 0.03); group.add(plaque);
+    const light = new THREE.PointLight(0xffd9a0, 0.9, 9, 2);
+    light.position.set(0, h / 2 + 0.8, 1.6); group.add(light);
+    const normal = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY);
+    const center = new THREE.Vector3(...p.pos);
+    paintings.push({ p, mesh, uniforms, tex, art, normal, center, amp: 0 });
+  });
+}
+
+/* ---------- Player ---------- */
+const player = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };
+const keys = {};
+let joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 };
+let mode = 'walk'; // walk | auto | entering | inside | exiting
+let auto = null, anim = null, near = null;
+
+addEventListener('keydown', e => {
+  if (mode === 'inside') { if (e.key === 'Escape') exitRoom(); return; }
+  keys[e.code] = true;
+  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') enter(near, new THREE.Vector2(.5, .5));
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+
+// pointer: drag to look, click to enter, left-bottom touch = joystick
+const stick = document.getElementById('stick');
+const look = { id: null, x: 0, y: 0, moved: 0 };
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.45 && e.clientY > innerHeight * 0.45 && joy.id === null) {
+    joy = { x: 0, y: 0, id: e.pointerId, ox: e.clientX, oy: e.clientY };
+    stick.hidden = false; stick.style.left = e.clientX + 'px'; stick.style.top = e.clientY + 'px';
+    return;
+  }
+  if (look.id === null) Object.assign(look, { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 });
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerId === joy.id) {
+    let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const m = Math.hypot(dx, dy), max = 45;
+    if (m > max) { dx *= max / m; dy *= max / m; }
+    joy.x = dx / max; joy.y = dy / max;
+    stick.firstElementChild.style.transform = `translate(${dx}px,${dy}px)`;
+    if (mode === 'auto') mode = 'walk';
+    return;
+  }
+  if (e.pointerId === look.id && (mode === 'walk' || mode === 'auto')) {
+    const dx = e.clientX - look.x, dy = e.clientY - look.y;
+    look.moved += Math.abs(dx) + Math.abs(dy); look.x = e.clientX; look.y = e.clientY;
+    if (look.moved > 4) {
+      player.yaw -= dx * 0.004; player.pitch = Math.max(-1.1, Math.min(1.1, player.pitch - dy * 0.004));
+    }
+  }
+});
+function endPointer(e) {
+  if (e.pointerId === joy.id) { joy = { x: 0, y: 0, id: null }; stick.hidden = true; stick.firstElementChild.style.transform = ''; return; }
+  if (e.pointerId === look.id) {
+    if (look.moved <= 6 && e.type === 'pointerup') clickAt(e.clientX, e.clientY);
+    look.id = null;
+  }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function clickAt(x, y) {
+  if (mode !== 'walk' && mode !== 'auto') return;
+  ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(paintings.map(p => p.mesh))[0];
+  if (!hit) return;
+  const pt = paintings.find(p => p.mesh === hit.object);
+  if (hit.distance < 6.5) enter(pt, hit.uv); else walkTo(pt);
+}
+
+function walkTo(pt) {
+  if (mode === 'inside' || mode === 'entering') return;
+  const target = pt.center.clone().addScaledVector(pt.normal, 3.6); target.y = 1.7;
+  auto = { pt, target }; mode = 'auto';
+}
+
+function enter(pt, uv) {
+  mode = 'entering'; near = null; promptEl.hidden = true;
+  pt.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5));
+  anim = {
+    pt, t: 0, dur: reduceMotion ? 0.01 : 1.1,
+    from: camera.position.clone(), to: pt.center.clone().addScaledVector(pt.normal, 0.25),
+    fromQ: camera.quaternion.clone(), toQ: lookQ(pt.center.clone().addScaledVector(pt.normal, 3), pt.center)
+  };
+}
+function lookQ(from, at) { const m = new THREE.Matrix4().lookAt(from, at, new THREE.Vector3(0, 1, 0)); return new THREE.Quaternion().setFromRotationMatrix(m); }
+
+/* ---------- Room overlay (inside the painting) ---------- */
+const room = document.getElementById('room'), flash = document.getElementById('flash');
+let current = null;
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function openRoom(pt) {
+  current = pt; const p = pt.p, t = p.theme;
+  room.style.setProperty('--room-bg', t.bg); room.style.setProperty('--room-fg', t.fg); room.style.setProperty('--room-accent', t.accent); room.style.setProperty('--art-max', pt.art.width === pt.art.height ? '440px' : '100%');
+  room.innerHTML = `
+    <div class="room-inner">
+      <div class="room-top"><span class="room-eyebrow">${esc(p.wing)} wing</span><button id="exit" type="button">← Back to the hall</button></div>
+      <div><h2>${esc(p.name)}</h2><p class="tagline">${esc(p.tagline)}</p></div>
+      <canvas class="art" width="${pt.art.width}" height="${pt.art.height}"></canvas>
+      <p class="desc">${esc(p.desc)}</p>
+      <ul class="modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
+      <div class="stack">${esc(p.stack)}</div>
+      <div class="links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
+    </div>`;
+  room.querySelector('canvas.art').getContext('2d').drawImage(pt.art, 0, 0);
+  room.hidden = false; room.scrollTop = 0;
+  room.querySelector('#exit').addEventListener('click', exitRoom);
+  room.querySelector('#exit').focus();
+  try { history.replaceState(null, '', '#' + p.id); } catch (e) {}
+}
+function exitRoom() {
+  if (!current) return;
+  const pt = current; current = null;
+  room.hidden = true; room.innerHTML = '';
+  const pos = pt.center.clone().addScaledVector(pt.normal, 3.4); pos.y = 1.7;
+  player.pos.copy(pos);
+  const d = pt.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); player.pitch = 0.22;
+  pt.amp = 0.22; mode = 'walk'; canvas.focus();
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+}
+
+/* ---------- Directory ---------- */
+const dir = document.getElementById('directory');
+PROJECTS.forEach((p, i) => {
+  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-' + p.id;
+  b.textContent = p.name.replace('STEADYWATCH™ ', 'SW ');
+  b.addEventListener('click', () => { if (paintings[i]) walkTo(paintings[i]); });
+  dir.appendChild(b);
+});
+const promptEl = document.getElementById('prompt');
+promptEl.addEventListener('click', () => { if (near && mode === 'walk') enter(near); });
+
+/* ---------- Loop ---------- */
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+const clock = new THREE.Clock();
+const fwd = new THREE.Vector3(), right = new THREE.Vector3(), mv = new THREE.Vector3();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+
+  if (mode === 'walk' || mode === 'auto') {
+    fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); right.set(-fwd.z, 0, fwd.x);
+    mv.set(0, 0, 0);
+    const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+    const kz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+    mv.addScaledVector(fwd, kz - joy.y).addScaledVector(right, kx + joy.x);
+    if (mv.lengthSq() > 0.01 && mode === 'auto') mode = 'walk';
+    if (mode === 'auto' && auto) {
+      const d = auto.target.clone().sub(player.pos); d.y = 0;
+      const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
+      let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      player.yaw += dy * Math.min(1, dt * 5); player.pitch += (0.2 - player.pitch) * Math.min(1, dt * 4);
+      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; enter(pt); }
+      else mv.copy(d.normalize());
+    }
+    if (mv.lengthSq() > 1) mv.normalize();
+    const speed = mode === 'auto' ? 6 : (keys.ShiftLeft ? 7 : 4.2);
+    player.pos.addScaledVector(mv, speed * dt);
+    player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
+    player.pos.z = Math.max(ROOM.zMin + 1, Math.min(ROOM.zMax - 0.8, player.pos.z));
+    const bob = mv.lengthSq() > 0.01 && !reduceMotion ? Math.sin(t * 10) * 0.04 : 0;
+    camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
+    camera.rotation.set(0, 0, 0, 'YXZ'); camera.rotation.order = 'YXZ';
+    camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
+    camera.fov += (65 - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
+
+    // proximity
+    near = null; let best = 5.2;
+    for (const pt of paintings) {
+      const d = pt.center.clone().sub(camera.position); d.y = 0;
+      const dist = d.length(), facing = -d.normalize().dot(pt.normal);
+      if (dist < best && facing > 0.3) { best = dist; near = pt; }
+    }
+    if (near && mode === 'walk') {
+      promptEl.innerHTML = `<span>Press E or tap to enter</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
+    } else promptEl.hidden = true;
+  }
+
+  if (mode === 'entering' && anim) {
+    anim.t += dt / anim.dur; const k = Math.min(1, anim.t), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    camera.position.lerpVectors(anim.from, anim.to, e);
+    camera.quaternion.slerpQuaternions(anim.fromQ, anim.toQ, Math.min(1, e * 1.6));
+    camera.fov = 65 + e * 25; camera.updateProjectionMatrix();
+    anim.pt.amp = 0.06 + e * 0.3; anim.pt.uniforms.uGlow.value = e * 0.25;
+    if (k > 0.72 && !anim.flashed) { anim.flashed = true; flash.style.opacity = 1; }
+    if (k >= 1) {
+      mode = 'inside'; const pt = anim.pt; anim = null;
+      openRoom(pt); pt.uniforms.uGlow.value = 0;
+      setTimeout(() => { flash.style.opacity = 0; }, 80);
+    }
+  }
+
+  for (const pt of paintings) {
+    const target = mode === 'entering' ? pt.amp : (near === pt ? 0.045 : 0);
+    if (mode !== 'entering') pt.amp += (target - pt.amp) * Math.min(1, dt * 2.5);
+    pt.uniforms.uAmp.value = reduceMotion ? Math.min(pt.amp, 0.02) : pt.amp;
+    pt.uniforms.uTime.value = t;
+    if (near !== pt && mode !== 'entering') pt.uniforms.uHit.value.lerp(new THREE.Vector2(.5, .5), dt);
+  }
+
+  if (mode !== 'inside') renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+const fontsReady = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]) : Promise.resolve();
+const LOGOS = {};
+const loadLogo = f => new Promise(res => { const i = new Image(); i.onload = () => { LOGOS[f] = i; res(); }; i.onerror = () => res(); i.src = f; });
+Promise.all([
+  fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'),
+  document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
+]).then(() => {
+  buildPaintings();
+  document.getElementById('loading').remove();
+  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash);
+  if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); }
+  tick();
+});
+})();
+</script>
+
+</body>
+</html>

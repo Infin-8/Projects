@@ -1,3 +1,12 @@
+<p align="center">
+  <a href="https://infin-8.github.io/Projects/"><img src="assets/gallery-preview.png" width="800" alt="The Infin-8 Gallery: a castle hall with the KaizenDoku, STEADYWATCH Handheld and STEADYWATCH Platform paintings on the walls"></a>
+</p>
+
+<p align="center">
+  <a href="https://infin-8.github.io/Projects/"><strong>Walk the gallery →</strong></a><br>
+  <sub>A 3D gallery in the style of Super Mario 64's castle. Walk up to a painting and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
+</p>
+
 ## Apps
 
 <table>
