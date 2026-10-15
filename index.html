@@ -16,12 +16,12 @@
 <style>
 /* Layout: full-bleed WebGL hall; HUD pinned to edges; project "inside the painting" opens as a full overlay */
 :root {
-  --night: #120d18;      /* hall shadow / page ground */
-  --stone: #2a2230;      /* panel surface */
+  --night: #080a12;      /* cleanroom dark / page ground */
+  --stone: #141826;      /* panel surface */
   --gilt: #d9a441;       /* frame gold, the one accent */
   --gilt-dim: #8a6a2e;
   --parchment: #f1e6cf;  /* text on dark */
-  --muted: #b7a98f;
+  --muted: #a3adc2;
   --display: "Young Serif", Georgia, "Times New Roman", serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -41,7 +41,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-bottom: 36px;
   pointer-events: none;
-  background: linear-gradient(to bottom, var(--night) 0%, color-mix(in srgb, var(--night) 92%, transparent) 72%, transparent 100%);
+  background: radial-gradient(620px 240px at 0 0, var(--night) 0%, color-mix(in srgb, var(--night) 90%, transparent) 55%, transparent 100%);
   text-shadow: 0 1px 2px var(--night);
 }
 #top > * { pointer-events: none; }
@@ -224,29 +224,49 @@ const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, platform: drawPlatform 
 
 /* ---------- Environment textures ---------- */
 function floorTex() {
+  // polished dark stone, still checkered so it reads as the castle floor
   const c = mk(512, 512), g = c.getContext('2d');
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-    g.fillStyle = (x + y) % 2 ? '#b9ab92' : '#6e6258'; g.fillRect(x * 128, y * 128, 128, 128);
-    g.strokeStyle = '#00000033'; g.lineWidth = 2; g.strokeRect(x * 128 + 1, y * 128 + 1, 126, 126);
+    g.fillStyle = (x + y) % 2 ? '#20242f' : '#11141c'; g.fillRect(x * 128, y * 128, 128, 128);
+    g.strokeStyle = '#3a4357'; g.lineWidth = 1.5; g.strokeRect(x * 128 + 0.75, y * 128 + 0.75, 126.5, 126.5);
   }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
 }
-function wallTex() {
+function wallTex(glow) {
+  // dark slate panels; the glow version is black except for a few lit seams (used as emissive map)
   const c = mk(512, 512), g = c.getContext('2d');
-  g.fillStyle = '#d8c8a8'; g.fillRect(0, 0, 512, 512);
-  g.strokeStyle = '#b8a584'; g.lineWidth = 3;
-  for (let row = 0; row < 8; row++) {
-    const y = row * 64; g.beginPath(); g.moveTo(0, y); g.lineTo(512, y); g.stroke();
-    for (let x = (row % 2) * 64; x < 512; x += 128) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 64); g.stroke(); }
+  g.fillStyle = glow ? '#000' : '#181c27'; g.fillRect(0, 0, 512, 512);
+  for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
+    const x = col * 256, y = row * 128;
+    if (!glow) {
+      const gr = g.createLinearGradient(x, y, x, y + 128); gr.addColorStop(0, '#1e2330'); gr.addColorStop(1, '#151923');
+      g.fillStyle = gr; g.fillRect(x + 3, y + 3, 250, 122);
+      g.strokeStyle = '#0b0d13'; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 1.5, 253, 125);
+    } else if (row === 1) {
+      g.fillStyle = '#3fe0e0'; g.fillRect(x, y + 126, 256, 2);
+    }
   }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
 function carpetTex() {
+  // the photon path: dark runner with teal edge lines and a soft cyan beam down the middle
   const c = mk(128, 512), g = c.getContext('2d');
-  g.fillStyle = '#9b1c22'; g.fillRect(0, 0, 128, 512);
-  g.fillStyle = '#d9a441'; g.fillRect(0, 0, 10, 512); g.fillRect(118, 0, 10, 512);
-  g.fillStyle = '#7d141a'; g.fillRect(16, 0, 4, 512); g.fillRect(108, 0, 4, 512);
+  g.fillStyle = '#0b0e16'; g.fillRect(0, 0, 128, 512);
+  const beam = g.createLinearGradient(0, 0, 128, 0);
+  beam.addColorStop(0.30, 'rgba(63,224,224,0)'); beam.addColorStop(0.5, 'rgba(120,240,240,0.85)'); beam.addColorStop(0.70, 'rgba(63,224,224,0)');
+  g.fillStyle = beam; g.fillRect(0, 0, 128, 512);
+  g.fillStyle = '#3fe0e0'; g.fillRect(2, 0, 3, 512); g.fillRect(123, 0, 3, 512);
   const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 6); return t;
+}
+function dotTex() {
+  const c = mk(64, 64), g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c);
+}
+function labelTex(text) {
+  const c = mk(640, 64), g = c.getContext('2d');
+  g.fillStyle = '#a3adc2'; g.font = '600 30px "IBM Plex Mono", monospace'; g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.fillText(text, 8, 34); return new THREE.CanvasTexture(c);
 }
 function plaqueTex(p) {
   const c = mk(512, 128), g = c.getContext('2d');
@@ -289,50 +309,121 @@ catch (e) {
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x120d18);
-scene.fog = new THREE.Fog(0x120d18, 16, 40);
+scene.background = new THREE.Color(0x080a12);
+scene.fog = new THREE.Fog(0x080a12, 14, 38);
 const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 
 const ROOM = { x: 8, zMin: -15, zMax: 12, h: 7.5 };
 const len = ROOM.zMax - ROOM.zMin, midZ = (ROOM.zMax + ROOM.zMin) / 2;
 
-scene.add(new THREE.HemisphereLight(0xfff0d8, 0x2a1830, 0.55));
-const sun = new THREE.DirectionalLight(0xffe2b0, 0.35); sun.position.set(3, 10, 6); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xb8c8ff, 0x0a0c14, 0.7));
+const key = new THREE.DirectionalLight(0xcfdcff, 0.25); key.position.set(3, 10, 6); scene.add(key);
 
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ map: floorTex() }));
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }));
 floor.rotation.x = -Math.PI / 2; floor.position.z = midZ; scene.add(floor);
-const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, len - 2), new THREE.MeshLambertMaterial({ map: carpetTex() }));
+const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, len - 2), new THREE.MeshBasicMaterial({ map: carpetTex() }));
 carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, 0.01, midZ + 1); scene.add(carpet);
 
-const wt = wallTex();
+const wt = wallTex(false), wg = wallTex(true);
 function wall(w, h, x, z, ry) {
-  const t = wt.clone(); t.needsUpdate = true; t.repeat.set(w / 4, h / 4);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t }));
+  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
   m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
 }
 wall(len, ROOM.h, -ROOM.x, midZ, Math.PI / 2);
 wall(len, ROOM.h, ROOM.x, midZ, -Math.PI / 2);
 wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMin, 0);
 wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMax, Math.PI);
-const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x3a2a3a }));
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
 ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(ceil);
 
-// wainscot + columns
-const trimMat = new THREE.MeshLambertMaterial({ color: 0x5a3a2a });
-[[-ROOM.x + 0.06, 0], [ROOM.x - 0.06, 0]].forEach(([x]) => {
-  const b = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, len), trimMat); b.position.set(x, 0.55, midZ); scene.add(b);
-});
-const colMat = new THREE.MeshLambertMaterial({ color: 0xe6d6b8 });
-const capMat = new THREE.MeshLambertMaterial({ color: 0xd9a441 });
-for (const z of [-11, -0.2, 6]) for (const x of [-ROOM.x + 0.5, ROOM.x - 0.5]) {
-  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, ROOM.h, 20), colMat); c.position.set(x, ROOM.h / 2, z); scene.add(c);
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), capMat); cap.position.set(x, ROOM.h - 0.15, z); scene.add(cap);
+// baseboard light line + columns (castle shapes, lab materials)
+const lineMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 });
+for (const x of [-ROOM.x + 0.03, ROOM.x - 0.03]) {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); b.position.set(x, 0.9, midZ); scene.add(b);
+}
+const gold = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
+const colMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 });
+const COLS_Z = [-11, -0.2, 6];
+for (const z of COLS_Z) for (const x of [-ROOM.x + 0.5, ROOM.x - 0.5]) {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, ROOM.h, 24), colMat); c.position.set(x, ROOM.h / 2, z); scene.add(c);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, ROOM.h - 0.15, z); scene.add(cap);
   const base = cap.clone(); base.position.y = 0.15; scene.add(base);
+}
+
+/* ---------- Cryostat chandelier ----------
+   A dilution refrigerator hangs like a gold chandelier: plates step down in
+   temperature from 50 K at the top to about 10 mK at the mixing chamber,
+   where the quantum chip sits. Stage temperatures are typical, not exact. */
+const cryo = new THREE.Group(); cryo.position.set(0, ROOM.h, 1.5); scene.add(cryo);
+const STAGES = [['50 K', 1.15], ['4 K', 0.98], ['Still · ~1 K', 0.8], ['Cold plate · ~100 mK', 0.64], ['Mixing chamber · ~10 mK', 0.5]];
+const silver = new THREE.MeshStandardMaterial({ color: 0xb9c0cc, metalness: 0.9, roughness: 0.25 });
+const copper = new THREE.MeshStandardMaterial({ color: 0xc8743a, metalness: 0.8, roughness: 0.35 });
+const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.6, 32), colMat); mount.position.y = -0.3; cryo.add(mount);
+const pulses = [];
+let y = -0.75;
+STAGES.forEach(([label, r], i) => {
+  const plate = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.07, 48), gold); plate.position.y = y; cryo.add(plate);
+  const ringM = new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.15 });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.01, 0.018, 8, 64), ringM); ring.rotation.x = Math.PI / 2; ring.position.y = y; cryo.add(ring);
+  pulses.push(ringM);
+  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(label), transparent: true, depthWrite: false }));
+  tag.scale.set(2.75, 0.275, 1); tag.center.set(0, 0.5); tag.position.set(r + 0.12, y, 0); cryo.add(tag);
+  const next = STAGES[i + 1];
+  if (next) {
+    const gap = 0.62 - i * 0.04, rr = next[1] * 0.85;
+    for (let k = 0; k < 6; k++) {
+      const a = k / 6 * Math.PI * 2;
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, gap, 6), silver);
+      rod.position.set(Math.cos(a) * rr, y - gap / 2, Math.sin(a) * rr); cryo.add(rod);
+    }
+    for (let k = 0; k < 4; k++) {   // coax lines bending between stages
+      const a = k / 4 * Math.PI * 2 + 0.4, r0 = r * 0.45, r1 = next[1] * 0.4;
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(a) * r0, y, Math.sin(a) * r0),
+        new THREE.Vector3(Math.cos(a + 0.5) * (r0 + 0.12), y - gap / 2, Math.sin(a + 0.5) * (r0 + 0.12)),
+        new THREE.Vector3(Math.cos(a + 0.9) * r1, y - gap, Math.sin(a + 0.9) * r1)]);
+      cryo.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.012, 5, false), copper));
+    }
+    y -= gap;
+  }
+});
+const chip = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.32, 24), copper); chip.position.y = y - 0.2; cryo.add(chip);
+const chipGlowM = new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.5 });
+const chipGlow = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.02, 8, 32), chipGlowM); chipGlow.rotation.x = Math.PI / 2; chipGlow.position.y = y - 0.36; cryo.add(chipGlow);
+pulses.push(chipGlowM);
+const plateLight = new THREE.PointLight(0xffe2b0, 1.2, 7, 2); plateLight.position.set(0, -1.6, 2.2); cryo.add(plateLight);
+const cryoLight = new THREE.PointLight(0x7fe8ff, 0.8, 8, 2); cryoLight.position.y = y - 0.8; cryo.add(cryoLight);
+
+/* ---------- Photons drifting down the runner ---------- */
+const PHOTONS = 240;
+const pPos = new Float32Array(PHOTONS * 3), pCol = new Float32Array(PHOTONS * 3), pSpd = new Float32Array(PHOTONS);
+const cyanC = new THREE.Color(0x7ff0f0), goldC = new THREE.Color(0xffd36b);
+for (let i = 0; i < PHOTONS; i++) {
+  pPos[i * 3] = (Math.random() - 0.5) * 2.4; pPos[i * 3 + 1] = 0.05 + Math.random() * 1.4; pPos[i * 3 + 2] = ROOM.zMin + 1 + Math.random() * (len - 2);
+  pSpd[i] = 0.8 + Math.random() * 1.6;
+  const c = Math.random() < 0.8 ? cyanC : goldC; pCol[i * 3] = c.r; pCol[i * 3 + 1] = c.g; pCol[i * 3 + 2] = c.b;
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+const photons = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.07, map: dotTex(), vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+scene.add(photons);
+
+function updateQuantum(dt, t) {
+  const m = reduceMotion ? 0.15 : 1;
+  // a pulse of cold travels down the stages, top to bottom
+  pulses.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
+  for (let i = 0; i < PHOTONS; i++) {
+    let z = pPos[i * 3 + 2] - pSpd[i] * dt * m;
+    if (z < ROOM.zMin + 1) z = ROOM.zMax - 1;
+    pPos[i * 3 + 2] = z;
+  }
+  pGeo.attributes.position.needsUpdate = true;
 }
 
 /* ---------- Paintings ---------- */
 const paintings = [];
-const frameMat = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.7, roughness: 0.35 });
+const frameMat = gold;
 function buildPaintings() {
   PROJECTS.forEach(p => {
     const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo]);
@@ -350,7 +441,7 @@ function buildPaintings() {
     });
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: plaqueTex(p) }));
     plaque.position.set(0, -h / 2 - 0.75, 0.03); group.add(plaque);
-    const light = new THREE.PointLight(0xffd9a0, 0.9, 9, 2);
+    const light = new THREE.PointLight(0xe6eeff, 1.1, 9, 2);
     light.position.set(0, h / 2 + 0.8, 1.6); group.add(light);
     const normal = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY);
     const center = new THREE.Vector3(...p.pos);
@@ -553,7 +644,7 @@ function tick() {
     if (near !== pt && mode !== 'entering') pt.uniforms.uHit.value.lerp(new THREE.Vector2(.5, .5), dt);
   }
 
-  if (mode !== 'inside') renderer.render(scene, camera);
+  if (mode !== 'inside') { updateQuantum(dt, t); renderer.render(scene, camera); }
   requestAnimationFrame(tick);
 }
 
