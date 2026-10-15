@@ -156,7 +156,14 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px));
   display: grid; align-content: start; gap: 16px;
 }
-#worldPanel .wp-head { display: grid; gap: 4px; }
+#worldPanel .wp-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+#worldPanel .wp-logo { width: 64px; height: 64px; display: block; box-shadow: 0 8px 20px #0008; }
+#worldPanel .wp-titles { display: grid; gap: 4px; min-width: 0; }
+#worldPanel .wp-sub { margin: 4px 0 -6px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
+#worldPanel .wp-modules { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+#worldPanel .wp-modules li { display: grid; gap: 2px; border-top: 1px solid rgba(142, 162, 255, .18); padding-top: 8px; }
+#worldPanel .wp-modules b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #3fe0e0; font-weight: 600; }
+#worldPanel .wp-modules span { font-size: 13px; line-height: 1.5; color: #b9c2d6; }
 #worldPanel .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #3fe0e0; }
 #worldPanel h2 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
 #worldPanel .wp-tag { margin: 0; color: #8ea2ff; font-size: 15px; }
@@ -187,11 +194,11 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
     top: auto; left: 0; width: auto; max-height: 52vh; border-left: 0; border-top: 1px solid rgba(63, 224, 224, .22);
     padding-top: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 12px;
   }
-  #worldPanel .wp-head { grid-template-columns: 1fr auto; align-items: center; }
-  #worldPanel .wp-head > :not(.wp-toggle) { grid-column: 1; }
+  #worldPanel .wp-head { gap: 12px; }
+  #worldPanel .wp-logo { width: 42px; height: 42px; }
   #worldPanel h2 { font-size: 20px; }
   #worldPanel .wp-tag { display: none; }
-  #worldPanel .wp-toggle { display: block; grid-column: 2; grid-row: 1 / span 2; font-family: var(--mono); font-size: 12px; background: transparent; color: #3fe0e0; border: 1px solid #3fe0e0; border-radius: 2px; padding: 8px 10px; cursor: pointer; }
+  #worldPanel .wp-toggle { display: block; font-family: var(--mono); font-size: 12px; background: transparent; color: #3fe0e0; border: 1px solid #3fe0e0; border-radius: 2px; padding: 8px 10px; cursor: pointer; }
   #worldPanel.collapsed .wp-body { display: none; }
   body.in-world #prompt { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -802,6 +809,7 @@ promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (wo
    and end in a 32-byte key; the SHQKD exchange stands behind the entrance.
    Built when you step in, freed when you leave. */
 let world = null;
+let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
 const worldPanel = document.getElementById('worldPanel');
 const PLATFORM_STATIONS = [
   { id: 'quantum', title: 'IBM Quantum', text: 'Random bits come from measuring qubits on IBM Quantum hardware. Each batch is tied to a verifiable IBM Quantum job ID.' },
@@ -1058,13 +1066,19 @@ function renderWorldPanel(pt) {
   const p = pt.p;
   worldPanel.innerHTML = `
     <div class="wp-head">
-      <span class="wp-eyebrow">${esc(p.wing)} wing · inside the painting</span>
-      <h2>${esc(p.name)}</h2>
-      <p class="wp-tag">${esc(p.tagline)}</p>
+      <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
+      <div class="wp-titles">
+        <span class="wp-eyebrow">${esc(p.wing)} wing · inside the painting</span>
+        <h2>${esc(p.name)}</h2>
+        <p class="wp-tag">${esc(p.tagline)}</p>
+      </div>
       <button class="wp-toggle" type="button" id="wpToggle" aria-expanded="false">Details</button>
     </div>
     <div class="wp-body" id="wpBody">
       <p class="wp-desc">${esc(p.desc)}</p>
+      <h3 class="wp-sub">Modules</h3>
+      <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
+      <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
@@ -1091,7 +1105,7 @@ function openWorld(pt) {
   renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize();
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
   mode = 'walk'; auto = null; near = null;
-  camera.fov = 65; camera.updateProjectionMatrix();
+  camera.fov = baseFov; camera.updateProjectionMatrix();
   for (const p of paintings) { p.amp = 0; p.uniforms.uGlow.value = 0; }
   try { history.replaceState(null, '', '#platform-world'); } catch (e) {}
   canvas.focus();
@@ -1110,6 +1124,11 @@ function resize() {
   // with the world panel docked on the right, shift the view so its centre sits in the visible part
   const docked = world && !worldPanel.hidden && !matchMedia('(max-width: 760px)').matches;
   if (docked) camera.setViewOffset(innerWidth, innerHeight, worldPanel.offsetWidth / 2, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+  if (world) {
+    const visW = docked ? innerWidth - worldPanel.offsetWidth : innerWidth;
+    const want = 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(39)) * innerWidth / Math.max(1, visW) / camera.aspect));
+    baseFov = Math.min(85, Math.max(65, want));
+  } else baseFov = 65;
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -1149,7 +1168,7 @@ function tick() {
     camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
     camera.rotation.set(0, 0, 0, 'YXZ'); camera.rotation.order = 'YXZ';
     camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
-    camera.fov += (65 - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
+    camera.fov += (baseFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
 
     // proximity
     near = null; let best = 5.2;
