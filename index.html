@@ -582,7 +582,8 @@ function buildPaintings() {
 }
 
 /* ---------- Player ---------- */
-const player = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };
+const START = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };   // by the door, facing the Platform painting
+const player = { pos: START.pos.clone(), yaw: START.yaw, pitch: START.pitch };
 const keys = {};
 let joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 };
 let mode = 'walk'; // walk | auto | entering | inside | exiting
@@ -691,12 +692,22 @@ function exitRoom() {
   if (!current) return;
   const pt = current; current = null;
   room.hidden = true; room.innerHTML = '';
-  const pos = pt.center.clone().addScaledVector(pt.normal, 3.4); pos.y = 1.7;
-  player.pos.copy(pos);
-  const d = pt.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); player.pitch = 0.22;
-  pt.amp = 0.22; mode = 'walk'; canvas.focus();
+  resetView(); canvas.focus();
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
+
+// Back in the hall for any reason: start over from the entrance with a clean view
+function resetView() {
+  player.pos.copy(START.pos); player.yaw = START.yaw; player.pitch = START.pitch;
+  mode = 'walk'; auto = null; anim = null; near = null;
+  for (const k in keys) keys[k] = false;
+  joy = { x: 0, y: 0, id: null }; stick.hidden = true;
+  document.getElementById('prompt').hidden = true;
+  camera.fov = 65; camera.updateProjectionMatrix();
+  for (const pt of paintings) { pt.amp = 0; pt.uniforms.uAmp.value = 0; pt.uniforms.uGlow.value = 0; pt.uniforms.uHit.value.set(.5, .5); }
+}
+// returning with the browser's back/forward buttons restores a cached page; reset it too
+addEventListener('pageshow', e => { if (!e.persisted) return; if (current) exitRoom(); else resetView(); });
 
 /* ---------- Directory ---------- */
 const dir = document.getElementById('directory');
