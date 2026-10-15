@@ -131,7 +131,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 .room-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--room-accent, var(--gilt)); }
 #exit { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; background: transparent; color: inherit; border: 1px solid currentColor; padding: 8px 12px; border-radius: 2px; cursor: pointer; }
 #exit:focus-visible { outline: 2px solid var(--room-accent, var(--gilt)); outline-offset: 2px; }
-#room canvas.art { width: 100%; max-width: var(--art-max, 100%); justify-self: center; height: auto; border: 6px solid var(--gilt); box-shadow: 0 0 0 2px #0006, 0 20px 40px #0008; }
+#room canvas.art { width: 100%; max-width: var(--art-max, 100%); justify-self: center; height: auto; box-shadow: 0 20px 40px #0008; }
 #room h2 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 6vw, 48px); margin: 0; line-height: 1.05; text-wrap: balance; overflow-wrap: anywhere; }
 .tagline { font-size: 18px; margin: 6px 0 0; color: var(--room-accent, var(--gilt)); }
 .desc { font-size: 16px; line-height: 1.6; max-width: 65ch; margin: 0; }
@@ -677,7 +677,9 @@ function openRoom(pt) {
       <div class="stack">${esc(p.stack)}</div>
       <div class="links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
     </div>`;
-  room.querySelector('canvas.art').getContext('2d').drawImage(pt.art, 0, 0);
+  // app icons show as-is here, without the dark edge line drawn for the wall paintings
+  const logo = p.id !== 'platform' && LOGOS[p.logo];
+  room.querySelector('canvas.art').getContext('2d').drawImage(logo || pt.art, 0, 0, pt.art.width, pt.art.height);
   room.hidden = false; room.scrollTop = 0;
   room.querySelector('#exit').addEventListener('click', exitRoom);
   room.querySelector('#exit').focus();
