@@ -46,7 +46,33 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 }
 #top > * { pointer-events: none; }
 #title { min-width: 0; max-width: 100%; }
-#title h1 { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 3.2vw, 34px); line-height: 1.25; padding-block: 2px; margin: 0; color: var(--parchment); text-shadow: 0 2px 0 #000a; letter-spacing: .01em; overflow-wrap: anywhere; }
+#title h1 {
+  font-family: var(--display); font-weight: 400; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.1;
+  padding-block: 4px; margin: 0; letter-spacing: -0.01em; overflow-wrap: anywhere;
+  color: var(--parchment); text-shadow: 0 2px 0 #000a;
+  font-feature-settings: "kern", "liga"; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+}
+/* parchment flowing into the hall's teal, with a slow shimmer */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  #title h1 {
+    background: linear-gradient(100deg, var(--parchment) 0%, #c8fbff 30%, #3fe0e0 55%, #1aa6b8 75%, #c8fbff 90%, var(--parchment) 100%);
+    background-size: 220% 100%; background-position: 0% 50%;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent; text-shadow: none;
+    filter: drop-shadow(0 0 14px rgba(63, 224, 224, .28)) drop-shadow(0 2px 0 rgba(0, 0, 0, .55));
+    animation: titleShimmer 9s ease-in-out infinite alternate;
+  }
+}
+@keyframes titleShimmer { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+@media (prefers-reduced-motion: reduce) { #title h1 { animation: none; } }
+/* the caret sits raised and lighter, like a superscript mark */
+#title h1 .caret { display: inline-block; font-size: .62em; transform: translateY(-.42em); margin-left: .04em; }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  #title h1 .caret {   /* a raised inline-block is painted on its own, so it carries its own fill */
+    background: linear-gradient(180deg, #c8fbff, #3fe0e0);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  }
+}
 #title a.listlink { color: var(--gilt); pointer-events: auto; text-underline-offset: 3px; }
 #title p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); max-width: 46ch; }
 #controls {
@@ -127,7 +153,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 
 <header class="hud" id="top">
 <div id="title">
-  <h1>Quantum V^</h1>
+  <h1>Quantum V<span class="caret">^</span></h1>
   <p>Walk up to a painting and step inside to see the project. <a class="listlink" href="https://github.com/Infin-8/Projects#apps">Prefer a list?</a></p>
 </div>
 <div id="controls">
