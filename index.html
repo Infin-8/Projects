@@ -409,7 +409,111 @@ pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttri
 const photons = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.07, map: dotTex(), vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
 scene.add(photons);
 
+/* ---------- Double-slit wall ----------
+   The back wall, where the photon runner begins, is the barrier of Young's
+   double-slit experiment. The floor shows the two waves from the slits adding
+   up: the dark fan-shaped lines are where they cancel. The detector screen
+   collects single hits drawn from the two-slit intensity pattern, so the
+   bands appear dot by dot. */
+const SLIT = { z: ROOM.zMax, y: 2.1, h: 2.4, gap: 0.8, wave: 0.35 };
+const barrier = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.6, 0.1), colMat);
+barrier.position.set(0, SLIT.y, SLIT.z - 0.05); scene.add(barrier);
+[[4.2 + 0.4, 0.2, 0, 1.9], [4.2 + 0.4, 0.2, 0, -1.9], [0.2, 3.6, 2.2, 0], [0.2, 3.6, -2.2, 0]].forEach(([w, h, x, y]) => {
+  const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), gold); f.position.set(x, SLIT.y + y, SLIT.z - 0.07); scene.add(f);
+});
+const slitMat = new THREE.MeshBasicMaterial({ color: 0xc8fbff });
+for (const sx of [-SLIT.gap / 2, SLIT.gap / 2]) {
+  const sl = new THREE.Mesh(new THREE.PlaneGeometry(0.09, SLIT.h), slitMat);
+  sl.position.set(sx, SLIT.y, SLIT.z - 0.111); sl.rotation.y = Math.PI; scene.add(sl);
+}
+const slitLight = new THREE.PointLight(0x7fe8ff, 0.5, 9, 2); slitLight.position.set(0, 0.6, SLIT.z - 2.5); scene.add(slitLight);
+
+// interference on the floor: Re of two cylindrical waves, squared
+const fringeU = { uTime: { value: 0 } };
+const fringe = new THREE.Mesh(new THREE.PlaneGeometry(12, 8, 1, 1), new THREE.ShaderMaterial({
+  uniforms: fringeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `
+    uniform float uTime; varying vec2 vUv;
+    void main(){
+      vec2 p = vec2((vUv.x - 0.5) * 12.0, vUv.y * 8.0);          // x across, y = distance from the slits
+      float r1 = length(p - vec2(-${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
+      float r2 = length(p - vec2( ${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
+      float k = 6.2831853 / ${SLIT.wave.toFixed(2)}, w = 3.2;
+      float a = cos(k * r1 - w * uTime) / sqrt(r1) + cos(k * r2 - w * uTime) / sqrt(r2);
+      float I = a * a * 0.22;
+      float fade = smoothstep(8.0, 1.5, p.y) * smoothstep(0.0, 0.35, p.y) * smoothstep(6.0, 3.0, abs(p.x));
+      gl_FragColor = vec4(vec3(0.25, 0.88, 0.9) * I * fade, 1.0);
+    }`
+}));
+fringe.rotation.x = -Math.PI / 2; fringe.position.set(0, 0.025, SLIT.z - 4); scene.add(fringe);
+
+function wrapText(g, text, x, y, maxW, lh) {
+  let line = '';
+  for (const word of text.split(' ')) {
+    const test = line ? line + ' ' + word : word;
+    if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); line = word; y += lh; } else line = test;
+  }
+  g.fillText(line, x, y); return y + lh;
+}
+function framedPanel(w, h, x, tex) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+  m.position.set(x, 2.25, SLIT.z - 0.06); m.rotation.y = Math.PI; scene.add(m);
+  const ft = 0.16;
+  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, w / 2 + ft / 2, 0], [ft, h, -w / 2 - ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(x + fx, 2.25 + fy, SLIT.z - 0.05); scene.add(f);
+  });
+}
+
+// caption on the visitor's right when facing the wall (world -x), clear of the title in the corner
+function buildSlitExhibit() {
+  const cc = mk(768, 576), g = cc.getContext('2d');
+  g.fillStyle = '#0d1018'; g.fillRect(0, 0, 768, 576);
+  g.fillStyle = '#3fe0e0'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText('EXHIBIT · QUANTUM SCIENCE', 48, 72);
+  g.fillStyle = '#f1e6cf'; g.font = '52px "Young Serif", Georgia, serif'; g.fillText('Double-slit experiment', 48, 140);
+  g.fillStyle = '#c9d2e3'; g.font = '25px "IBM Plex Sans", sans-serif';
+  let y = wrapText(g, 'Light passing through two narrow slits spreads out and overlaps. Where the waves line up the screen is bright; where they cancel it is dark.', 48, 200, 672, 36);
+  y = wrapText(g, 'Send the photons one at a time and each lands as a single dot, yet the dots still build up the same bands.', 48, y + 14, 672, 36);
+  g.fillStyle = '#8e99b0'; g.font = '20px "IBM Plex Mono", monospace';
+  g.fillText('Thomas Young showed light interfering in the early 1800s.', 48, 520);
+  framedPanel(2.9, 2.175, -4.8, new THREE.CanvasTexture(cc));
+}
+
+// detector: single hits sampled from the two-slit intensity, accumulating
+const det = mk(768, 576), dg = det.getContext('2d');
+const detTex = new THREE.CanvasTexture(det);
+let hits = 0;
+function detReset() {
+  dg.fillStyle = '#05070b'; dg.fillRect(0, 0, 768, 576); hits = 0;
+}
+function detIntensity(u) {           // u in [-1, 1] across the screen
+  const beta = 5.2 * u, alpha = 1.25 * u;   // fringe term and single-slit envelope
+  const env = alpha === 0 ? 1 : Math.sin(alpha) / alpha;
+  return Math.cos(beta) ** 2 * env * env;
+}
+function detHit() {
+  let u; do { u = Math.random() * 2 - 1; } while (Math.random() > detIntensity(u));
+  const x = 384 + u * 360, y = 24 + Math.random() * 456;
+  dg.fillStyle = 'rgba(127,240,240,0.85)'; dg.fillRect(x - 1.5, y - 1.5, 3, 3); hits++;
+}
+function detLabel() {
+  dg.fillStyle = '#05070b'; dg.fillRect(0, 496, 768, 80);
+  dg.fillStyle = '#3fe0e0'; dg.font = '600 22px "IBM Plex Mono", monospace'; dg.textAlign = 'left'; dg.fillText('DETECTOR · SINGLE PHOTONS', 36, 546);
+  dg.textAlign = 'right'; dg.fillStyle = '#c9d2e3'; dg.fillText('n = ' + hits.toLocaleString('en-US'), 732, 546); dg.textAlign = 'left';
+}
+detReset(); detLabel();
+framedPanel(2.9, 2.175, 4.8, detTex);
+let detAcc = 0;
+function updateSlits(dt, t) {
+  fringeU.uTime.value = reduceMotion ? 0 : t;
+  detAcc += dt * (reduceMotion ? 40 : 90);
+  while (detAcc >= 1) { detAcc -= 1; detHit(); }
+  if (hits > 14000) detReset();
+  detLabel(); detTex.needsUpdate = true;
+}
+
 function updateQuantum(dt, t) {
+  updateSlits(dt, t);
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
   pulses.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
@@ -515,7 +619,7 @@ function clickAt(x, y) {
 
 function walkTo(pt) {
   if (mode === 'inside' || mode === 'entering') return;
-  const target = pt.center.clone().addScaledVector(pt.normal, 3.6); target.y = 1.7;
+  const target = pt.center.clone().addScaledVector(pt.normal, pt.standOff || 3.6); target.y = 1.7;
   auto = { pt, target }; mode = 'auto';
 }
 
@@ -572,6 +676,11 @@ PROJECTS.forEach((p, i) => {
   b.addEventListener('click', () => { if (paintings[i]) walkTo(paintings[i]); });
   dir.appendChild(b);
 });
+const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
+{
+  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-double-slit';
+  b.textContent = 'Double slit'; b.addEventListener('click', () => walkTo(slitStop)); dir.appendChild(b);
+}
 const promptEl = document.getElementById('prompt');
 promptEl.addEventListener('click', () => { if (near && mode === 'walk') enter(near); });
 
@@ -595,8 +704,8 @@ function tick() {
       const d = auto.target.clone().sub(player.pos); d.y = 0;
       const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-      player.yaw += dy * Math.min(1, dt * 5); player.pitch += (0.2 - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; enter(pt); }
+      player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
+      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
@@ -655,10 +764,10 @@ Promise.all([
   fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'),
   document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
-  buildPaintings();
+  buildPaintings(); buildSlitExhibit();
   document.getElementById('loading').remove();
-  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash);
-  if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); }
+  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
+  if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   tick();
 });
 })();
