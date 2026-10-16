@@ -840,7 +840,7 @@ function makeVee(parent, pos, facing) {
   const normal = facing.clone().setY(0).normalize(), restYaw = Math.atan2(normal.x, normal.z);
   fig.rotation.y = restYaw;
   const v = { parent, pad, body, fig, headG, mouth, eyes, shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
-    follow: true, bounds: null, seed: Math.random() * 100, lean: 0, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
+    follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
     awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
@@ -871,7 +871,9 @@ function veePing(v, target) {
 }
 // Ahead and to the left of you, inside the room
 function veeFollowSpot(v) {
-  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), lx = fz, lz = -fx;
+  // she follows your walking, not your looking: her heading only turns toward yours while you're moving
+  if (v.heading === null) v.heading = player.yaw;
+  const fx = -Math.sin(v.heading), fz = -Math.cos(v.heading), lx = fz, lz = -fx;
   const narrow = camera.aspect < 0.85;
   let side = narrow ? 0.4 : 1.1, ahead = narrow ? 4.2 : 3.8;   // nearer the middle on a narrow screen
   if (!reduceMotion) {   // she wanders: drifting side to side (sometimes across to your right) and nearer or farther
@@ -886,6 +888,13 @@ function veeFollowSpot(v) {
 }
 function updateVee(v, dt, t) {
   const m = reduceMotion ? 0.2 : 1, cam = camera.position, b = v.body.position, L = Math.min(1, dt * 8);
+  // track whether you're walking; only then does her follow heading catch up with where you face
+  const pp = camera.position;
+  if (v.lastP) {
+    const moved = Math.hypot(pp.x - v.lastP.x, pp.z - v.lastP.z);
+    if (moved > 0.002 && v.heading !== null) v.heading += angleTo(v.heading, player.yaw) * Math.min(1, dt * 2.5);
+    v.lastP.set(pp.x, 0, pp.z);
+  } else v.lastP = new THREE.Vector3(pp.x, 0, pp.z);
   // where she floats: a tour spot, a display she's zipping into, or just ahead and to your left
   const goal = v.bodyTarget || (v.follow ? veeFollowSpot(v) : v.home);
   const kx = (goal.x - b.x) * Math.min(1, dt * (reduceMotion ? 20 : 2.4)), kz = (goal.z - b.z) * Math.min(1, dt * (reduceMotion ? 20 : 2.4));
@@ -894,7 +903,7 @@ function updateVee(v, dt, t) {
   const ft = t + v.seed, liftY = reduceMotion ? 0.12 : v.bodyTarget ? 0.15 + 0.06 * Math.sin(ft * 1.2) : 0.12 + 0.22 * (1 + Math.sin(ft * 0.37)) + 0.06 * Math.sin(ft * 1.3);
   b.y += (liftY - b.y) * Math.min(1, dt * 2);
   // lean into the drift, like she's gliding
-  if (dt > 0) { const cx = Math.cos(player.yaw), cz = -Math.sin(player.yaw), lat = (kx * cx + kz * cz) / dt; v.lean += (Math.max(-0.25, Math.min(0.25, -lat * 0.12)) - v.lean) * Math.min(1, dt * 3); }
+  if (dt > 0) { const hy = v.heading ?? player.yaw, cx = Math.cos(hy), cz = -Math.sin(hy), lat = (kx * cx + kz * cz) / dt; v.lean += (Math.max(-0.25, Math.min(0.25, -lat * 0.12)) - v.lean) * Math.min(1, dt * 3); }
   v.hoverM.opacity = 0.75;
   v.pos.copy(b);
   // shimmer in when she arrives somewhere, shrink away when she zips into a display
@@ -1021,7 +1030,7 @@ function buildMascot() {
     const next = u[0], tgt = next === 'about' ? null : paintings.find(q => q.p.id === next);
     vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? 'Next up: tap me to meet the builder.' : `Next up: ${WORLD_NAMES[next]}.`, null, tgt ? tgt.center : null);
   };
-  vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
+  vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
   renderExplored();
 }
 function updateMascot(dt, t) {
