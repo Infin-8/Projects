@@ -332,7 +332,7 @@ const PROJECTS = [
 /* ---------- About (from the Software Engineer resume) ----------
    Not a wall display: Vee, the hall's holographic guide, leads into this world. */
 const ABOUT = {
-  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptName: 'About & resume',
+  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptName: 'About & Resume',
   tagline: 'Software Engineer · Founder of Quantum V^', wing: 'About',
   desc: 'Software engineer with a foundation in semiconductor manufacturing, enterprise operations and hands-on teaching, now building at the intersection of quantum computing and applied cryptography. Founder of Quantum V^ LLC, where I designed and shipped STEADYWATCH™ and KaizenDoku.',
   sectionTitle: 'Experience',
@@ -1143,7 +1143,7 @@ function buildKiosk() {
   r2.rotation.x = Math.PI / 2; emblem.add(r1, r2);
   const nc = mk(256, 256), ng = nc.getContext('2d'); ng.fillStyle = '#c8fbff'; ng.font = '120px "Young Serif", Georgia, serif'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NV', 128, 138);
   const nv = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(nc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); nv.scale.set(0.34, 0.34, 1); emblem.add(nv);
-  const label = stationLabel('THE BUILDER', 'About & resume'); label.scale.multiplyScalar(0.62); label.position.y = Y + H / 2 + 1.25; group.add(label);
+  const label = stationLabel('THE BUILDER', 'About & Resume'); label.scale.multiplyScalar(0.62); label.position.y = Y + H / 2 + 1.25; group.add(label);
   const light = new THREE.PointLight(0x7fe8ff, 0.8, 6, 2); light.position.set(0, Y, 1.4); group.add(light);
   const center = new THREE.Vector3(KIOSK_POS.x, Y, KIOSK_POS.z).addScaledVector(normal, 0.06);
   const pt = { p: ABOUT, mesh, uniforms, tex, art, normal, center, amp: 0, kiosk: true, standOff: 4.4, pitch: 0.18 };
@@ -1241,7 +1241,7 @@ function hallTourStops() {
     stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
   stops.push({ center: slitStop.center, normal: slitStop.normal, standOff: 7, pitch: -0.12, line: 'The double-slit experiment.', sub: 'Light interfering, one photon at a time.' });
-  if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's kiosk.", sub: 'Step inside for experience, the resume and contact links.' });
+  if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's kiosk.", sub: 'Step inside for experience, the Resume and contact links.' });
   stops.push({ center: new THREE.Vector3(0, 3.2, ROOM.zMin), normal: new THREE.Vector3(0, 0, 1), standOff: ROOM.zMax - 2.4 - ROOM.zMin, pitch: 0.05, home: true,
     line: "That's the hall.", sub: 'Walk up to any display to step inside.' });
   return stops;
@@ -1269,13 +1269,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
     lines = [
-      ["This is the builder's room.", 'Each raised screen is a role from the resume.', 'hero'],
-      ['The resume is straight ahead.', 'Walk up and press E to open the PDF.', 'site'],
+      ["This is the builder's room.", 'Each raised screen is a role from the Resume.', 'hero'],
+      ['The Resume is straight ahead.', 'Walk up and press E to open the PDF.', 'site'],
       ['Want to get in touch?', 'Open Details for LinkedIn, GitHub and email.', null],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
-      ['site', 'The resume', 'Walk up and press E to open the full PDF.'],
+      ['site', 'The Resume', 'Walk up and press E to open the full PDF.'],
       ['hero', 'Experience', 'Each big screen is a role; the middle one is the summary.'],
       ['portal', 'Thanks for visiting.', 'Details has LinkedIn, GitHub and email.']];
   } else {
@@ -2329,11 +2329,11 @@ function tick() {
         vee.lastReact = near;
         if (!vee.reacted.has(near.p.id)) {
           vee.reacted.add(near.p.id); vee.tourK = vee.tour.length - 1;
-          if (near.kiosk) vee.say("That's the builder's kiosk.", 'Press E for experience, the resume and contact links.', null, near.center);
+          if (near.kiosk) vee.say("That's the builder's kiosk.", 'Step inside for experience, the Resume and contact links.', null, near.center);
           else vee.say(`That's ${near.p.name}.`, `${near.p.tagline}. Press E to step inside.`.replace('..', '.'), null, near.center);
         }
       } else if (vee && !near) vee.lastReact = null;
-      if (near && mode === 'walk' && !tour) {
+      if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
         promptEl.innerHTML = `<span>Press E or tap to enter</span><b style="font-weight:400">${esc(near.p.promptName || near.p.name)}</b>`; promptEl.hidden = false;
       } else promptEl.hidden = true;
     }
