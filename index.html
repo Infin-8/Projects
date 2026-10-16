@@ -755,7 +755,11 @@ function clickAt(x, y) {
 }
 
 // in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
-function worldAct(st, uv) { if (st.portal) enter(st, uv); else if (st.site) openSite(st.site.url); else showStation(st); }
+function worldAct(st, uv) {
+  if (st.portal) enter(st, uv);
+  else if (st.site) { if (st.uniforms) { st.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5)); st.burst = 1; } openSite(st.site.url); }
+  else showStation(st);
+}
 function openSite(url) {   // runs inside the click or key press, so the browser allows the new tab
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.click();
 }
@@ -1317,7 +1321,10 @@ function buildProductWorld(p) {
     const W3 = slot.w, H3 = W3 * 860 / 1280;
     const frame = new THREE.Group(); frame.position.y = slot.y; g.add(frame);
     frame.add(new THREE.Mesh(new THREE.BoxGeometry(W3 + 0.16, H3 + 0.16, 0.12), bezel));
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3), new THREE.MeshBasicMaterial({ map: siteTex })); scr.position.z = 0.062; frame.add(scr);
+    // same ripple surface as the hall's displays: it stirs as you walk up and swells when you open the site
+    const siteU = { map: { value: siteTex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: W3 / H3 } };
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3, 96, 64), new THREE.ShaderMaterial({ uniforms: siteU, vertexShader: vert, fragmentShader: frag }));
+    scr.position.z = 0.13; frame.add(scr);   // clear of the bezel, so the waves never dip behind it
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, slot.y - H3 / 2, 12), pedMat); post.position.y = (slot.y - H3 / 2) / 2; g.add(post);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.08, 32), pedMat); base.position.y = 0.04; g.add(base);
     const glowM = new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.8 });
@@ -1326,7 +1333,15 @@ function buildProductWorld(p) {
     const top = slot.y + H3 / 2;
     const k = slot.labelScale;   // bigger when it is the far centre screen
     const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', p.theme.brand ? `700 30px ${p.theme.brand.font}` : '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 3.4 * k); cta.position.set(0, slot.y - H3 / 2 - 0.35, 0.25); g.add(cta);
-    addStation(g, { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: slot.standOff, pitch: slot.pitch }, slot.y);
+    const siteSt = { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: slot.standOff, pitch: slot.pitch, uniforms: siteU, amp: 0, burst: 0 };
+    addStation(g, siteSt, slot.y);
+    updates.push((dt, t) => {
+      siteSt.burst = Math.max(0, siteSt.burst - dt * 0.9);
+      siteSt.amp += ((near === siteSt ? 0.025 : 0) + 0.07 * siteSt.burst - siteSt.amp) * Math.min(1, dt * 5);   // gentler than the hall: you stand much closer
+      if (near !== siteSt && siteSt.burst === 0) siteU.uHit.value.lerp(new THREE.Vector2(.5, .5), dt);
+      siteU.uAmp.value = reduceMotion ? Math.min(siteSt.amp, 0.02) : siteSt.amp;
+      siteU.uGlow.value = 0.2 * siteSt.burst; siteU.uTime.value = t;
+    });
   }
   const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
 
