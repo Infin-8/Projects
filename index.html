@@ -2221,7 +2221,7 @@ function startTour() {
 function nextStop() {
   if (!tour) return;
   tour.i++;
-  if (tour.i >= tour.stops.length) { endTour(); return; }
+  if (tour.i >= tour.stops.length) { endTour(); returnToStart(); return; }
   const s = tour.stops[tour.i], g = tourGuide();
   tour.arrived = false; tour.t = 0; tour.auto = true;
   // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
@@ -2238,6 +2238,18 @@ function nextStop() {
   // a moderate tilt keeps both Vee and what she's showing in frame, even for high things like the chandelier
   walkTo({ exhibit: true, tourStop: true, center: s.center, normal: s.normal, standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
   renderTourBar();
+}
+// a finished tour brings you back to where this room starts: the hall entrance, or the world's arrival spot
+function returnToStart() {
+  if (world) {
+    player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
+    mode = 'walk'; auto = null; near = null; promptEl.hidden = true;
+    if (world.vee) { world.vee.heading = player.yaw; world.vee.lastP = null; world.vee.body.position.copy(veeFollowSpot(world.vee)); world.vee.waveT = 2.4; }
+  } else {
+    resetView();
+    if (vee) { vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; }
+  }
+  flash.style.opacity = 0.6; setTimeout(() => { flash.style.opacity = 0; }, 120);   // a quick blink to mark the jump
 }
 function endTour() {
   if (!tour) return;
