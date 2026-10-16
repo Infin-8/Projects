@@ -853,10 +853,10 @@ function updateMascot(dt, t) {
 
 // In a world: Vee greets you and talks you through the room, one tip per press
 function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
-  const short = p.name.replace(/STEADYWATCH™\s*/, 'STEADYWATCH™ ').replace('STEADYWATCH™ PLATFORM', 'the Platform').replace('STEADYWATCH™ HANDHELD', 'Handheld');
+  const short = p.name;   // always the full product name, e.g. STEADYWATCH™ HANDHELD
   let lines;
   if (kind === 'platform') lines = [
-    ['Welcome to the Platform.', 'Follow the bits from the cryostat to the key.'],
+    ['Welcome to STEADYWATCH™ PLATFORM.', 'Follow the bits from the cryostat to the key.'],
     ['Each station has details.', 'Walk up to one and press E, or tap it.'],
     ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.'],
     ['Ready to head back?', 'The exit display is on your left.']];
