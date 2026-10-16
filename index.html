@@ -1491,10 +1491,6 @@ PROJECTS.forEach((p, i) => {
   b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
 }
 const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
-{
-  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-double-slit';
-  b.textContent = 'Double slit'; b.addEventListener('click', () => walkTo(slitStop)); dir.appendChild(b);
-}
 const promptEl = document.getElementById('prompt');
 // Show the small indicator floating just above the thing you're near (projected to the screen)
 const touchUI = matchMedia('(pointer: coarse)').matches, _ip = new THREE.Vector3();
