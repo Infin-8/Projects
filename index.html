@@ -1100,6 +1100,64 @@ function updateVee(v, dt, t) {
     pg.ring.scale.setScalar(1 + 5 * k); pg.ringM.opacity = 0.9 * (1 - k); pg.beamM.opacity = 0.3 * (1 - k);
   }
 }
+/* ---------- The Builder's kiosk ----------
+   A freestanding podium by the entrance (the walls stay free for future apps) with a portrait
+   screen that ripples like the displays and leads into the About world. */
+const KIOSK_POS = new THREE.Vector3(-4.3, 0, 4.2);   // in view on your left as you arrive
+let kiosk = null;
+function kioskCanvas() {
+  const c = mk(768, 1024), g = c.getContext('2d');
+  const bgG = g.createLinearGradient(0, 0, 0, 1024); bgG.addColorStop(0, '#141826'); bgG.addColorStop(1, '#070910');
+  g.fillStyle = bgG; g.fillRect(0, 0, 768, 1024);
+  g.drawImage(makeMonogram(), 194, 70, 380, 380);
+  g.textAlign = 'center';
+  g.fillStyle = '#3fe0e0'; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText('THE BUILDER', 384, 520);
+  g.fillStyle = '#f1e6cf'; g.font = '64px "Young Serif", Georgia, serif'; g.fillText('Nathaniel', 384, 610); g.fillText('Vazquez', 384, 684);
+  g.fillStyle = '#c9d2e3'; g.font = '32px "IBM Plex Sans", sans-serif'; g.fillText('Software Engineer', 384, 750); g.fillText('Founder of Quantum V^', 384, 794);
+  g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('EXPERIENCE · RESUME · CONTACT', 384, 880);
+  g.fillStyle = '#3fe0e0'; g.font = '28px "IBM Plex Sans", sans-serif'; g.fillText('Step inside ▸', 384, 950);
+  return c;
+}
+function buildKiosk() {
+  const normal = new THREE.Vector3(0 - KIOSK_POS.x, 0, 8.5 - KIOSK_POS.z).normalize();
+  const group = new THREE.Group(); group.position.copy(KIOSK_POS); group.rotation.y = Math.atan2(normal.x, normal.z); scene.add(group);
+  const podMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 });
+  const podium = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.9, 0.5, 40), podMat); podium.position.y = 0.25; group.add(podium);
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.02, 8, 80), new THREE.MeshBasicMaterial({ color: 0x3fe0e0 })); trim.rotation.x = Math.PI / 2; trim.position.y = 0.5; group.add(trim);
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.12), podMat); post.position.y = 0.85; group.add(post);
+  // the portrait screen, with the same ripple surface as the wall displays
+  const W = 1.35, H = W * 1024 / 768, Y = 1.2 + H / 2;
+  const art = kioskCanvas(), tex = new THREE.CanvasTexture(art); tex.anisotropy = 8;
+  const uniforms = { map: { value: tex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: W / H } };
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H, 48, 64), new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag }));
+  mesh.position.set(0, Y, 0.06); group.add(mesh);
+  const ft = 0.07;
+  [[W + ft * 2, ft, 0, H / 2 + ft / 2], [W + ft * 2, ft, 0, -H / 2 - ft / 2], [ft, H, -W / 2 - ft / 2, 0], [ft, H, W / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.08), gold); f.position.set(x, Y + y, 0.05); group.add(f);
+  });
+  const back = new THREE.Mesh(new THREE.BoxGeometry(W + 0.14, H + 0.14, 0.04), podMat); back.position.set(0, Y, 0); group.add(back);
+  // a holographic emblem spinning above it
+  const emblem = new THREE.Group(); emblem.position.y = Y + H / 2 + 0.55; group.add(emblem);
+  const ringM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending });
+  const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 8, 64), ringM), r2 = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.01, 8, 64), ringM);
+  r2.rotation.x = Math.PI / 2; emblem.add(r1, r2);
+  const nc = mk(256, 256), ng = nc.getContext('2d'); ng.fillStyle = '#c8fbff'; ng.font = '120px "Young Serif", Georgia, serif'; ng.textAlign = 'center'; ng.textBaseline = 'middle'; ng.fillText('NV', 128, 138);
+  const nv = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(nc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); nv.scale.set(0.34, 0.34, 1); emblem.add(nv);
+  const label = stationLabel('THE BUILDER', 'About & resume'); label.scale.multiplyScalar(0.62); label.position.y = Y + H / 2 + 1.25; group.add(label);
+  const light = new THREE.PointLight(0x7fe8ff, 0.8, 6, 2); light.position.set(0, Y, 1.4); group.add(light);
+  const center = new THREE.Vector3(KIOSK_POS.x, Y, KIOSK_POS.z).addScaledVector(normal, 0.06);
+  const pt = { p: ABOUT, mesh, uniforms, tex, art, normal, center, amp: 0, kiosk: true, standOff: 4.4, pitch: 0.18 };
+  mesh.userData.project = ABOUT;
+  paintings.push(pt);
+  kiosk = { pt, emblem, r1, r2 };
+}
+function updateKiosk(dt, t) {
+  if (!kiosk) return;
+  const m = reduceMotion ? 0.15 : 1;
+  kiosk.emblem.rotation.y += dt * 0.9 * m; kiosk.r1.rotation.y += dt * 0.6 * m; kiosk.r2.rotation.z += dt * 1.1 * m;
+  kiosk.emblem.position.y += (Math.sin(t * 1.4) * 0.0015) * m;
+}
+
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
 const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'about'];
@@ -1137,7 +1195,7 @@ function buildMascot() {
     ['Walk up to a display and step inside.', 'Every product has its own world to explore.', kz ? kz.center : null],
     ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.', new THREE.Vector3(0, ROOM.h - 2.4, 1.5)],
     ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.', new THREE.Vector3(0, SLIT.y, SLIT.z - 0.2)],
-    ['Want a guided tour, or to meet the builder?', 'Press T for the tour, or tap me to meet the builder.', null]];
+    ['Want a guided tour?', "Press T. The builder's kiosk is by the entrance.", kiosk ? kiosk.pt.center : null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
     vee.tour = [
@@ -1150,20 +1208,20 @@ function buildMascot() {
   vee.sayTour();
   const pt = { p: ABOUT, mesh: vee.hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
     art: makeMonogram(), normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
-  vee.hitM.userData.project = ABOUT;
-  paintings.push(pt); vee.pt = pt;
+  vee.pt = pt;   // only for her glow; she no longer leads into the About world
   // back from a world: a word on how much you've explored, pointing at what's next
   vee.sayExplored = () => {
     const u = unseenWorlds(), n = WORLD_IDS.length - u.length;
     vee.tourK = vee.tour.length - 1; vee.tourT = 0;
-    if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting. Tap me any time to meet the builder.', null, null); return; }
-    const next = u[0], tgt = next === 'about' ? null : paintings.find(q => q.p.id === next);
-    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? 'Next up: tap me to meet the builder.' : `Next up: ${WORLD_NAMES[next]}.`, null, tgt ? tgt.center : null);
+    if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); return; }
+    const next = u[0], tgt = paintings.find(q => q.p.id === next);
+    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's kiosk by the entrance." : `Next up: ${WORLD_NAMES[next]}.`, null, tgt ? tgt.center : null);
   };
   vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
   renderExplored();
 }
 function updateMascot(dt, t) {
+  updateKiosk(dt, t);
   if (!vee) return;
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
   // she's the way into the About world, so her record follows her around
@@ -1183,8 +1241,9 @@ function hallTourStops() {
     stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
   stops.push({ center: slitStop.center, normal: slitStop.normal, standOff: 7, pitch: -0.12, line: 'The double-slit experiment.', sub: 'Light interfering, one photon at a time.' });
+  if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's kiosk.", sub: 'Step inside for experience, the resume and contact links.' });
   stops.push({ center: new THREE.Vector3(0, 3.2, ROOM.zMin), normal: new THREE.Vector3(0, 0, 1), standOff: ROOM.zMax - 2.4 - ROOM.zMin, pitch: 0.05, home: true,
-    line: "That's the hall.", sub: 'Tap me any time to meet the builder.' });
+    line: "That's the hall.", sub: 'Walk up to any display to step inside.' });
   return stops;
 }
 
@@ -1280,7 +1339,7 @@ for (const ev of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'
 const HALL_HINTS = [
   ['Psst, want a guided tour?', 'Press T, or tap ▶ Tour.'],
   ['Each display opens a world.', 'Walk up to one and press E to step inside.'],
-  ['Curious who built all this?', 'Tap me to meet the builder.']];
+  ['Curious who built all this?', "Visit the builder's kiosk by the entrance."]];
 const WORLD_HINTS = [
   ['Want me to show you around?', 'Press T, or tap Tour.'],
   ['Tap any screen.', "I'll walk you over to it."],
@@ -1432,7 +1491,7 @@ PROJECTS.forEach((p, i) => {
 });
 {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
-  b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (vee && (mode === 'walk' || mode === 'auto')) enter(vee.pt); }); dir.appendChild(b);
+  b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
 }
 const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
 {
@@ -2232,6 +2291,8 @@ function tick() {
     } else {
       player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
       player.pos.z = Math.max(ROOM.zMin + 1, Math.min(ROOM.zMax - 0.8, player.pos.z));
+      const kx = player.pos.x - KIOSK_POS.x, kz = player.pos.z - KIOSK_POS.z, kd = Math.hypot(kx, kz);   // don't walk through the kiosk
+      if (kd < 1.1 && kd > 0.0001) { player.pos.x = KIOSK_POS.x + kx / kd * 1.1; player.pos.z = KIOSK_POS.z + kz / kd * 1.1; }
     }
     const bob = mv.lengthSq() > 0.01 && !reduceMotion ? Math.sin(t * 10) * 0.04 : 0;
     camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
@@ -2262,10 +2323,6 @@ function tick() {
         const d = pt.center.clone().sub(camera.position); d.y = 0;
         const dist = d.length(), facing = -d.normalize().dot(pt.normal);
         if (dist < best && facing > 0.3) { best = dist; near = pt; }
-      }
-      if (!near && vee && vee.scale > 0.9) {   // nothing else nearby: E meets the builder through Vee
-        const dx = vee.body.position.x - camera.position.x, dz = vee.body.position.z - camera.position.z, d = Math.hypot(dx, dz);
-        if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = vee.pt;
       }
       // the first time you walk up to a display, she points at it and says what it is
       if (vee && near && !near.mascot && !tour && mode === 'walk' && near !== vee.lastReact) {
@@ -2330,7 +2387,7 @@ Promise.all([
   document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
-  buildPaintings(); buildSlitExhibit(); buildMascot();
+  buildPaintings(); buildSlitExhibit(); buildKiosk(); buildMascot();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
   if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
