@@ -792,7 +792,10 @@ function makeVee(parent, pos, facing) {
   const headG = new THREE.Group(); headG.position.y = 1.66; fig.add(headG);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), holo); head.scale.set(1, 1.18, 1.02); headG.add(head);
   const visorM = new THREE.MeshBasicMaterial({ color: 0xe8ffff, opacity: 0.9, side: THREE.DoubleSide, ...addBlend });
-  const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.122, 0.122, 0.022, 24, 1, true, -0.95, 1.9), visorM); visor.position.y = 0.018; headG.add(visor);
+  for (const sx of [-1, 1]) {   // two short vertical eyes, set into the curve of the face
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.013, 0.03, 0.008), visorM);
+    eye.position.set(0.036 * sx, 0.016, 0.111); eye.rotation.y = 0.32 * sx; headG.add(eye);
+  }
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 12, 0, Math.PI * 2, 0, 1.2), hair); cap.scale.set(1.02, 1.18, 1.06); cap.position.set(0, 0.012, -0.012); headG.add(cap);
   limb(headG, V(0, 0.06, -0.1), V(0, -0.2, -0.115), 0.07, 0.028, hair);          // hair swept back
   limb(headG, V(0.085, 0.1, 0.07), V(0.128, -0.07, 0.045), 0.03, 0.011, hair);   // one side bang
@@ -1912,17 +1915,19 @@ function nextStop() {
   if (tour.i >= tour.stops.length) { endTour(); return; }
   const s = tour.stops[tour.i], g = tourGuide();
   tour.arrived = false; tour.t = 0; tour.auto = true;
-  const stand = s.center.clone().addScaledVector(s.normal, s.standOff); stand.y = 0;
+  // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
+  const standOff = s.standOff + (world && (s.pitch ?? 0) > 0.3 ? 0 : 1.3);
+  const stand = s.center.clone().addScaledVector(s.normal, standOff); stand.y = 0;
   if (s.home) g.bodyTarget = null;
   else {   // she floats beside you: a little to your left and a step toward what you're looking at
     const toT = s.center.clone().sub(stand).setY(0).normalize(), left = new THREE.Vector3(toT.z, 0, -toT.x);
-    const ahead = Math.min(3.2, s.standOff * 0.6);   // far enough ahead to sit comfortably in view, never past what you're looking at
+    const ahead = Math.min(3.4, standOff * 0.55);   // far enough ahead to sit comfortably in view, never past what you're looking at
     g.bodyTarget = stand.clone().addScaledVector(left, Math.max(1, ahead * 0.45)).addScaledVector(toT, ahead);   // about 25° to your left
   }
   g.say(s.line, s.sub, `Tour ${tour.i + 1} / ${tour.stops.length}`, s.home ? null : (s.point || s.center));
   if (world) highlightStation(s.panelId || null);
   // a moderate tilt keeps both Vee and what she's showing in frame, even for high things like the chandelier
-  walkTo({ exhibit: true, tourStop: true, center: s.center, normal: s.normal, standOff: s.standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
+  walkTo({ exhibit: true, tourStop: true, center: s.center, normal: s.normal, standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
   renderTourBar();
 }
 function endTour() {
@@ -2003,7 +2008,7 @@ function tick() {
     camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
     camera.rotation.set(0, 0, 0, 'YXZ'); camera.rotation.order = 'YXZ';
     camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
-    camera.fov += (baseFov - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();
+    camera.fov += (baseFov + (tour ? 14 : 0) - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();   // zoomed out while touring
 
     // proximity
     near = null; let best = 5.2;
