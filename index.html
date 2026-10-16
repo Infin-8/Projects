@@ -892,7 +892,12 @@ function makeVee(parent, pos, facing) {
   limb(shoulder, V(0, 0), V(0.045, -0.27), 0.048, 0.04);
   const elbow = new THREE.Group(); elbow.position.set(0.045, -0.27, 0); shoulder.add(elbow);
   limb(elbow, V(0, 0), V(0.015, -0.24), 0.04, 0.032);
-  for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.068, 0.05); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.05, 0.038); }
+  const knees = [-1, 1].map(sx => {   // each lower leg hangs from a knee joint so it can bend
+    limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.068, 0.05);
+    const knee = new THREE.Group(); knee.position.set(0.09 * sx, 0.56, 0); fig.add(knee);
+    limb(knee, V(0, 0), V(0, -0.38), 0.05, 0.038);
+    return knee;
+  });
   // the swarm: each body part carries its share of drones as a child, so they move with her
   const droneU = { uTime: holoU.uTime, uDim: holoU.uDim, uGlow: holoU.uGlow, uPx: { value: 800 }, uSize: { value: 0.008 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff).multiplyScalar(0.55) } };
   const droneMat = new THREE.ShaderMaterial({ uniforms: droneU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -957,7 +962,7 @@ function makeVee(parent, pos, facing) {
   hitM.position.y = 1.15; body.add(hitM);
   const normal = facing.clone().setY(0).normalize(), restYaw = Math.atan2(normal.x, normal.z);
   fig.rotation.y = restYaw;
-  const v = { parent, pad, body, fig, headG, mouth, eyes, shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
+  const v = { parent, pad, body, fig, headG, mouth, eyes, knee: knees[0], shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
     droneU, follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null, motes, moteData, moteSpeed: 1,
     pool, poolM, floorSwarm, floorData, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 6 + Math.random() * 5, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
@@ -1087,6 +1092,9 @@ function updateVee(v, dt, t) {
   } else {
     v.shoulder.rotation.x *= 1 - L; v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9;
   }
+  // while she waves, she pops her left foot back with a single knee bend
+  const waveK = v.waveT > 0 && !pointing ? Math.max(0, Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5)) : 0;
+  v.knee.rotation.x += (1.05 * waveK * (reduceMotion ? 0.4 : 1) - v.knee.rotation.x) * Math.min(1, dt * 10);
   // left arm and head: gesture and nod while she talks, glance around when idle
   v.shoulderL.rotation.x += ((talking ? -0.45 - 0.18 * Math.sin(t * 7) * m : 0) - v.shoulderL.rotation.x) * L;
   v.elbowL.rotation.x += ((talking ? -0.6 : 0) - v.elbowL.rotation.x) * L;
