@@ -1361,7 +1361,7 @@ function buildProductWorld(p) {
   };
 }
 
-let panelOpenLarge = true;
+let panelOpenLarge = false;   // the world panel starts hidden; Details opens it, and that choice carries over between worlds
 function renderWorldPanel(pt) {
   const p = pt.p;
   worldPanel.style.setProperty('--wp-accent', world.accent); worldPanel.style.setProperty('--wp-accent2', world.accent2);
@@ -1391,7 +1391,7 @@ function renderWorldPanel(pt) {
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
     </div>`;
-  const small = matchMedia('(max-width: 760px)').matches;   // phones start collapsed; large screens remember the last choice
+  const small = matchMedia('(max-width: 760px)').matches;   // phones always start collapsed; large screens start hidden and remember the last choice
   worldPanel.classList.toggle('collapsed', small);
   const tog = worldPanel.querySelector('#wpToggle');
   const setOpen = open => {
