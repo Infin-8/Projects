@@ -169,7 +169,16 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 #worldPanel .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--wp-accent); }
 #worldPanel h2 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
 #worldPanel .wp-tag { margin: 0; color: var(--wp-accent2); font-size: 15px; }
-#worldPanel .wp-toggle { display: none; }
+#worldPanel .wp-toggle { font-family: var(--mono); font-size: 12px; background: transparent; color: var(--wp-accent); border: 1px solid var(--wp-accent); border-radius: 2px; padding: 8px 10px; cursor: pointer; align-self: start; }
+#worldPanel .wp-toggle:hover, #worldPanel .wp-toggle:focus-visible { background: color-mix(in srgb, var(--wp-accent) 12%, transparent); outline: none; }
+#worldPanel.collapsed .wp-body { display: none; }
+/* collapsed on a large screen: just the header, as a card in the top-right corner, and the 3D view uses the full width */
+@media (min-width: 761px) {
+  #worldPanel.collapsed { bottom: auto; width: min(420px, calc(100% - 32px)); top: calc(16px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px; border: 1px solid color-mix(in srgb, var(--wp-accent) 22%, transparent); border-radius: 4px; }
+  #worldPanel.collapsed .wp-tag { display: none; }
+  #worldPanel.collapsed .wp-logo { width: 44px; height: 44px; }
+  #worldPanel.collapsed h2 { font-size: 20px; }
+}
 #worldPanel .wp-body { display: grid; gap: 16px; }
 #worldPanel .wp-desc { margin: 0; font-size: 14px; line-height: 1.55; color: #c9d2e3; }
 #worldPanel .wp-stations { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -200,8 +209,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   #worldPanel .wp-logo { width: 42px; height: 42px; }
   #worldPanel h2 { font-size: 20px; }
   #worldPanel .wp-tag { display: none; }
-  #worldPanel .wp-toggle { display: block; font-family: var(--mono); font-size: 12px; background: transparent; color: var(--wp-accent); border: 1px solid var(--wp-accent); border-radius: 2px; padding: 8px 10px; cursor: pointer; }
-  #worldPanel.collapsed .wp-body { display: none; }
+  #worldPanel .wp-toggle { align-self: center; }
   body.in-world #prompt { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
 /* Branded products (KaizenDoku): system font, heavy weights, card colours and gradient title from the product's own site */
@@ -1338,6 +1346,7 @@ function buildProductWorld(p) {
   };
 }
 
+let panelOpenLarge = true;
 function renderWorldPanel(pt) {
   const p = pt.p;
   worldPanel.style.setProperty('--wp-accent', world.accent); worldPanel.style.setProperty('--wp-accent2', world.accent2);
@@ -1367,12 +1376,15 @@ function renderWorldPanel(pt) {
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
     </div>`;
-  const small = matchMedia('(max-width: 760px)').matches;
+  const small = matchMedia('(max-width: 760px)').matches;   // phones start collapsed; large screens remember the last choice
   worldPanel.classList.toggle('collapsed', small);
   const tog = worldPanel.querySelector('#wpToggle');
-  const setOpen = open => { worldPanel.classList.toggle('collapsed', !open); tog.setAttribute('aria-expanded', String(open)); tog.textContent = open ? 'Hide' : 'Details'; };
-  setOpen(!small);
-  tog.addEventListener('click', () => setOpen(worldPanel.classList.contains('collapsed')));
+  const setOpen = open => {
+    worldPanel.classList.toggle('collapsed', !open); tog.setAttribute('aria-expanded', String(open)); tog.textContent = open ? 'Hide' : 'Details';
+    resize();
+  };
+  setOpen(small ? false : panelOpenLarge);
+  tog.addEventListener('click', () => { const open = worldPanel.classList.contains('collapsed'); if (!matchMedia('(max-width: 760px)').matches) panelOpenLarge = open; setOpen(open); });
   worldPanel.querySelector('#wpBack').addEventListener('click', exitWorld);
   worldPanel.querySelector('#wpPage').addEventListener('click', () => { mode = 'inside'; openRoom(pt); });
   worldPanel.querySelectorAll('.st').forEach(b => b.addEventListener('click', () => {
@@ -1417,7 +1429,7 @@ function exitWorld() {
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight;
   // with the world panel docked on the right, shift the view so its centre sits in the visible part
-  const docked = world && !worldPanel.hidden && !matchMedia('(max-width: 760px)').matches;
+  const docked = world && !worldPanel.hidden && !worldPanel.classList.contains('collapsed') && !matchMedia('(max-width: 760px)').matches;
   if (docked) camera.setViewOffset(innerWidth, innerHeight, worldPanel.offsetWidth / 2, 0, innerWidth, innerHeight); else camera.clearViewOffset();
   if (world) {
     const visW = docked ? innerWidth - worldPanel.offsetWidth : innerWidth;
