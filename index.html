@@ -1383,7 +1383,7 @@ function renderWorldPanel(pt) {
       <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
-      <h3 class="wp-sub">Modules · one screen each</h3>
+      <h3 class="wp-sub">Features</h3>
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
       ${p.site ? `<h3 class="wp-sub">Website</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the centre screen in front of you. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
