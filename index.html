@@ -739,15 +739,16 @@ void main(){
   float fade = smoothstep(0.12, 0.7, vY);                                 // the legs dissolve into the beam
   gl_FragColor = vec4(uColor * (0.16 + 1.25 * f) * scan * flick * (1.0 + 2.0 * uGlow) * fade, 1.0);
 }`;
-function buildMascot() {
-  const root = new THREE.Group(); root.position.copy(VEE_POS); scene.add(root);
+// Builds one Vee in any scene. facing: the direction she rests facing. Returns a handle for updateVee().
+function makeVee(parent, pos, facing) {
+  const root = new THREE.Group(); root.position.copy(pos); parent.add(root);
   const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uColor: { value: new THREE.Color(0x5ff0ff) } };
   const holo = new THREE.ShaderMaterial({ uniforms: holoU, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const up = new THREE.Vector3(0, 1, 0);
-  function limb(parent, a, b, r0, r1) {
+  function limb(par, a, b, r0, r1) {
     const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), holo);
-    m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(up, d.clone().normalize()); parent.add(m);
-    const j = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), holo); j.position.copy(b); parent.add(j);
+    m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(up, d.clone().normalize()); par.add(m);
+    const jn = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), holo); jn.position.copy(b); par.add(jn);
   }
   const V = (x, y, z = 0) => new THREE.Vector3(x, y, z);
 
@@ -777,47 +778,93 @@ function buildMascot() {
   for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.07, 0.052); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.052, 0.04); }
   const rings = [0.62, 1.22].map((y, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - i * 0.06, 0.008, 6, 80), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); r.position.y = y; r.rotation.x = Math.PI / 2 + 0.25; root.add(r); return r; });
 
-  // name and speech bubble
+  // name and speech bubble (redrawn for each line)
   const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; root.add(name);
-  const bc = mk(1024, 300), bg = bc.getContext('2d');
-  bg.fillStyle = 'rgba(8,10,18,0.82)'; rr(bg, 10, 10, 1004, 230, 40); bg.fill();
-  bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, 10, 1004, 230, 40); bg.stroke();
-  bg.beginPath(); bg.moveTo(470, 238); bg.lineTo(512, 290); bg.lineTo(554, 238); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.82)'; bg.fill(); bg.stroke();
-  bg.fillStyle = '#f1e6cf'; bg.font = '60px "Young Serif", Georgia, serif'; bg.textAlign = 'center'; bg.fillText("Hi, I'm Vee.", 512, 105);
-  bg.fillStyle = '#5ff0ff'; bg.font = '44px "IBM Plex Sans", sans-serif'; bg.fillText('Want to meet the builder?', 512, 180);
-  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(bc), transparent: true, depthWrite: false, opacity: 0 }));
+  const bc = mk(1024, 300), bg = bc.getContext('2d'), bubbleTex = new THREE.CanvasTexture(bc);
+  function setLine(title, sub, step) {
+    bg.clearRect(0, 0, 1024, 300);
+    bg.fillStyle = 'rgba(8,10,18,0.95)'; rr(bg, 10, 10, 1004, 230, 40); bg.fill();
+    bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, 10, 1004, 230, 40); bg.stroke();
+    bg.beginPath(); bg.moveTo(470, 238); bg.lineTo(512, 290); bg.lineTo(554, 238); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.95)'; bg.fill(); bg.stroke();
+    bg.textAlign = 'center';
+    let px = 60; do { bg.font = `${px}px "Young Serif", Georgia, serif`; } while (bg.measureText(title).width > 940 && --px > 30);
+    bg.fillStyle = '#f1e6cf'; bg.fillText(title, 512, 105);
+    px = 44; do { bg.font = `${px}px "IBM Plex Sans", sans-serif`; } while (bg.measureText(sub).width > 940 && --px > 24);
+    bg.fillStyle = '#5ff0ff'; bg.fillText(sub, 512, 180);
+    if (step) { bg.fillStyle = '#8e99b0'; bg.font = '600 24px "IBM Plex Mono", monospace'; bg.textAlign = 'right'; bg.fillText(step, 984, 226); }
+    bubbleTex.needsUpdate = true;
+  }
+  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, opacity: 0 }));
   bubble.scale.set(1.9, 0.56, 1); bubble.position.set(0, 2.32, 0); root.add(bubble);
 
-  // invisible hit target, and the display-like record the hall uses for walk-up, prompt and the dive
+  // invisible hit target
   const hitM = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.3, 12), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
   hitM.position.y = 1.15; root.add(hitM);
-  const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
-  const art = makeMonogram();
-  const pt = { p: ABOUT, mesh: hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
-    art, normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
-  hitM.userData.project = ABOUT;
-  paintings.push(pt);
+  const normal = facing.clone().setY(0).normalize();
   fig.rotation.y = Math.atan2(normal.x, normal.z);
-  vee = { root, fig, shoulder, elbow, rings, bubble, holoU, pt, waveT: 0, wasNear: false };
+  return { root, fig, shoulder, elbow, rings, bubble, holoU, hitM, pos: pos.clone(), normal, setLine, waveT: 0, wasNear: false, glow: 0 };
 }
-function updateMascot(dt, t) {
-  if (!vee) return;
+function updateVee(v, dt, t) {
   const m = reduceMotion ? 0.2 : 1, cam = camera.position;
-  const dx = cam.x - VEE_POS.x, dz = cam.z - VEE_POS.z, dist = Math.hypot(dx, dz);
-  const want = dist < 9 ? Math.atan2(dx, dz) : Math.atan2(vee.pt.normal.x, vee.pt.normal.z);
-  let d = want - vee.fig.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); vee.fig.rotation.y += d * Math.min(1, dt * 3);
-  vee.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
+  const dx = cam.x - v.pos.x, dz = cam.z - v.pos.z, dist = Math.hypot(dx, dz);
+  const want = dist < 9 ? Math.atan2(dx, dz) : Math.atan2(v.normal.x, v.normal.z);
+  let d = want - v.fig.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); v.fig.rotation.y += d * Math.min(1, dt * 3);
+  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
   const isNear = dist < 5.5;
-  if (isNear && !vee.wasNear) vee.waveT = 2.4;              // wave hello on the way in
-  vee.wasNear = isNear;
-  if (vee.waveT > 0) {
-    vee.waveT -= dt; const k = Math.min(1, Math.min(2.4 - vee.waveT, vee.waveT) * 2.5);
-    vee.shoulder.rotation.z = 2.5 * k; vee.elbow.rotation.z = (0.5 + 0.45 * Math.sin(t * 9) * m) * k;
-  } else { vee.shoulder.rotation.z *= 0.9; vee.elbow.rotation.z *= 0.9; }
-  vee.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.6 : 0.8) * m; });
-  vee.bubble.material.opacity += ((isNear ? 1 : 0) - vee.bubble.material.opacity) * Math.min(1, dt * 4);
-  vee.bubble.position.y = 2.32 + Math.sin(t * 1.6) * 0.03 * m;
-  vee.holoU.uTime.value = t; vee.holoU.uGlow.value = vee.pt.amp;
+  if (isNear && !v.wasNear) v.waveT = 2.4;              // wave hello on the way in
+  v.wasNear = isNear;
+  if (v.waveT > 0) {
+    v.waveT -= dt; const k = Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5);
+    v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.45 * Math.sin(t * 9) * m) * k;
+  } else { v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9; }
+  v.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.6 : 0.8) * m; });
+  v.bubble.material.opacity += ((isNear ? 1 : 0) - v.bubble.material.opacity) * Math.min(1, dt * 4);
+  v.bubble.position.y = 2.32 + Math.sin(t * 1.6) * 0.03 * m;
+  v.holoU.uTime.value = t; v.holoU.uGlow.value = v.glow;
+}
+// In the hall: Vee by the entrance leads into the About world
+function buildMascot() {
+  const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
+  vee = makeVee(scene, VEE_POS, normal);
+  vee.setLine("Hi, I'm Vee.", 'Want to meet the builder?');
+  const pt = { p: ABOUT, mesh: vee.hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
+    art: makeMonogram(), normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
+  vee.hitM.userData.project = ABOUT;
+  paintings.push(pt); vee.pt = pt;
+}
+function updateMascot(dt, t) { if (vee) { vee.glow = vee.pt.amp; updateVee(vee, dt, t); } }
+
+// In a world: Vee greets you and talks you through the room, one tip per press
+function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
+  const short = p.name.replace(/STEADYWATCH™\s*/, 'STEADYWATCH™ ').replace('STEADYWATCH™ PLATFORM', 'the Platform').replace('STEADYWATCH™ HANDHELD', 'Handheld');
+  let lines;
+  if (kind === 'platform') lines = [
+    ['Welcome to the Platform.', 'Follow the bits from the cryostat to the key.'],
+    ['Each station has details.', 'Walk up to one and press E, or tap it.'],
+    ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.'],
+    ['Ready to head back?', 'The exit display is on your left.']];
+  else if (p.id === 'about') lines = [
+    ["This is the builder's room.", 'Each raised screen is a role from the resume.'],
+    ['The resume is straight ahead.', 'Walk up and press E to open the PDF.'],
+    ['Want to get in touch?', 'Open Details for LinkedIn, GitHub and email.'],
+    ['Ready to head back?', 'The exit display is on your left.']];
+  else {
+    lines = [[`Welcome to ${short}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`],
+             ['The features are up on the big screens.', 'Click one and I’ll walk you over.']];
+    if (p.links.some(([l]) => l === 'App Store')) lines.push(['Want the app?', 'The App Store screen is on your right.']);
+    if (p.shots) lines.push(['See it in action.', 'App Store screenshots are on your left.']);
+    lines.push(['Ready to head back?', 'The exit display is past the screenshots.']);
+  }
+  const pos = new THREE.Vector3(startPos.x - 2.1, 0, startPos.z - 4.4);   // ahead and to the left, fully in view on arrival
+  const v = makeVee(ws, pos, new THREE.Vector3(startPos.x - pos.x, 0, startPos.z - pos.z));
+  let k = 0;
+  const say = () => v.setLine(lines[k][0], lines[k][1], `${k + 1} / ${lines.length}`);
+  say();
+  const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
+    center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
+  v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
+  updates.push((dt, t) => updateVee(v, dt, t));
+  return v;
 }
 
 /* ---------- Player ---------- */
@@ -889,6 +936,7 @@ function clickAt(x, y) {
 
 // in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
 function worldAct(st, uv) {
+  if (st.vee) { st.next(); return; }
   if (st.portal) enter(st, uv);
   else if (st.site) { if (st.uniforms) { st.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5)); st.burst = 1; } openSite(st.site.url); }
   else showStation(st);
@@ -1276,10 +1324,11 @@ function buildPlatformWorld() {
 
   // 7. Exit painting back to the hall
   const exit = makeExitPainting(ws, { R, angleDeg: -100, pedMat, hit, stations, updates });
+  const worldVee = addWorldVee(ws, PROJECTS.find(q => q.id === 'platform'), 'platform', hit, stations, updates, new THREE.Vector3(0, 1.7, 7.6));
   const portal = exit.portal, hallShot = exit.hallShot;
 
   return {
-    kind: 'platform', accent: '#3fe0e0', accent2: '#8ea2ff',
+    kind: 'platform', accent: '#3fe0e0', accent2: '#8ea2ff', vee: worldVee,
     scene: ws, stations, hit, radius: RADIUS, portal,
     start: { pos: new THREE.Vector3(0, 1.7, 7.6), yaw: 0, pitch: 0.1 },
     update(dt, t) { for (const u of updates) u(dt, t); },
@@ -1554,10 +1603,11 @@ function buildProductWorld(p) {
       siteU.uGlow.value = 0.2 * siteSt.burst; siteU.uTime.value = t;
     });
   }
+  const worldVee = addWorldVee(ws, p, 'product', hit, stations, updates, new THREE.Vector3(0, 1.7, 9.5));
   const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
 
   return {
-    kind: 'product', accent: p.theme.accent, accent2,
+    kind: 'product', accent: p.theme.accent, accent2, vee: worldVee,
     scene: ws, stations, hit, radius: RADIUS, portal: exit.portal,
     start: { pos: new THREE.Vector3(0, 1.7, 9.5), yaw: 0, pitch: 0.16 },
     update(dt, t) { for (const u of updates) u(dt, t); },
@@ -1686,7 +1736,7 @@ function tick() {
       const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
+      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
@@ -1695,6 +1745,7 @@ function tick() {
     if (world) {
       const r = Math.hypot(player.pos.x, player.pos.z);
       if (r > world.radius) player.pos.multiplyScalar(world.radius / r);
+      if (world.vee) { const vx = player.pos.x - world.vee.pos.x, vz = player.pos.z - world.vee.pos.z, vd = Math.hypot(vx, vz); if (vd < 0.8 && vd > 0.0001) { player.pos.x = world.vee.pos.x + vx / vd * 0.8; player.pos.z = world.vee.pos.z + vz / vd * 0.8; } }
       player.pos.y = 1.7;
     } else {
       player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
@@ -1718,7 +1769,7 @@ function tick() {
         if (d < reach && d - reach < best && facing > 0.35) { best = d - reach; near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
+      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.vee ? 'Press E or tap to talk to' : near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
