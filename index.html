@@ -348,7 +348,7 @@ const PROJECTS = [
 /* ---------- About (from the Software Engineer resume) ----------
    Not a wall display: Vee, the hall's holographic guide, leads into this world. */
 const ABOUT = {
-  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptName: 'About & Resume',
+  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptName: 'About & Resume', noBadge: true,   // no logo next to the name
   tagline: 'Software Engineer', wing: 'About',
   desc: 'Software engineer with a foundation in semiconductor manufacturing, enterprise operations and hands-on education, now building at the intersection of quantum computing and applied cryptography. Comfortable across the full stack, from low-level hardware and sensor data to backend APIs and polished mobile UI.',
   sectionTitle: 'Experience',
@@ -1471,12 +1471,12 @@ function esc(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 function openRoom(pt) {
   current = pt; const p = pt.p, t = p.theme;
   applyBrand(room, 'room', t.brand);
-  room.style.setProperty('--room-bg', t.bg); room.style.setProperty('--room-fg', t.fg); room.style.setProperty('--room-accent', t.accent); room.style.setProperty('--art-max', pt.art.width === pt.art.height ? '440px' : '100%');
+  room.style.setProperty('--room-bg', t.bg); room.style.setProperty('--room-fg', t.fg); room.style.setProperty('--room-accent', t.accent); const art = p.noBadge ? null : pt.art; if (art) room.style.setProperty('--art-max', art.width === art.height ? '440px' : '100%');
   room.innerHTML = `
     <div class="room-inner">
       <div class="room-top"><span class="room-eyebrow">${esc(p.wing)} wing</span><button id="exit" type="button">${world ? '← Back to the world' : '← Back to the hall'}</button></div>
       <div><h2>${esc(p.name)}</h2><p class="tagline">${taglineHTML(p)}</p></div>
-      <canvas class="art" width="${pt.art.width}" height="${pt.art.height}"></canvas>
+      ${art ? `<canvas class="art" width="${art.width}" height="${art.height}"></canvas>` : ''}
       <p class="desc">${esc(p.desc)}</p>
       <ul class="modules">${p.modules.map(([k, v]) => `<li><b>${esc(t.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <div class="stack">${esc(p.stack)}</div>
@@ -1484,7 +1484,7 @@ function openRoom(pt) {
     </div>`;
   // app icons show as-is here, without the dark edge line drawn for the wall paintings
   const logo = p.id !== 'platform' && LOGOS[p.logo];
-  room.querySelector('canvas.art').getContext('2d').drawImage(logo || pt.art, 0, 0, pt.art.width, pt.art.height);
+  if (art) room.querySelector('canvas.art').getContext('2d').drawImage(logo || art, 0, 0, art.width, art.height);
   room.hidden = false; room.scrollTop = 0;
   room.querySelector('#exit').addEventListener('click', exitRoom);
   room.querySelector('#exit').focus();
@@ -2378,7 +2378,7 @@ function renderWorldPanel(pt) {
   applyBrand(worldPanel, 'wp', p.theme.brand);
   worldPanel.innerHTML = `
     <div class="wp-head">
-      <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
+      ${p.noBadge ? '' : `<img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">`}
       <div class="wp-titles">
         <h2>${esc(p.name).replace('™', '\u2060™')}</h2>
         <p class="wp-tag">${taglineHTML(p)}</p>
