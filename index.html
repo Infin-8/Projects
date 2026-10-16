@@ -268,6 +268,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">The gallery needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 (() => {
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1302,6 +1303,56 @@ function buildProductWorld(p) {
 
   const exit = makeExitPainting(ws, { R: 9, angleDeg: -112, pedMat, hit, stations, updates });
 
+  // App Store display on the right, mirroring the exit display: icon, name, a download button and a
+  // QR code a desktop visitor can scan with their iPhone. Acting on it opens the App Store listing.
+  const storeLink = p.links.find(([l]) => l === 'App Store');
+  if (storeLink) {
+    const url = storeLink[1], B = p.theme.brand, t = p.theme;
+    const font = (w, px) => B ? `${w} ${px}px ${B.font}` : (w >= 700 ? `${px}px "Young Serif", Georgia, serif` : `${w} ${px}px "IBM Plex Sans", sans-serif`);
+    const c = mk(1280, 860), g2 = c.getContext('2d');
+    const bgG = g2.createLinearGradient(0, 0, 0, 860); bgG.addColorStop(0, t.bg); bgG.addColorStop(1, '#05070b');
+    g2.fillStyle = bgG; g2.fillRect(0, 0, 1280, 860);
+    const logo = LOGOS[p.logo];
+    if (logo) { g2.save(); rr(g2, 80, 110, 300, 300, 66); g2.clip(); g2.drawImage(logo, 80, 110, 300, 300); g2.restore(); }
+    g2.fillStyle = t.accent; g2.font = font(700, 30); spacing(g2, 2); g2.fillText('AVAILABLE ON IPHONE', 80, 500); spacing(g2, 0);
+    g2.fillStyle = t.fg; g2.font = font(800, 64); wrapText(g2, p.name, 80, 580, 640, 70);
+    g2.fillStyle = B ? B.muted : t.fg; g2.globalAlpha = B ? 1 : 0.8; g2.font = font(400, 34); g2.fillText(p.tagline, 80, p.name.length > 14 ? 726 : 650); g2.globalAlpha = 1;
+    // download button
+    g2.fillStyle = '#ffffff'; rr(g2, 80, 770 - (p.name.length > 14 ? 0 : 68), 520, 74, 37); g2.fill();
+    g2.fillStyle = '#000000'; g2.font = font(700, 32); g2.textBaseline = 'middle'; g2.fillText('Download on the App Store', 120, 808 - (p.name.length > 14 ? 0 : 68)); g2.textBaseline = 'alphabetic';
+    // QR code panel
+    g2.fillStyle = '#ffffff'; rr(g2, 780, 110, 420, 420, 28); g2.fill();
+    if (window.qrcode) {
+      const qr = qrcode(0, 'M'); qr.addData(url); qr.make();
+      const nMod = qr.getModuleCount(), cell = Math.floor(360 / nMod), off = 780 + (420 - cell * nMod) / 2, offY = 110 + (420 - cell * nMod) / 2;
+      g2.fillStyle = '#000000';
+      for (let r = 0; r < nMod; r++) for (let q = 0; q < nMod; q++) if (qr.isDark(r, q)) g2.fillRect(off + q * cell, offY + r * cell, cell, cell);
+    }
+    g2.fillStyle = t.fg; g2.font = font(400, 28); g2.textAlign = 'center';
+    g2.fillText('Scan with your iPhone camera', 990, 590); g2.fillStyle = t.accent; g2.fillText('or walk up and press E', 990, 632); g2.textAlign = 'left';
+
+    const sg = place(112, 9), W4 = 3.2, H4 = W4 * 860 / 1280, Y4 = 2.15;
+    const frame = new THREE.Group(); frame.position.y = Y4; sg.add(frame);
+    frame.add(new THREE.Mesh(new THREE.BoxGeometry(W4 + 0.16, H4 + 0.16, 0.12), bezel));
+    const storeU = { map: { value: new THREE.CanvasTexture(c) }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: W4 / H4 } };
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W4, H4, 96, 64), new THREE.ShaderMaterial({ uniforms: storeU, vertexShader: vert, fragmentShader: frag }));
+    scr.position.z = 0.13; frame.add(scr);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, Y4 - H4 / 2, 12), pedMat); post.position.y = (Y4 - H4 / 2) / 2; sg.add(post);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.08, 32), pedMat); base.position.y = 0.04; sg.add(base);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.02, 8, 64), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.8 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; sg.add(ring);
+    const sl = new THREE.PointLight(A, 0.6, 7, 2); sl.position.set(0, 2.6, 1.8); sg.add(sl);
+    const lbl = stationLabel('GET THE APP', 'App Store', p.theme.accent, B); lbl.position.set(0, Y4 + H4 / 2 + 1.25, 0); sg.add(lbl);
+    const storeSt = { id: 'store', site: { url, label: 'App Store' }, info: { title: 'App Store' }, exhibit: true, standOff: 3.6, pitch: 0.08, uniforms: storeU, amp: 0, burst: 0 };
+    addStation(sg, storeSt, Y4);
+    updates.push((dt, tt) => {
+      storeSt.burst = Math.max(0, storeSt.burst - dt * 0.9);
+      storeSt.amp += ((near === storeSt ? 0.025 : 0) + 0.07 * storeSt.burst - storeSt.amp) * Math.min(1, dt * 5);
+      if (near !== storeSt && storeSt.burst === 0) storeU.uHit.value.lerp(new THREE.Vector2(.5, .5), dt);
+      storeU.uAmp.value = reduceMotion ? Math.min(storeSt.amp, 0.02) : storeSt.amp;
+      storeU.uGlow.value = 0.2 * storeSt.burst; storeU.uTime.value = tt;
+    });
+  }
+
   // website display: a browser-style screen showing the product site; acting on it opens the real site
   if (p.site) {
     const slot = { angle: 0, r: 3, w: 3.2, y: 2.15, standOff: 3.2, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
@@ -1385,7 +1436,9 @@ function renderWorldPanel(pt) {
       <h3 class="wp-sub">Features</h3>
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
       ${p.site ? `<h3 class="wp-sub">Website</h3>
-      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the centre screen in front of you. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the centre screen in front of you. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}
+      ${p.links.some(([l]) => l === 'App Store') ? `<h3 class="wp-sub">App Store</h3>
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="store"><b>Download ${esc(p.name)}</b><span>On the screen to your right, with a QR code to scan on your iPhone. Walk up and press E, or tap it, to open the App Store.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
