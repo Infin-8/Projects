@@ -826,13 +826,30 @@ function updateVee(v, dt, t) {
 function buildMascot() {
   const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
   vee = makeVee(scene, VEE_POS, normal);
-  vee.setLine("Hi, I'm Vee.", 'Want to meet the builder?');
+  // A short tour of the hall that plays on its own while you stand near her; pressing E (or tapping her)
+  // always leads to the About world, so the last line is the invitation.
+  vee.tour = [
+    ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Each display on the wall is a product.'],
+    ['Walk up to a display and step inside.', 'Every product has its own world to explore.'],
+    ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.'],
+    ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.'],
+    ['Want to meet the builder?', 'Press E or tap me.']];
+  vee.tourK = 0; vee.tourT = 0;
+  const sayTour = () => vee.setLine(vee.tour[vee.tourK][0], vee.tour[vee.tourK][1], `${vee.tourK + 1} / ${vee.tour.length}`);
+  vee.sayTour = sayTour; sayTour();
   const pt = { p: ABOUT, mesh: vee.hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
     art: makeMonogram(), normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
   vee.hitM.userData.project = ABOUT;
   paintings.push(pt); vee.pt = pt;
 }
-function updateMascot(dt, t) { if (vee) { vee.glow = vee.pt.amp; updateVee(vee, dt, t); } }
+function updateMascot(dt, t) {
+  if (!vee) return;
+  vee.glow = vee.pt.amp; updateVee(vee, dt, t);
+  if (vee.wasNear) {   // advance the tour while you're close; it rests on the invitation once it gets there
+    vee.tourT += dt;
+    if (vee.tourT > 4.5 && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
+  } else if (vee.tourK !== 0 && vee.bubble.material.opacity < 0.02) { vee.tourK = 0; vee.tourT = 0; vee.sayTour(); }   // start over next visit
+}
 
 // In a world: Vee greets you and talks you through the room, one tip per press
 function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
