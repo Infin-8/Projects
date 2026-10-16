@@ -1260,44 +1260,39 @@ function buildProductWorld(p) {
     stations.push(st);
   }
 
-  // Two slots: CENTRE is the big raised screen straight ahead (clear of the module screens),
-  // SIDE stands on the right, mirroring the exit display. The website gets the centre when there is one.
-  const CENTRE = { angle: 0, r: 10.5, w: 6.4, y: 5.6, standOff: 7, pitch: 0.38, labelScale: 1.7 };
-  const SIDE = { angle: 112, r: 9, w: 3.6, y: 2.25, standOff: 4.2, pitch: 0.1, labelScale: 1 };
+  // a stand of two legs and a light under a raised screen
   function stand(g, slot, h) {
     const bottom = slot.y - h / 2 - 0.08, spread = slot.w / 2 - 0.8;
     for (const x of [-spread, spread]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, bottom, 0.12), pedMat); leg.position.set(x, bottom / 2, -0.05); g.add(leg); }
     const l = new THREE.PointLight(A, 0.7, 10, 2); l.position.set(0, slot.y - 1.5, 2.5); g.add(l);
   }
-  const heroSlot = p.site ? SIDE : CENTRE;
-  const heroG = place(heroSlot.angle, heroSlot.r), heroH = heroSlot.w * 1000 / 1600;
-  const hero = display(productHeroCanvas(p), heroSlot.w, heroH); hero.position.y = heroSlot.y; heroG.add(hero);
-  stand(heroG, heroSlot, heroH);
-  addStation(heroG, { id: 'hero', info: { title: p.name }, exhibit: true, standOff: heroSlot.standOff, pitch: heroSlot.pitch }, heroSlot.y);
 
-  // one screen per module card, in an arc. With a website, it takes the slot straight ahead
-  // and the modules sit either side of it (an odd count puts the extra one on the left, away from the panel).
-  const n = p.modules.length, span = n > 4 ? 116 : 100;
-  const slots = n + (p.site ? 1 : 0), siteIdx = p.site ? Math.ceil(n / 2) : -1, step = slots > 5 ? 21 : 24;
-  const arcAngle = k => p.site ? (k - siteIdx) * step : (n === 1 ? 0 : -span / 2 + span * k / (n - 1));
-  p.modules.forEach(([title, text], i) => {
-    const ang = arcAngle(p.site && i >= siteIdx ? i + 1 : i);
-    const g = place(ang, R);
-    const scr = display(productScreenCanvas(p, title, text), 2.6, 1.625); scr.position.y = 1.95; g.add(scr);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 12), pedMat); post.position.y = 0.6; g.add(post);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.08, 32), pedMat); base.position.y = 0.04; g.add(base);
+  // The raised row: one large screen per module card, with the logo and description screen
+  // spliced into the middle (centre of an odd row; just left of centre in an even row, leaving
+  // the middle open above the eye-level website screen). Raised high enough that the website
+  // and its Open line in front never block them.
+  const row = p.modules.map(([title, text], i) => ({ kind: 'module', title, text, i }));
+  row.splice(Math.floor(row.length / 2), 0, { kind: 'hero' });
+  const n = row.length, mStep = n > 5 ? 21 : 24, MR = 11, MW = n > 5 ? 3.5 : 4.2, MH = MW * 0.625, MY = 6.0;
+  row.forEach((item, k) => {
+    const g = place((k - (n - 1) / 2) * mStep, MR);
+    const canvas = item.kind === 'hero' ? productHeroCanvas(p) : productScreenCanvas(p, item.title, item.text);
+    const scr = display(canvas, MW, MH); scr.position.y = MY; g.add(scr);
+    stand(g, { y: MY, w: MW }, MH);
     const glowM = new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.6 });
-    const glow = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.018, 8, 64), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = 0.02; g.add(glow);
-    const st = { id: 'm' + i, info: { title, text }, exhibit: true, standOff: 3.1, pitch: 0.06, glowM };
-    addStation(g, st, 1.95);
-    updates.push((dt, t) => { glowM.opacity = near === st ? 0.95 : 0.35 + 0.15 * Math.sin(t * 1.6 + i); });
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.02, 8, 64), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = 0.02; g.add(glow);
+    const st = item.kind === 'hero'
+      ? { id: 'hero', info: { title: p.name }, exhibit: true, standOff: 6.5, pitch: 0.55, nearDist: 7.6, glowM }
+      : { id: 'm' + item.i, info: { title: item.title, text: item.text }, exhibit: true, standOff: 6.5, pitch: 0.55, nearDist: 7.6, glowM };
+    addStation(g, st, MY);
+    updates.push((dt, t) => { glowM.opacity = near === st ? 0.95 : 0.35 + 0.15 * Math.sin(t * 1.6 + k); });
   });
 
   const exit = makeExitPainting(ws, { R: 9, angleDeg: -112, pedMat, hit, stations, updates });
 
   // website display: a browser-style screen showing the product site; acting on it opens the real site
   if (p.site) {
-    const slot = { angle: arcAngle(siteIdx), r: R, w: 3.2, y: 2.15, standOff: 3.6, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
+    const slot = { angle: 0, r: 3, w: 3.2, y: 2.15, standOff: 3.2, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
     const bc = mk(1280, 860), bg2 = bc.getContext('2d'), siteTex = new THREE.CanvasTexture(bc);
     const chrome = () => {
       bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
@@ -1322,8 +1317,7 @@ function buildProductWorld(p) {
     const l = new THREE.PointLight(A, 0.6, 7, 2); l.position.set(0, 2.6, 1.8); g.add(l);
     const top = slot.y + H3 / 2;
     const k = slot.labelScale;   // bigger when it is the far centre screen
-    const lbl = stationLabel('WEBSITE', p.site.label, p.theme.accent, p.theme.brand); lbl.scale.multiplyScalar(k); lbl.position.set(0, top + 0.7 + 0.55 * k, 0); g.add(lbl);
-    const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', p.theme.brand ? `700 30px ${p.theme.brand.font}` : '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 3.4 * k); cta.position.set(0, top + 0.3 + 0.1 * k, 0.2); g.add(cta);
+    const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', p.theme.brand ? `700 30px ${p.theme.brand.font}` : '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 3.4 * k); cta.position.set(0, slot.y - H3 / 2 - 0.35, 0.25); g.add(cta);
     addStation(g, { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: slot.standOff, pitch: slot.pitch }, slot.y);
   }
   const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
@@ -1331,7 +1325,7 @@ function buildProductWorld(p) {
   return {
     kind: 'product', accent: p.theme.accent, accent2,
     scene: ws, stations, hit, radius: RADIUS, portal: exit.portal,
-    start: { pos: new THREE.Vector3(0, 1.7, slots > 5 ? 8.6 : 7.5), yaw: 0, pitch: 0.12 },   // a step back when the arc is wider
+    start: { pos: new THREE.Vector3(0, 1.7, 9.5), yaw: 0, pitch: 0.16 },
     update(dt, t) { for (const u of updates) u(dt, t); },
     dispose() {
       exit.hallShot.dispose();
@@ -1477,7 +1471,8 @@ function tick() {
       for (const st of world.stations) {
         const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz);
         const facing = (dx * fwd.x + dz * fwd.z) / (d || 1);   // only stations in front of you
-        if (d < best && facing > 0.35) { best = d; near = st; }
+        const reach = st.nearDist || 5.2;                       // raised screens are read from farther back
+        if (d < reach && d - reach < best && facing > 0.35) { best = d - reach; near = st; }
       }
       highlightStation(near ? near.id : null);
       if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
