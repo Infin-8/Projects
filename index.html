@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <meta name="description" content="Infin-8's projects: KaizenDoku, STEADYWATCH™ß Handheld and the STEADYWATCH™ Platform.">
 <meta property="og:title" content="Quantum Hall">
-<meta property="og:description" content="Walk up to a painting and step inside to see the project.">
+<meta property="og:description" content="Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://infin-8.github.io/Projects/assets/gallery-preview.png">
 <meta property="og:url" content="https://infin-8.github.io/Projects/">
 <meta name="twitter:card" content="summary_large_image">
@@ -212,23 +212,23 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 
 </head>
 <body>
-<canvas id="scene" tabindex="0" aria-label="3D gallery. Use the project buttons at the bottom to visit each painting."></canvas>
+<canvas id="scene" tabindex="0" aria-label="3D gallery. Use the project buttons at the bottom to visit each display."></canvas>
 
 <header class="hud" id="top">
 <div id="title">
   <!-- <h1>Quantum V<span class="caret">^</span></h1> -->
-  <p>Walk up to a painting and step inside to see the project. <a class="listlink" href="https://github.com/Infin-8/Projects#apps">Prefer a list?</a></p>
+  <p>Walk up to a display and step inside to see the project. <a class="listlink" href="https://github.com/Infin-8/Projects#apps">Prefer a list?</a></p>
 </div>
 <div id="controls">
   <div class="desk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look</div>
-  <div class="desk hall-only"><kbd>E</kbd> or click a painting to enter</div>
+  <div class="desk hall-only"><kbd>E</kbd> or click a display to enter</div>
   <div class="desk world-only"><kbd>E</kbd> or click a station for details · <kbd>Esc</kbd> back to the hall</div>
   <div class="touch">Left thumb walks · drag to look</div>
-  <div class="touch hall-only">Tap a painting to enter</div>
+  <div class="touch hall-only">Tap a display to enter</div>
   <div class="touch world-only">Tap a station for details</div>
 </div>
 </header>
-<nav class="hud" id="directory" aria-label="Paintings"></nav>
+<nav class="hud" id="directory" aria-label="Displays"></nav>
 <div class="hud" id="prompt" hidden></div>
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
@@ -864,7 +864,7 @@ function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
     const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.16), gold); f.position.set(x, 2.05 + y, 0.08); portalG.add(f);
   });
   const easel = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.9, 0.12, 0.9), pedMat); easel.position.set(0, 0.06, 0.2); portalG.add(easel);
-  const pl = stationLabel('EXIT PAINTING', 'Quantum Hall'); pl.position.set(0, 4.55, 0); portalG.add(pl);
+  const pl = stationLabel('EXIT DISPLAY', 'Quantum Hall'); pl.position.set(0, 4.55, 0); portalG.add(pl);
   const portalLight = new THREE.PointLight(0xe6eeff, 1.0, 7, 2); portalLight.position.set(0, 3.6, 1.6); portalG.add(portalLight);
   const portal = {
     id: 'portal', portal: true, exhibit: true, info: { title: 'Quantum Hall' }, standOff: 3.4, pitch: 0.12,
@@ -1247,7 +1247,7 @@ function renderWorldPanel(pt) {
     <div class="wp-head">
       <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
       <div class="wp-titles">
-        <span class="wp-eyebrow">${esc(p.wing)} wing · inside the painting</span>
+        <span class="wp-eyebrow">${esc(p.wing)} wing · inside the display</span>
         <h2>${esc(p.name)}</h2>
         <p class="wp-tag">${esc(p.tagline)}</p>
       </div>
