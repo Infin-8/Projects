@@ -117,17 +117,19 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 @media (max-width: 760px) { body.in-world #tourBar { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
 .dir-btn.tour-btn { border-color: #5ff0ff; color: #5ff0ff; }
 #explored { margin-top: 6px; color: #5ff0ff; letter-spacing: .06em; }
+/* a small indicator floating above whatever you can interact with: a keycap and one word */
 #prompt {
-  left: 0; right: 0; margin-inline: auto; width: fit-content;
-  max-width: min(520px, calc(100vw - 2 * max(16px, env(safe-area-inset-left, 0px))));
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  display: grid; gap: 4px; justify-items: center; text-align: center;
-  font-family: var(--display); font-size: 18px; line-height: 1.25; color: var(--parchment);
-  background: color-mix(in srgb, var(--night) 82%, transparent); border: 1px solid var(--gilt);
-  padding: 10px 18px; border-radius: 2px; cursor: pointer;
-  text-wrap: balance; overflow-wrap: anywhere;
+  left: 0; top: 0; bottom: auto; transform: translate(-50%, -100%);
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #c8fbff;
+  background: color-mix(in srgb, var(--night) 72%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 55%, transparent);
+  padding: 3px 8px 3px 3px; border-radius: 999px; cursor: pointer;
+  box-shadow: 0 0 12px color-mix(in srgb, #5ff0ff 25%, transparent);
+  animation: promptBob 1.6s ease-in-out infinite;
 }
-#prompt span { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gilt); }
+#prompt kbd { font-family: var(--mono); font-size: 11px; font-weight: 600; color: #05070b; background: #5ff0ff; border-radius: 999px; min-width: 20px; height: 20px; display: inline-grid; place-items: center; padding: 0 5px; }
+@keyframes promptBob { 0%, 100% { margin-top: 0; } 50% { margin-top: -3px; } }
+@media (prefers-reduced-motion: reduce) { #prompt { animation: none; } }
 
 #stick { position: fixed; z-index: 3; width: 110px; height: 110px; border-radius: 50%; border: 1px solid var(--gilt-dim); background: color-mix(in srgb, var(--night) 40%, transparent); pointer-events: none; transform: translate(-50%, -50%); }
 #stick i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px; border-radius: 50%; background: var(--gilt); opacity: .7; }
@@ -227,7 +229,6 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
   #worldPanel h2 { font-size: 20px; }
   #worldPanel .wp-tag { display: none; }
   #worldPanel .wp-toggle { align-self: center; }
-  body.in-world #prompt { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
 /* Branded products (KaizenDoku): system font, heavy weights, card colours and gradient title from the product's own site */
 #worldPanel.branded { font-family: var(--wp-font); background: color-mix(in srgb, #0d0d0d 92%, transparent); }
@@ -1499,6 +1500,23 @@ const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.V
   b.textContent = 'Double slit'; b.addEventListener('click', () => walkTo(slitStop)); dir.appendChild(b);
 }
 const promptEl = document.getElementById('prompt');
+// Show the small indicator floating just above the thing you're near (projected to the screen)
+const touchUI = matchMedia('(pointer: coarse)').matches, _ip = new THREE.Vector3();
+let lastIndicator = '';
+function showIndicator(target, verb, name, lift) {
+  const key = verb + '|' + name;
+  if (key !== lastIndicator) {
+    lastIndicator = key;
+    promptEl.innerHTML = `<kbd>${touchUI ? 'Tap' : 'E'}</kbd><span>${esc(verb)}</span>`;
+    promptEl.setAttribute('aria-label', `${touchUI ? 'Tap' : 'Press E'} to ${verb.toLowerCase()}: ${name}`);
+  }
+  const c = target.center, halfH = target.mesh && target.mesh.geometry && target.mesh.geometry.parameters ? (target.mesh.geometry.parameters.height || 0) / 2 : 0;
+  _ip.set(c.x, c.y + halfH + lift, c.z).project(camera);
+  if (_ip.z > 1) { promptEl.hidden = true; return; }
+  const x = Math.max(40, Math.min(innerWidth - 40, (_ip.x + 1) / 2 * innerWidth)), y = Math.max(60, Math.min(innerHeight - 90, (1 - _ip.y) / 2 * innerHeight));
+  promptEl.style.left = x + 'px'; promptEl.style.top = y + 'px';
+  promptEl.hidden = false;
+}
 promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world) worldAct(near); else enter(near); } });
 
 /* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
@@ -2315,7 +2333,7 @@ function tick() {
         if (st) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk' && !tour) { promptEl.innerHTML = `<span>${near.vee ? 'Press E or tap to talk to' : near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
+      if (near && mode === 'walk' && !tour) showIndicator(near, near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
@@ -2334,7 +2352,7 @@ function tick() {
         }
       } else if (vee && !near) vee.lastReact = null;
       if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
-        promptEl.innerHTML = `<span>Press E or tap to enter</span><b style="font-weight:400">${esc(near.p.promptName || near.p.name)}</b>`; promptEl.hidden = false;
+        showIndicator(near, 'Enter', near.p.promptName || near.p.name, near.kiosk ? 0.6 : 0.5);
       } else promptEl.hidden = true;
     }
   }
