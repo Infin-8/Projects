@@ -820,7 +820,7 @@ function makeVee(parent, pos, facing) {
   // a soft pool of light on the floor beneath her, and a faint trail when she glides
   const poolM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, map: dotTex(), opacity: 0.35, ...addBlend });
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), poolM); pool.rotation.x = -Math.PI / 2; pool.position.set(pos.x, 0.025, pos.z); parent.add(pool);
-  const TN = 30, tPos = new Float32Array(TN * 3), tCol = new Float32Array(TN * 3);
+  const TN = 44, tPos = new Float32Array(TN * 3), tCol = new Float32Array(TN * 3);
   const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tg.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
   const trail = new THREE.Points(tg, new THREE.PointsMaterial({ size: 0.09, map: dotTex(), vertexColors: true, ...addBlend })); trail.frustumCulled = false; parent.add(trail);
 
@@ -921,12 +921,15 @@ function updateVee(v, dt, t) {
   else v.scale = 1;
   v.body.scale.setScalar(Math.max(0.001, v.scale)); v.body.visible = v.scale > 0.01;
   v.pool.position.set(b.x, 0.025, b.z); v.poolM.opacity = 0.38 * v.scale * (1 - Math.min(0.6, b.y)); v.pool.scale.setScalar(1 + b.y * 0.8);
-  // trail: recent positions at chest height, brighter the farther she has moved since
-  v.tSamples.unshift({ x: b.x, y: b.y + 1.15, z: b.z });
+  // trail: orbs shed from her swirl as she glides; each keeps circling, rises and spreads out as it fades
+  for (const smp of v.tSamples) smp.age += dt;
+  v.tSamples.unshift({ x: b.x, y: b.y + 0.4 + Math.random() * 1.5, z: b.z, a: Math.random() * Math.PI * 2, r: 0.15 + Math.random() * 0.25,
+    spin: (1 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), rise: 0.2 + Math.random() * 0.35, age: 0 });
   if (v.tSamples.length > v.TN) v.tSamples.pop();
   for (let i = 0; i < v.TN; i++) {
     const smp = v.tSamples[i] || v.tSamples[v.tSamples.length - 1];
-    v.tPos[i * 3] = smp.x; v.tPos[i * 3 + 1] = smp.y; v.tPos[i * 3 + 2] = smp.z;
+    const ang = smp.a + smp.spin * smp.age * m, rad = smp.r * (1 + smp.age * 1.6);
+    v.tPos[i * 3] = smp.x + Math.cos(ang) * rad; v.tPos[i * 3 + 1] = smp.y + smp.rise * smp.age * m; v.tPos[i * 3 + 2] = smp.z + Math.sin(ang) * rad;
     const far = Math.min(1, Math.hypot(smp.x - b.x, smp.z - b.z) * 2.2), fade = (1 - i / v.TN) * far * v.scale * (reduceMotion ? 0 : 0.8);
     v.tCol[i * 3] = 0.37 * fade; v.tCol[i * 3 + 1] = 0.94 * fade; v.tCol[i * 3 + 2] = fade;
   }
