@@ -1275,10 +1275,13 @@ function buildProductWorld(p) {
   stand(heroG, heroSlot, heroH);
   addStation(heroG, { id: 'hero', info: { title: p.name }, exhibit: true, standOff: heroSlot.standOff, pitch: heroSlot.pitch }, heroSlot.y);
 
-  // one screen per module card
+  // one screen per module card, in an arc. With a website, it takes the slot straight ahead
+  // and the modules sit either side of it (an odd count puts the extra one on the left, away from the panel).
   const n = p.modules.length, span = n > 4 ? 116 : 100;
+  const slots = n + (p.site ? 1 : 0), siteIdx = p.site ? Math.ceil(n / 2) : -1, step = slots > 5 ? 21 : 24;
+  const arcAngle = k => p.site ? (k - siteIdx) * step : (n === 1 ? 0 : -span / 2 + span * k / (n - 1));
   p.modules.forEach(([title, text], i) => {
-    const ang = n === 1 ? 0 : -span / 2 + span * i / (n - 1);
+    const ang = arcAngle(p.site && i >= siteIdx ? i + 1 : i);
     const g = place(ang, R);
     const scr = display(productScreenCanvas(p, title, text), 2.6, 1.625); scr.position.y = 1.95; g.add(scr);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 12), pedMat); post.position.y = 0.6; g.add(post);
@@ -1294,7 +1297,7 @@ function buildProductWorld(p) {
 
   // website display: a browser-style screen showing the product site; acting on it opens the real site
   if (p.site) {
-    const slot = CENTRE, g = place(slot.angle, slot.r);
+    const slot = { angle: arcAngle(siteIdx), r: R, w: 3.2, y: 2.15, standOff: 3.6, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
     const bc = mk(1280, 860), bg2 = bc.getContext('2d'), siteTex = new THREE.CanvasTexture(bc);
     const chrome = () => {
       bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
@@ -1312,7 +1315,11 @@ function buildProductWorld(p) {
     const frame = new THREE.Group(); frame.position.y = slot.y; g.add(frame);
     frame.add(new THREE.Mesh(new THREE.BoxGeometry(W3 + 0.16, H3 + 0.16, 0.12), bezel));
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3), new THREE.MeshBasicMaterial({ map: siteTex })); scr.position.z = 0.062; frame.add(scr);
-    stand(g, slot, H3);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, slot.y - H3 / 2, 12), pedMat); post.position.y = (slot.y - H3 / 2) / 2; g.add(post);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.08, 32), pedMat); base.position.y = 0.04; g.add(base);
+    const glowM = new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.8 });
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.02, 8, 64), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = 0.02; g.add(glow);
+    const l = new THREE.PointLight(A, 0.6, 7, 2); l.position.set(0, 2.6, 1.8); g.add(l);
     const top = slot.y + H3 / 2;
     const k = slot.labelScale;   // bigger when it is the far centre screen
     const lbl = stationLabel('WEBSITE', p.site.label, p.theme.accent, p.theme.brand); lbl.scale.multiplyScalar(k); lbl.position.set(0, top + 0.7 + 0.55 * k, 0); g.add(lbl);
@@ -1324,7 +1331,7 @@ function buildProductWorld(p) {
   return {
     kind: 'product', accent: p.theme.accent, accent2,
     scene: ws, stations, hit, radius: RADIUS, portal: exit.portal,
-    start: { pos: new THREE.Vector3(0, 1.7, 7.5), yaw: 0, pitch: 0.12 },
+    start: { pos: new THREE.Vector3(0, 1.7, slots > 5 ? 8.6 : 7.5), yaw: 0, pitch: 0.12 },   // a step back when the arc is wider
     update(dt, t) { for (const u of updates) u(dt, t); },
     dispose() {
       exit.hallShot.dispose();
@@ -1361,7 +1368,7 @@ function renderWorldPanel(pt) {
       <h3 class="wp-sub">Modules · one screen each</h3>
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
       ${p.site ? `<h3 class="wp-sub">Website</h3>
-      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the big screen straight ahead. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the centre screen in front of you. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
