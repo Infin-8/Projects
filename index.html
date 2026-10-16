@@ -796,6 +796,8 @@ function makeVee(parent, pos, facing) {
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.013, 0.03, 0.008), visorM);
     eye.position.set(0.036 * sx, 0.016, 0.111); eye.rotation.y = 0.32 * sx; headG.add(eye);
   }
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.0045, 0.008), visorM);   // a short glowing line that opens as she talks
+  mouth.position.set(0, -0.042, 0.11); headG.add(mouth);
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 12, 0, Math.PI * 2, 0, 1.2), hair); cap.scale.set(1.02, 1.18, 1.06); cap.position.set(0, 0.012, -0.012); headG.add(cap);
   limb(headG, V(0, 0.06, -0.1), V(0, -0.2, -0.115), 0.07, 0.028, hair);          // hair swept back
   limb(headG, V(0.085, 0.1, 0.07), V(0.128, -0.07, 0.045), 0.03, 0.011, hair);   // one side bang
@@ -840,7 +842,7 @@ function makeVee(parent, pos, facing) {
   hitM.position.y = 1.15; body.add(hitM);
   const normal = facing.clone().setY(0).normalize(), restYaw = Math.atan2(normal.x, normal.z);
   fig.rotation.y = restYaw;
-  const v = { parent, pad, body, fig, headG, shoulder, elbow, shoulderL, elbowL, rings, bubble, hoverM, holoU, hitM,
+  const v = { parent, pad, body, fig, headG, mouth, shoulder, elbow, shoulderL, elbowL, rings, bubble, hoverM, holoU, hitM,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
     awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
@@ -915,6 +917,7 @@ function updateVee(v, dt, t) {
   v.shoulderL.rotation.x += ((talking ? -0.45 - 0.18 * Math.sin(t * 7) * m : 0) - v.shoulderL.rotation.x) * L;
   v.elbowL.rotation.x += ((talking ? -0.6 : 0) - v.elbowL.rotation.x) * L;
   v.headG.rotation.x = talking ? Math.sin(t * 13) * 0.07 * m : v.headG.rotation.x * 0.9;
+  v.mouth.scale.y += ((talking ? 1 + 2 * Math.abs(Math.sin(t * 17)) * Math.abs(Math.sin(t * 5.3)) : 1) - v.mouth.scale.y) * Math.min(1, dt * 20);
   v.headG.rotation.y += (((!isNear && !v.bodyTarget && !pointing) ? Math.sin(t * 0.45) * 0.45 * m : 0) - v.headG.rotation.y) * Math.min(1, dt * 2);
   // blink: a brief dip in the hologram every few seconds
   if (!reduceMotion) { v.blinkT -= dt; if (v.blinkT < 0) { v.blinkT = 3.5 + Math.random() * 4; v.blinkD = 0.13; } }
