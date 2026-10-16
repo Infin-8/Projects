@@ -375,7 +375,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: the dock where her micro-drones rest and recharge.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Resume', cardText: 'The main screen of the operator desk. Walk up and press E, or tap it, to open the PDF.' },
@@ -1300,6 +1300,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ["Welcome to the builder's office.", 'This is the operator desk.', 'site'],
       ['The main screen holds the Resume.', 'It decodes out of a stream of QES-256 keys. Press E to open it.', 'site'],
       ['Career on the left, skills on the right.', 'Tap any screen for details.', 'm0'],
+      ['Turn around: that\'s my nest.', "I'm made of micro-drones. That's where we recharge.", 'dock'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The door on your left goes to the hall.', 'portal']];
     stops = [
@@ -1308,6 +1309,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['skills', 'Skills', 'From languages and mobile to quantum computing and cryptography.'],
       ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku, both on the App Store.'],
       ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
+      ['dock', "Vee's nest", "My dock. I'm thousands of micro-drones, and we recharge here."],
       ['portal', "That's the office.", 'The door takes you back to the hall.']];
   } else {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
@@ -2331,6 +2333,82 @@ function buildOfficeWorld(p) {
   mono.position.set(RX - 0.02, 2.0, 1.2); mono.rotation.y = -Math.PI / 2; ws.add(mono);
   [[1.56, 0.08, 0, 0.74], [1.56, 0.08, 0, -0.74], [0.08, 1.4, 0.74, 0], [0.08, 1.4, -0.74, 0]].forEach(([fw, fh, a, b]) => {
     const f = new THREE.Mesh(new THREE.BoxGeometry(0.06, fh, fw), gold); f.position.set(RX - 0.04, 2.0 + b, 1.2 + a); ws.add(f);
+  });
+
+  // Vee's nest: a wall dock behind the operator's chair where her micro-drones rest and recharge,
+  // with a landing pad she glides back to
+  const nestG = new THREE.Group(); nestG.position.set(0, 0, RZ1 - 0.04); nestG.rotation.y = Math.PI; ws.add(nestG);   // faces into the room
+  const NW = 3.2, NH = 2.0, NY = 1.95;
+  const hexC = mk(1024, 640), hg = hexC.getContext('2d'), hexTex = new THREE.CanvasTexture(hexC);
+  const HR = 17, hexCells = [];
+  for (let row = 0, y = HR; y < 640 + HR; row++, y += HR * 1.5) for (let x = (row % 2) * HR * 0.866, col = 0; x < 1024 + HR; x += HR * 1.732, col++) hexCells.push({ x, y, ph: Math.random() * 6.28 });
+  let hexAcc = 1, charge = 0;
+  function drawHex(t) {
+    hg.fillStyle = '#05080d'; hg.fillRect(0, 0, 1024, 640);
+    for (const c of hexCells) {
+      const sweep = Math.max(0, Math.sin(t * 1.2 - c.x * 0.008 + c.y * 0.003)), k = 0.12 + 0.55 * sweep * sweep + 0.12 * Math.sin(t * 2 + c.ph) + charge * 0.25;
+      hg.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; hg.lineTo(c.x + Math.cos(a) * (HR - 2), c.y + Math.sin(a) * (HR - 2)); } hg.closePath();
+      hg.fillStyle = `rgba(63,224,224,${Math.min(0.9, k * 0.45)})`; hg.fill();
+      hg.strokeStyle = `rgba(95,240,255,${Math.min(1, 0.25 + k * 0.6)})`; hg.lineWidth = 1.5; hg.stroke();
+    }
+    hg.fillStyle = 'rgba(5,8,13,0.75)'; rr(hg, 352, 560, 320, 56, 12); hg.fill();
+    hg.fillStyle = '#5ff0ff'; hg.font = '600 24px "IBM Plex Mono", monospace'; hg.textAlign = 'center'; hg.textBaseline = 'middle';
+    hg.fillText(charge > 0.3 ? 'VEE · DOCKED · CHARGING' : 'VEE · DOCK · READY', 512, 589); hg.textAlign = 'left'; hg.textBaseline = 'alphabetic';
+    hexTex.needsUpdate = true;
+  }
+  drawHex(0);
+  const hexPanel = new THREE.Mesh(new THREE.PlaneGeometry(NW, NH), new THREE.MeshBasicMaterial({ map: hexTex })); hexPanel.position.set(0, NY, 0.03); nestG.add(hexPanel);
+  [[NW + 0.24, 0.12, 0, NH / 2 + 0.06], [NW + 0.24, 0.12, 0, -NH / 2 - 0.06], [0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
+  });
+  const nestLabel = stationLabel("VEE'S NEST", 'Micro-drone dock'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); nestG.add(nestLabel);
+  // parked drones resting in the cells
+  const parkU = { uTime: { value: 0 }, uDim: { value: 1 }, uGlow: { value: 0 }, uPx: { value: 800 }, uSize: { value: 0.012 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
+  const parkMat = new THREE.ShaderMaterial({ uniforms: parkU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const PN = 1400, pkPos = new Float32Array(PN * 3), pkRnd = new Float32Array(PN), pkDir = new Float32Array(PN * 3);
+  for (let i = 0; i < PN; i++) { pkPos[i * 3] = (Math.random() - 0.5) * (NW - 0.1); pkPos[i * 3 + 1] = NY + (Math.random() - 0.5) * (NH - 0.1); pkPos[i * 3 + 2] = 0.06; pkRnd[i] = Math.random(); pkDir[i * 3 + 2] = 1; }
+  const pkG = new THREE.BufferGeometry(); pkG.setAttribute('position', new THREE.BufferAttribute(pkPos, 3)); pkG.setAttribute('aRnd', new THREE.BufferAttribute(pkRnd, 1)); pkG.setAttribute('aDir', new THREE.BufferAttribute(pkDir, 3));
+  nestG.add(new THREE.Points(pkG, parkMat));
+  // the landing pad on the floor in front of the dock
+  const padPos = new THREE.Vector3(0, 0, RZ1 - 0.85);
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.06, 48), deskMat); pad.position.set(padPos.x, 0.03, padPos.z); ws.add(pad);
+  const padRings = [0.5, 0.64].map((r, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.015, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); m.rotation.x = Math.PI / 2; m.position.set(padPos.x, 0.07 + i * 0.005, padPos.z); ws.add(m); return m; });
+  const nestLight = new THREE.PointLight(0x5ff0ff, 0.7, 6, 2); nestLight.position.set(0, NY, RZ1 - 1.0); ws.add(nestLight);
+  // a stream of drones always flowing between the dock and Vee: half heading out, half coming home
+  const SN = 220, sPos = new Float32Array(SN * 3), sCol = new Float32Array(SN * 3), sData = [];
+  for (let i = 0; i < SN; i++) sData.push({ u: Math.random(), out: i % 2 === 0, from: new THREE.Vector3((Math.random() - 0.5) * (NW - 0.2), NY + (Math.random() - 0.5) * (NH - 0.2), RZ1 - 0.1), lift: 0.4 + Math.random() * 0.9, sp: 0.18 + Math.random() * 0.22, off: new THREE.Vector3((Math.random() - 0.5) * 0.5, Math.random() * 1.6, (Math.random() - 0.5) * 0.5) });
+  const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3)); sGeo.setAttribute('color', new THREE.BufferAttribute(sCol, 3));
+  const stream = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); stream.frustumCulled = false; ws.add(stream);
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _m = new THREE.Vector3();
+  const dockSt = { id: 'dock', info: { title: "Vee's nest" }, exhibit: true, standOff: 3.5, pitch: 0.06 };
+  dockSt.center = new THREE.Vector3(0, NY, RZ1 - 0.1); dockSt.normal = new THREE.Vector3(0, 0, -1); dockSt.mesh = hexPanel;
+  hexPanel.userData.station = dockSt; hit.push(hexPanel); stations.push(dockSt);
+  let nested = false;
+  updates.push((dt, t) => {
+    const v = worldVee; if (!v) return;
+    // walk up to the dock and she glides home onto her pad; walk away and she follows you again
+    const atDock = near === dockSt && !tour && mode === 'walk';
+    if (atDock && !nested) { nested = true; v.bodyTarget = padPos.clone(); v.say("This is my nest.", "I'm thousands of micro-drones. We rest and recharge here.", null, null); }
+    else if (!atDock && nested && !tour) { nested = false; v.bodyTarget = null; }
+    const home = Math.hypot(v.body.position.x - padPos.x, v.body.position.z - padPos.z) < 0.5;
+    charge += ((nested && home ? 1 : 0) - charge) * Math.min(1, dt * 1.5);
+    hexAcc += dt; if (hexAcc > (reduceMotion ? 0.5 : 0.12)) { hexAcc = 0; drawHex(t); }
+    parkU.uTime.value = t; parkU.uGlow.value = charge * 0.6;
+    parkU.uPx.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    padRings.forEach((r, i) => { r.material.opacity = 0.35 + 0.35 * Math.sin(t * 2 + i) + charge * 0.3; });
+    _b.copy(v.body.position);
+    const m = reduceMotion ? 0.3 : 1, rate = 1 + charge * 1.8;
+    sData.forEach((d, i) => {
+      d.u += d.sp * rate * dt * m; if (d.u > 1) d.u -= 1;
+      const k = d.out ? d.u : 1 - d.u;                                    // 0 at the dock, 1 at Vee
+      _a.copy(d.from); const vb = _m.copy(_b).add(d.off);
+      const mx = (_a.x + vb.x) / 2, my = Math.max(_a.y, vb.y) + d.lift, mz = (_a.z + vb.z) / 2;   // a curved arc between them
+      const q = 1 - k;
+      sPos[i * 3] = q * q * _a.x + 2 * q * k * mx + k * k * vb.x; sPos[i * 3 + 1] = q * q * _a.y + 2 * q * k * my + k * k * vb.y; sPos[i * 3 + 2] = q * q * _a.z + 2 * q * k * mz + k * k * vb.z;
+      const f = Math.min(1, Math.sin(d.u * Math.PI) * (0.75 + 0.5 * charge)) * v.scale;
+      sCol[i * 3] = 0.56 * f; sCol[i * 3 + 1] = 0.97 * f; sCol[i * 3 + 2] = f;
+    });
+    sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
   });
 
   // the door back to the hall, on the left wall
