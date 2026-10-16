@@ -375,7 +375,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: the dock where her micro-drones rest and recharge.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Resume', cardText: 'The main screen of the operator desk. Walk up and press E, or tap it, to open the PDF.' },
@@ -1300,7 +1300,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ["Welcome to the builder's office.", 'This is the operator desk.', 'site'],
       ['The main screen holds the Resume.', 'It decodes out of a stream of QES-256 keys. Press E to open it.', 'site'],
       ['Career on the left, skills on the right.', 'Tap any screen for details.', 'm0'],
-      ['Turn around: that\'s my nest.', "I'm made of micro-drones. That's where we recharge.", 'dock'],
+      ['Turn around: that\'s my Nesting Station.', 'Where the nanobots that compile my image recharge.', 'dock'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The door on your left goes to the hall.', 'portal']];
     stops = [
@@ -1309,7 +1309,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['skills', 'Skills', 'From languages and mobile to quantum computing and cryptography.'],
       ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku, both on the App Store.'],
       ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
-      ['dock', "Vee's nest", "My dock. I'm thousands of micro-drones, and we recharge here."],
+      ['dock', 'My Nesting Station', 'The thousands of nanobots that compile my image rest and recharge here.'],
       ['portal', "That's the office.", 'The door takes you back to the hall.']];
   } else {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
@@ -2388,7 +2388,7 @@ function buildOfficeWorld(p) {
     const v = worldVee; if (!v) return;
     // walk up to the dock and she glides home onto her pad; walk away and she follows you again
     const atDock = near === dockSt && !tour && mode === 'walk';
-    if (atDock && !nested) { nested = true; v.bodyTarget = padPos.clone(); v.say("This is my nest.", "I'm thousands of micro-drones. We rest and recharge here.", null, null); }
+    if (atDock && !nested) { nested = true; v.bodyTarget = padPos.clone(); v.say('Welcome to my Nesting Station.', 'The thousands of nanobots that compile my image rest and recharge here.', null, null); }
     else if (!atDock && nested && !tour) { nested = false; v.bodyTarget = null; }
     const home = Math.hypot(v.body.position.x - padPos.x, v.body.position.z - padPos.z) < 0.5;
     charge += ((nested && home ? 1 : 0) - charge) * Math.min(1, dt * 1.5);
