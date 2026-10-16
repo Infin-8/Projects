@@ -47,6 +47,20 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   text-shadow: 0 1px 2px var(--night);
 }
 #top > * { pointer-events: none; }
+/* the header fades away after a few seconds; the ? button brings it back */
+#top { transition: opacity .6s ease, visibility 0s linear 0s; }
+#top.faded { opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility 0s linear .6s; }
+#top.faded a.listlink { pointer-events: none; }
+#helpBtn {
+  position: fixed; z-index: 3; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px));
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  font-family: var(--mono); font-size: 14px; font-weight: 600; color: #5ff0ff;
+  background: color-mix(in srgb, var(--night) 70%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 55%, transparent);
+  opacity: 0; visibility: hidden; transition: opacity .4s ease;
+}
+#helpBtn.show { opacity: .85; visibility: visible; }
+#helpBtn:hover, #helpBtn:focus-visible { opacity: 1; outline: none; }
+@media (prefers-reduced-motion: reduce) { #top, #top.faded, #helpBtn { transition: none; } }
 #title { min-width: 0; max-width: 100%; }
 #title h1 {
   font-family: var(--display); font-weight: 400; font-size: clamp(30px, 4.4vw, 52px); line-height: 1.1;
@@ -262,6 +276,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <body>
 <canvas id="scene" tabindex="0" aria-label="3D gallery. Use the project buttons at the bottom to visit each display."></canvas>
 
+<button type="button" id="helpBtn" aria-label="Show controls" aria-controls="top">?</button>
 <header class="hud" id="top">
 <div id="title">
   <!-- <h1>Quantum V<span class="caret">^</span></h1> -->
@@ -2422,7 +2437,20 @@ function taglineHTML(p) {
 function highlightStation(id) {
   worldPanel.querySelectorAll('.st').forEach(b => b.classList.toggle('active', b.dataset.st === id));
 }
+// Header: shown for a few seconds, then faded so it never clashes with the rest of the screen
+const topEl = document.getElementById('top'), helpBtn = document.getElementById('helpBtn');
+let headerTimer = null;
+function showHeader(ms = 6000) {
+  topEl.classList.remove('faded'); helpBtn.classList.remove('show'); helpBtn.setAttribute('aria-expanded', 'true');
+  clearTimeout(headerTimer); headerTimer = setTimeout(hideHeader, ms);
+}
+function hideHeader() {
+  clearTimeout(headerTimer); topEl.classList.add('faded'); helpBtn.classList.add('show'); helpBtn.setAttribute('aria-expanded', 'false');
+}
+helpBtn.addEventListener('click', () => { if (topEl.classList.contains('faded')) showHeader(8000); else hideHeader(); });
+showHeader(7000);
 function openWorld(pt) {
+  showHeader();
   // settle the hall paintings first, so the exit painting's view of the hall is calm
   for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
   world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
@@ -2437,6 +2465,7 @@ function openWorld(pt) {
 }
 function exitWorld() {
   if (!world) return;
+  showHeader();
   if (tour) endTour();
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
