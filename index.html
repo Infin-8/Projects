@@ -332,7 +332,7 @@ const PROJECTS = [
 /* ---------- About (from the Software Engineer resume) ----------
    Not a wall display: Vee, the hall's holographic guide, leads into this world. */
 const ABOUT = {
-  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptVerb: 'Press E or tap to meet',
+  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptName: 'About & resume',
   tagline: 'Software Engineer · Founder of Quantum V^', wing: 'About',
   desc: 'Software engineer with a foundation in semiconductor manufacturing, enterprise operations and hands-on teaching, now building at the intersection of quantum computing and applied cryptography. Founder of Quantum V^ LLC, where I designed and shipped STEADYWATCH™ and KaizenDoku.',
   sectionTitle: 'Experience',
@@ -2329,11 +2329,12 @@ function tick() {
         vee.lastReact = near;
         if (!vee.reacted.has(near.p.id)) {
           vee.reacted.add(near.p.id); vee.tourK = vee.tour.length - 1;
-          vee.say(`That's ${near.p.name}.`, `${near.p.tagline}. Press E to step inside.`.replace('..', '.'), null, near.center);
+          if (near.kiosk) vee.say("That's the builder's kiosk.", 'Press E for experience, the resume and contact links.', null, near.center);
+          else vee.say(`That's ${near.p.name}.`, `${near.p.tagline}. Press E to step inside.`.replace('..', '.'), null, near.center);
         }
       } else if (vee && !near) vee.lastReact = null;
       if (near && mode === 'walk' && !tour) {
-        promptEl.innerHTML = `<span>${esc(near.p.promptVerb || 'Press E or tap to enter')}</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
+        promptEl.innerHTML = `<span>Press E or tap to enter</span><b style="font-weight:400">${esc(near.p.promptName || near.p.name)}</b>`; promptEl.hidden = false;
       } else promptEl.hidden = true;
     }
   }
