@@ -739,7 +739,7 @@ function clickAt(x, y) {
   if (mode !== 'walk' && mode !== 'auto') return;
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.portal || st.site ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
+  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.site ? 9 : st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const hit = ray.intersectObjects(paintings.map(p => p.mesh))[0];
   if (!hit) return;
   const pt = paintings.find(p => p.mesh === hit.object);
@@ -1260,12 +1260,20 @@ function buildProductWorld(p) {
     stations.push(st);
   }
 
-  // main screen, raised behind the arc
-  const heroG = place(0, 10.5);
-  const hero = display(productHeroCanvas(p), 6.4, 4.0); hero.position.y = 5.4; heroG.add(hero);   // high enough to clear the module screens
-  for (const x of [-2.4, 2.4]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.4, 0.14), pedMat); leg.position.set(x, 1.7, -0.05); heroG.add(leg); }
-  const heroLight = new THREE.PointLight(A, 0.7, 10, 2); heroLight.position.set(0, 3, 2.5); heroG.add(heroLight);
-  addStation(heroG, { id: 'hero', info: { title: p.name }, exhibit: true, standOff: 7, pitch: 0.36 }, 5.4);
+  // Two slots: CENTRE is the big raised screen straight ahead (clear of the module screens),
+  // SIDE stands on the right, mirroring the exit display. The website gets the centre when there is one.
+  const CENTRE = { angle: 0, r: 10.5, w: 6.4, y: 5.6, standOff: 7, pitch: 0.38, labelScale: 1.7 };
+  const SIDE = { angle: 112, r: 9, w: 3.6, y: 2.25, standOff: 4.2, pitch: 0.1, labelScale: 1 };
+  function stand(g, slot, h) {
+    const bottom = slot.y - h / 2 - 0.08, spread = slot.w / 2 - 0.8;
+    for (const x of [-spread, spread]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, bottom, 0.12), pedMat); leg.position.set(x, bottom / 2, -0.05); g.add(leg); }
+    const l = new THREE.PointLight(A, 0.7, 10, 2); l.position.set(0, slot.y - 1.5, 2.5); g.add(l);
+  }
+  const heroSlot = p.site ? SIDE : CENTRE;
+  const heroG = place(heroSlot.angle, heroSlot.r), heroH = heroSlot.w * 1000 / 1600;
+  const hero = display(productHeroCanvas(p), heroSlot.w, heroH); hero.position.y = heroSlot.y; heroG.add(hero);
+  stand(heroG, heroSlot, heroH);
+  addStation(heroG, { id: 'hero', info: { title: p.name }, exhibit: true, standOff: heroSlot.standOff, pitch: heroSlot.pitch }, heroSlot.y);
 
   // one screen per module card
   const n = p.modules.length, span = n > 4 ? 116 : 100;
@@ -1286,7 +1294,7 @@ function buildProductWorld(p) {
 
   // website display: a browser-style screen showing the product site; acting on it opens the real site
   if (p.site) {
-    const g = place(112, 9);
+    const slot = CENTRE, g = place(slot.angle, slot.r);
     const bc = mk(1280, 860), bg2 = bc.getContext('2d'), siteTex = new THREE.CanvasTexture(bc);
     const chrome = () => {
       bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
@@ -1300,15 +1308,16 @@ function buildProductWorld(p) {
     const shot = new Image();
     shot.onload = () => { bg2.drawImage(shot, 0, 60, 1280, 800); chrome(); siteTex.needsUpdate = true; };
     shot.src = p.site.shot;
-    const W3 = 3.6, H3 = W3 * 860 / 1280;
-    const frame = new THREE.Group(); frame.position.y = 2.25; g.add(frame);
+    const W3 = slot.w, H3 = W3 * 860 / 1280;
+    const frame = new THREE.Group(); frame.position.y = slot.y; g.add(frame);
     frame.add(new THREE.Mesh(new THREE.BoxGeometry(W3 + 0.16, H3 + 0.16, 0.12), bezel));
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3), new THREE.MeshBasicMaterial({ map: siteTex })); scr.position.z = 0.062; frame.add(scr);
-    for (const x of [-1.2, 1.2]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), pedMat); leg.position.set(x, 0.45, -0.05); g.add(leg); }
-    const lbl = stationLabel('WEBSITE', p.site.label, p.theme.accent, p.theme.brand); lbl.position.set(0, 4.2, 0); g.add(lbl);
-    const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 2.6); cta.position.set(0, 0.62, 0.2); g.add(cta);
-    const siteLight = new THREE.PointLight(A, 0.6, 7, 2); siteLight.position.set(0, 3, 2); g.add(siteLight);
-    addStation(g, { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: 4.2, pitch: 0.1 }, 2.25);
+    stand(g, slot, H3);
+    const top = slot.y + H3 / 2;
+    const k = slot.labelScale;   // bigger when it is the far centre screen
+    const lbl = stationLabel('WEBSITE', p.site.label, p.theme.accent, p.theme.brand); lbl.scale.multiplyScalar(k); lbl.position.set(0, top + 0.7 + 0.55 * k, 0); g.add(lbl);
+    const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', p.theme.brand ? `700 30px ${p.theme.brand.font}` : '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 3.4 * k); cta.position.set(0, top + 0.3 + 0.1 * k, 0.2); g.add(cta);
+    addStation(g, { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: slot.standOff, pitch: slot.pitch }, slot.y);
   }
   const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
 
@@ -1352,7 +1361,7 @@ function renderWorldPanel(pt) {
       <h3 class="wp-sub">Modules · one screen each</h3>
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
       ${p.site ? `<h3 class="wp-sub">Website</h3>
-      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the screen to your right. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the big screen straight ahead. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
