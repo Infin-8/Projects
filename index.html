@@ -286,6 +286,7 @@ const PROJECTS = [
       brand: { font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif', muted: '#a0a0a0', card: '#1a1a1a', border: '#2a2a2a', radius: 14,
         titleGradient: 'linear-gradient(135deg, #ffffff 20%, #00ff41 100%)', taglineSplit: ['Sudoku.', 'With Friends.'] } },
     logo: 'assets/kaizendoku-icon.png', site: { url: 'https://kaizendoku.com', label: 'kaizendoku.com', shot: 'assets/site-kaizendoku.jpg' },
+    shots: [1, 2, 3, 4, 5, 6, 7].map(n => `assets/shots/kz-${n}.jpg`),
     pos: [-7.92, 3.2, -3.5], rotY: Math.PI / 2, size: [3.7, 3.7]
   },
   {
@@ -295,6 +296,7 @@ const PROJECTS = [
     stack: 'NTP · Face ID · Secure Enclave · OIDC',
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
     theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
+    shots: [1, 2, 3, 4, 5, 6, 7].map(n => `assets/shots/hh-${n}.jpg`),
     pos: [7.92, 3.2, -3.5], rotY: -Math.PI / 2, size: [3.7, 3.7]
   },
   {
@@ -307,6 +309,36 @@ const PROJECTS = [
     pos: [0, 3.4, -14.92], rotY: 0, size: [6.4, 4.4]
   }
 ];
+
+/* ---------- About (from the Software Engineer resume) ----------
+   Not a wall display: Vee, the hall's holographic guide, leads into this world. */
+const ABOUT = {
+  id: 'about', name: 'Nathaniel Vazquez', dir: 'About', promptVerb: 'Press E or tap to meet',
+  tagline: 'Software Engineer · Founder of Quantum V^', wing: 'About',
+  desc: 'Software engineer with a foundation in semiconductor manufacturing, enterprise operations and hands-on teaching, now building at the intersection of quantum computing and applied cryptography. Founder of Quantum V^ LLC, where I designed and shipped STEADYWATCH™ and KaizenDoku.',
+  sectionTitle: 'Experience',
+  modules: [
+    ['Quantum V^ LLC', 'Founder & Lead Software Engineer, 2025 to present. Shipped STEADYWATCH™ and KaizenDoku and their quantum backend.'],
+    ['Persevere NOW', 'Senior Software Developer & Teaching Assistant, 2022 to 2025. Taught cohorts of 20 students.'],
+    ['Express Scripts', 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team, 2012 to 2018. Led a team of about 20.'],
+    ['Freescale Semiconductor', 'Process Engineer, Test Wafer Distribution, 2005 to 2011. Semiconductor fabrication.']
+  ],
+  stack: 'Swift · SwiftUI · Python · JavaScript · React Native · Flask · Node.js · Qiskit · CryptoKit',
+  links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
+  site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
+    heading: 'Resume', cardText: 'On the centre screen in front of you. Walk up and press E, or tap it, to open the PDF.' },
+  theme: { bg: '#141826', fg: '#f1e6cf', accent: '#3fe0e0' },
+  logo: null   // a monogram drawn at load, see makeMonogram()
+};
+function makeMonogram() {
+  const c = mk(512, 512), g = c.getContext('2d');
+  const bgG = g.createLinearGradient(0, 0, 512, 512); bgG.addColorStop(0, '#1b2236'); bgG.addColorStop(1, '#070910');
+  g.fillStyle = bgG; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = 'rgba(63,224,224,.55)'; g.lineWidth = 6; g.beginPath(); g.arc(256, 256, 200, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#f1e6cf'; g.font = '190px "Young Serif", Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('NV', 256, 268);
+  g.fillStyle = '#3fe0e0'; g.font = '600 34px "IBM Plex Mono", monospace'; g.fillText('QUANTUM V^', 256, 400);
+  return c;
+}
 
 /* ---------- Painting art (canvas) ---------- */
 const W = 1024, H = 768;
@@ -688,6 +720,106 @@ function buildPaintings() {
   });
 }
 
+/* ---------- Vee: the hall's holographic guide ----------
+   An original hologram figure on a projector pad by the entrance. She turns to
+   face you, waves when you come close, and leads into the About world. */
+const VEE_POS = new THREE.Vector3(-3.6, 0, 5.6);   // just beyond walk-up range of the start, so no prompt on arrival
+let vee = null;
+const holoVert = `
+varying vec3 vN; varying vec3 vV; varying float vY;
+void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vY = wp.y; vec4 mv = viewMatrix * wp;
+  vN = normalize(normalMatrix * normal); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`;
+const holoFrag = `
+uniform float uTime; uniform float uGlow; uniform vec3 uColor;
+varying vec3 vN; varying vec3 vV; varying float vY;
+void main(){
+  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.6);      // bright rim, see-through middle
+  float scan = 0.55 + 0.45 * sin(vY * 90.0 - uTime * 6.0);               // scanlines drifting up
+  float flick = 0.93 + 0.07 * sin(uTime * 37.0) * sin(uTime * 11.0);
+  float fade = smoothstep(0.12, 0.7, vY);                                 // the legs dissolve into the beam
+  gl_FragColor = vec4(uColor * (0.16 + 1.25 * f) * scan * flick * (1.0 + 2.0 * uGlow) * fade, 1.0);
+}`;
+function buildMascot() {
+  const root = new THREE.Group(); root.position.copy(VEE_POS); scene.add(root);
+  const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uColor: { value: new THREE.Color(0x5ff0ff) } };
+  const holo = new THREE.ShaderMaterial({ uniforms: holoU, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const up = new THREE.Vector3(0, 1, 0);
+  function limb(parent, a, b, r0, r1) {
+    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), holo);
+    m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(up, d.clone().normalize()); parent.add(m);
+    const j = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), holo); j.position.copy(b); parent.add(j);
+  }
+  const V = (x, y, z = 0) => new THREE.Vector3(x, y, z);
+
+  // projector pad, beam and particles
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.56, 0.14, 40), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 }));
+  pad.position.y = 0.07; root.add(pad);
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.018, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); padRing.rotation.x = Math.PI / 2; padRing.position.y = 0.145; root.add(padRing);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.46, 2.1, 40, 1, true), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  beam.position.y = 1.2; root.add(beam);
+  const NP = 70, pp = new Float32Array(NP * 3);
+  for (let i = 0; i < NP; i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 0.36; pp[i * 3] = Math.cos(a) * r; pp[i * 3 + 1] = 0.15 + Math.random() * 2; pp[i * 3 + 2] = Math.sin(a) * r; }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+  root.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x9ff8ff, size: 0.035, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+  const glowL = new THREE.PointLight(0x5ff0ff, 0.8, 4.5, 2); glowL.position.y = 1.3; root.add(glowL);
+
+  // the figure (faces local +z)
+  const fig = new THREE.Group(); fig.position.y = 0.15; root.add(fig);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), holo); head.scale.set(1, 1.18, 1.02); head.position.y = 1.66; fig.add(head);
+  limb(fig, V(0, 1.48), V(0, 1.56), 0.05, 0.042);   // neck
+  const torso = new THREE.Mesh(new THREE.LatheGeometry([V(0, 0.93), V(0.13, 0.95), V(0.155, 1.04), V(0.12, 1.17), V(0.112, 1.25), V(0.15, 1.37), V(0.17, 1.43), V(0.12, 1.49), V(0.03, 1.5)].map(v => new THREE.Vector2(v.x, v.y)), 28), holo);
+  torso.scale.z = 0.68; fig.add(torso);
+  limb(fig, V(-0.19, 1.44), V(-0.235, 1.17), 0.048, 0.04); limb(fig, V(-0.235, 1.17), V(-0.25, 0.93), 0.04, 0.032);   // left arm
+  const shoulder = new THREE.Group(); shoulder.position.set(0.19, 1.44, 0); fig.add(shoulder);                       // right arm waves
+  limb(shoulder, V(0, 0), V(0.045, -0.27), 0.048, 0.04);
+  const elbow = new THREE.Group(); elbow.position.set(0.045, -0.27, 0); shoulder.add(elbow);
+  limb(elbow, V(0, 0), V(0.015, -0.24), 0.04, 0.032);
+  for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.07, 0.052); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.052, 0.04); }
+  const rings = [0.62, 1.22].map((y, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - i * 0.06, 0.008, 6, 80), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); r.position.y = y; r.rotation.x = Math.PI / 2 + 0.25; root.add(r); return r; });
+
+  // name and speech bubble
+  const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; root.add(name);
+  const bc = mk(1024, 300), bg = bc.getContext('2d');
+  bg.fillStyle = 'rgba(8,10,18,0.82)'; rr(bg, 10, 10, 1004, 230, 40); bg.fill();
+  bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, 10, 1004, 230, 40); bg.stroke();
+  bg.beginPath(); bg.moveTo(470, 238); bg.lineTo(512, 290); bg.lineTo(554, 238); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.82)'; bg.fill(); bg.stroke();
+  bg.fillStyle = '#f1e6cf'; bg.font = '60px "Young Serif", Georgia, serif'; bg.textAlign = 'center'; bg.fillText("Hi, I'm Vee.", 512, 105);
+  bg.fillStyle = '#5ff0ff'; bg.font = '44px "IBM Plex Sans", sans-serif'; bg.fillText('Want to meet the builder?', 512, 180);
+  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(bc), transparent: true, depthWrite: false, opacity: 0 }));
+  bubble.scale.set(1.9, 0.56, 1); bubble.position.set(0, 2.32, 0); root.add(bubble);
+
+  // invisible hit target, and the display-like record the hall uses for walk-up, prompt and the dive
+  const hitM = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.3, 12), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
+  hitM.position.y = 1.15; root.add(hitM);
+  const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
+  const art = makeMonogram();
+  const pt = { p: ABOUT, mesh: hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
+    art, normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
+  hitM.userData.project = ABOUT;
+  paintings.push(pt);
+  fig.rotation.y = Math.atan2(normal.x, normal.z);
+  vee = { root, fig, shoulder, elbow, rings, bubble, holoU, pt, waveT: 0, wasNear: false };
+}
+function updateMascot(dt, t) {
+  if (!vee) return;
+  const m = reduceMotion ? 0.2 : 1, cam = camera.position;
+  const dx = cam.x - VEE_POS.x, dz = cam.z - VEE_POS.z, dist = Math.hypot(dx, dz);
+  const want = dist < 9 ? Math.atan2(dx, dz) : Math.atan2(vee.pt.normal.x, vee.pt.normal.z);
+  let d = want - vee.fig.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); vee.fig.rotation.y += d * Math.min(1, dt * 3);
+  vee.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
+  const isNear = dist < 5.5;
+  if (isNear && !vee.wasNear) vee.waveT = 2.4;              // wave hello on the way in
+  vee.wasNear = isNear;
+  if (vee.waveT > 0) {
+    vee.waveT -= dt; const k = Math.min(1, Math.min(2.4 - vee.waveT, vee.waveT) * 2.5);
+    vee.shoulder.rotation.z = 2.5 * k; vee.elbow.rotation.z = (0.5 + 0.45 * Math.sin(t * 9) * m) * k;
+  } else { vee.shoulder.rotation.z *= 0.9; vee.elbow.rotation.z *= 0.9; }
+  vee.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.6 : 0.8) * m; });
+  vee.bubble.material.opacity += ((isNear ? 1 : 0) - vee.bubble.material.opacity) * Math.min(1, dt * 4);
+  vee.bubble.position.y = 2.32 + Math.sin(t * 1.6) * 0.03 * m;
+  vee.holoU.uTime.value = t; vee.holoU.uGlow.value = vee.pt.amp;
+}
+
 /* ---------- Player ---------- */
 const START = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };   // by the door, facing the Platform painting
 const player = { pos: START.pos.clone(), yaw: START.yaw, pitch: START.pitch };
@@ -842,6 +974,10 @@ PROJECTS.forEach((p, i) => {
   b.addEventListener('click', () => { if (paintings[i]) walkTo(paintings[i]); });
   dir.appendChild(b);
 });
+{
+  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
+  b.textContent = ABOUT.dir; b.addEventListener('click', () => { const v = paintings.find(p => p.p.id === 'about'); if (v) walkTo(v); }); dir.appendChild(b);
+}
 const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
 {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-double-slit';
@@ -1185,7 +1321,7 @@ function productScreenCanvas(p, title, text) {
   g.fillStyle = t.accent; g.font = '600 24px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
   g.fillText(p.name.toUpperCase(), 140, 82);
   g.textBaseline = 'alphabetic';
-  g.fillStyle = t.fg; g.font = '72px "Young Serif", Georgia, serif'; g.fillText(title, 56, 232);
+  g.fillStyle = t.fg; let tpx = 72; do { g.font = `${tpx}px "Young Serif", Georgia, serif`; } while (g.measureText(title).width > 912 && --tpx > 36); g.fillText(title, 56, 232);
   g.fillStyle = t.accent; g.fillRect(58, 268, 120, 6);
   g.fillStyle = t.fg; g.globalAlpha = 0.88; g.font = '48px "IBM Plex Sans", sans-serif';
   wrapText(g, text, 56, 360, 912, 64); g.globalAlpha = 1;
@@ -1218,7 +1354,7 @@ function productHeroCanvas(p) {
   g.fillStyle = t.accent; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText(p.wing.toUpperCase() + ' WING', x, 190);
   g.fillStyle = t.fg; g.font = '92px "Young Serif", Georgia, serif';
   let y = wrapText(g, p.name, x, 300, 860, 100);
-  g.fillStyle = t.accent; g.font = '44px "IBM Plex Sans", sans-serif'; g.fillText(p.tagline, x, y + 4); y += 80;
+  g.fillStyle = t.accent; g.font = '44px "IBM Plex Sans", sans-serif'; y = wrapText(g, p.tagline, x, y + 4, 860, 54) + 26;
   g.fillStyle = t.fg; g.globalAlpha = 0.85; g.font = '32px "IBM Plex Sans", sans-serif';
   y = wrapText(g, p.desc, x, y, 860, 46); g.globalAlpha = 1;
   g.fillStyle = t.accent; g.globalAlpha = 0.75; g.font = '26px "IBM Plex Mono", monospace'; g.fillText(p.stack, 90, 900); g.globalAlpha = 1;
@@ -1303,6 +1439,26 @@ function buildProductWorld(p) {
 
   const exit = makeExitPainting(ws, { R: 9, angleDeg: -112, pedMat, hit, stations, updates });
 
+  // App Store screenshots: a row of phones standing on the left, between the raised screens and the exit
+  if (p.shots && p.shots.length) {
+    const sh = place(-76, 9.4), PW2 = 0.9, PH2 = PW2 * 2796 / 1290, gap = 1.12, nS = p.shots.length;
+    const loader = new THREE.TextureLoader();
+    p.shots.forEach((url, k) => {
+      const ph = new THREE.Group(); ph.position.set((k - (nS - 1) / 2) * gap, 1.75, 0); sh.add(ph);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(PW2 + 0.07, PH2 + 0.07, 0.07), new THREE.MeshStandardMaterial({ color: 0x15171d, metalness: 0.7, roughness: 0.3 }));
+      ph.add(body);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x0b0d12 });
+      loader.load(url, tx => { mat.map = tx; mat.color.set(0xffffff); mat.needsUpdate = true; });
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(PW2, PH2), mat); sc.position.z = 0.037; ph.add(sc);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.75 - PH2 / 2, 8), pedMat); post.position.set(0, -(1.75 - PH2 / 2) / 2 - PH2 / 2, -0.02); ph.add(post);
+    });
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(nS * gap + 0.4, 0.06, 0.8), pedMat); plinth.position.y = 0.03; sh.add(plinth);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(nS * gap + 0.4, 0.02, 0.02), accentMat); edge.position.set(0, 0.07, 0.41); sh.add(edge);
+    const lab = stationLabel('APP STORE', 'Screenshots', p.theme.accent, p.theme.brand); lab.position.set(0, 1.75 + PH2 / 2 + 0.75, 0); sh.add(lab);
+    const shL = new THREE.PointLight(0xffffff, 0.5, 8, 2); shL.position.set(0, 2.6, 2.2); sh.add(shL);
+    addStation(sh, { id: 'shots', info: { title: 'Screenshots' }, exhibit: true, standOff: 4.6, pitch: 0.06, nearDist: 6 }, 1.75);
+  }
+
   // App Store display on the right, mirroring the exit display: icon, name, a download button and a
   // QR code a desktop visitor can scan with their iPhone. Acting on it opens the App Store listing.
   const storeLink = p.links.find(([l]) => l === 'App Store');
@@ -1361,13 +1517,17 @@ function buildProductWorld(p) {
       bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
       ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { bg2.fillStyle = c; bg2.beginPath(); bg2.arc(32 + i * 26, 30, 8, 0, Math.PI * 2); bg2.fill(); });
       bg2.fillStyle = '#0b0d12'; rr(bg2, 130, 14, 1020, 32, 16); bg2.fill();
-      bg2.fillStyle = '#c9d2e3'; bg2.font = '20px "IBM Plex Mono", monospace'; bg2.textBaseline = 'middle'; bg2.fillText('https://' + p.site.label, 154, 31);
+      bg2.fillStyle = '#c9d2e3'; bg2.font = '20px "IBM Plex Mono", monospace'; bg2.textBaseline = 'middle'; bg2.fillText(p.site.addr || 'https://' + p.site.label, 154, 31);
     };
     bg2.fillStyle = '#05070b'; bg2.fillRect(0, 60, 1280, 800);
     bg2.fillStyle = '#8e99b0'; bg2.font = '32px "IBM Plex Sans", sans-serif'; bg2.textAlign = 'center'; bg2.fillText(p.site.label, 640, 460); bg2.textAlign = 'left';
     chrome();
     const shot = new Image();
-    shot.onload = () => { bg2.drawImage(shot, 0, 60, 1280, 800); chrome(); siteTex.needsUpdate = true; };
+    shot.onload = () => {
+      if (p.site.fit === 'top') { bg2.fillStyle = '#ffffff'; bg2.fillRect(0, 60, 1280, 800); bg2.drawImage(shot, 0, 0, shot.width, shot.width * 800 / 1280, 0, 60, 1280, 800); }   // a document: show its top, unstretched
+      else bg2.drawImage(shot, 0, 60, 1280, 800);
+      chrome(); siteTex.needsUpdate = true;
+    };
     shot.src = p.site.shot;
     const W3 = slot.w, H3 = W3 * 860 / 1280;
     const frame = new THREE.Group(); frame.position.y = slot.y; g.add(frame);
@@ -1433,10 +1593,12 @@ function renderWorldPanel(pt) {
       <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
-      <h3 class="wp-sub">Features</h3>
+      <h3 class="wp-sub">${esc(p.sectionTitle || 'Features')}</h3>
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
-      ${p.site ? `<h3 class="wp-sub">Website</h3>
-      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the centre screen in front of you. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}
+      ${p.site ? `<h3 class="wp-sub">${esc(p.site.heading || 'Website')}</h3>
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>${esc(p.site.cardText || 'On the centre screen in front of you. Walk up and press E, or tap it, to open the site.')}</span></button></li></ul>` : ''}
+      ${p.shots ? `<h3 class="wp-sub">Screenshots</h3>
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="shots"><b>App Store screenshots</b><span>On your left: ${p.shots.length} screens from the App Store listing.</span></button></li></ul>` : ''}
       ${p.links.some(([l]) => l === 'App Store') ? `<h3 class="wp-sub">App Store</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="store"><b>Download ${esc(p.name)}</b><span>On the screen to your right, with a QR code to scan on your iPhone. Walk up and press E, or tap it, to open the App Store.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
@@ -1537,6 +1699,8 @@ function tick() {
     } else {
       player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
       player.pos.z = Math.max(ROOM.zMin + 1, Math.min(ROOM.zMax - 0.8, player.pos.z));
+      const vx = player.pos.x - VEE_POS.x, vz = player.pos.z - VEE_POS.z, vd = Math.hypot(vx, vz);
+      if (vd < 0.8 && vd > 0.0001) { player.pos.x = VEE_POS.x + vx / vd * 0.8; player.pos.z = VEE_POS.z + vz / vd * 0.8; }
     }
     const bob = mv.lengthSq() > 0.01 && !reduceMotion ? Math.sin(t * 10) * 0.04 : 0;
     camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
@@ -1563,7 +1727,7 @@ function tick() {
         if (dist < best && facing > 0.3) { best = dist; near = pt; }
       }
       if (near && mode === 'walk') {
-        promptEl.innerHTML = `<span>Press E or tap to enter</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
+        promptEl.innerHTML = `<span>${esc(near.p.promptVerb || 'Press E or tap to enter')}</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
       } else promptEl.hidden = true;
     }
   }
@@ -1593,7 +1757,7 @@ function tick() {
 
   if (mode !== 'inside') {
     if (world) { world.update(dt, t); renderer.render(world.scene, camera); }
-    else { updateQuantum(dt, t); renderer.render(scene, camera); }
+    else { updateQuantum(dt, t); updateMascot(dt, t); renderer.render(scene, camera); }
   }
   requestAnimationFrame(tick);
 }
@@ -1605,7 +1769,8 @@ Promise.all([
   fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'),
   document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
-  buildPaintings(); buildSlitExhibit();
+  { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
+  buildPaintings(); buildSlitExhibit(); buildMascot();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
   if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
