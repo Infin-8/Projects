@@ -146,11 +146,13 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 .links a { font-family: var(--mono); font-size: 13px; color: inherit; text-decoration: none; border: 1px solid var(--room-accent, var(--gilt)); padding: 10px 14px; border-radius: 2px; }
 .links a:hover, .links a:focus-visible { background: var(--room-accent, var(--gilt)); color: var(--room-bg, var(--stone)); outline: none; }
 
-/* Platform world: info panel docked right; a collapsible bar at the bottom on phones */
+/* World info panel (any painting's world): docked right; a collapsible bar at the bottom on phones.
+   --wp-accent / --wp-accent2 are set per world from the product's colours. */
 #worldPanel {
+  --wp-accent: #3fe0e0; --wp-accent2: #8ea2ff;
   position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: min(380px, 100%);
   overflow-y: auto; overscroll-behavior: contain;
-  background: color-mix(in srgb, #080a12 88%, transparent); border-left: 1px solid rgba(63, 224, 224, .22);
+  background: color-mix(in srgb, #080a12 88%, transparent); border-left: 1px solid color-mix(in srgb, var(--wp-accent) 22%, transparent);
   color: #e6e6ff; backdrop-filter: blur(6px);
   padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-bottom, 0px));
   padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px));
@@ -161,44 +163,44 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 #worldPanel .wp-titles { display: grid; gap: 4px; min-width: 0; }
 #worldPanel .wp-sub { margin: 4px 0 -6px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
 #worldPanel .wp-modules { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-#worldPanel .wp-modules li { display: grid; gap: 2px; border-top: 1px solid rgba(142, 162, 255, .18); padding-top: 8px; }
-#worldPanel .wp-modules b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #3fe0e0; font-weight: 600; }
+#worldPanel .wp-modules li { display: grid; gap: 2px; border-top: 1px solid color-mix(in srgb, var(--wp-accent2) 18%, transparent); padding-top: 8px; }
+#worldPanel .wp-modules b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--wp-accent); font-weight: 600; }
 #worldPanel .wp-modules span { font-size: 13px; line-height: 1.5; color: #b9c2d6; }
-#worldPanel .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #3fe0e0; }
+#worldPanel .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--wp-accent); }
 #worldPanel h2 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
-#worldPanel .wp-tag { margin: 0; color: #8ea2ff; font-size: 15px; }
+#worldPanel .wp-tag { margin: 0; color: var(--wp-accent2); font-size: 15px; }
 #worldPanel .wp-toggle { display: none; }
 #worldPanel .wp-body { display: grid; gap: 16px; }
 #worldPanel .wp-desc { margin: 0; font-size: 14px; line-height: 1.55; color: #c9d2e3; }
 #worldPanel .wp-stations { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 #worldPanel .st {
   width: 100%; text-align: left; cursor: pointer; display: grid; gap: 3px;
-  background: transparent; color: inherit; border: 1px solid rgba(142, 162, 255, .18); border-radius: 3px; padding: 10px 12px;
+  background: transparent; color: inherit; border: 1px solid color-mix(in srgb, var(--wp-accent2) 18%, transparent); border-radius: 3px; padding: 10px 12px;
   font: inherit;
 }
-#worldPanel .st b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #8ea2ff; font-weight: 600; }
+#worldPanel .st b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--wp-accent2); font-weight: 600; }
 #worldPanel .st span { font-size: 13px; line-height: 1.5; color: #b9c2d6; }
-#worldPanel .st:hover, #worldPanel .st:focus-visible { border-color: rgba(63, 224, 224, .6); outline: none; }
-#worldPanel .st.active { border-color: #3fe0e0; background: rgba(63, 224, 224, .08); }
-#worldPanel .st.active b { color: #3fe0e0; }
+#worldPanel .st:hover, #worldPanel .st:focus-visible { border-color: color-mix(in srgb, var(--wp-accent) 60%, transparent); outline: none; }
+#worldPanel .st.active { border-color: var(--wp-accent); background: color-mix(in srgb, var(--wp-accent) 8%, transparent); }
+#worldPanel .st.active b { color: var(--wp-accent); }
 #worldPanel .wp-stack { font-family: var(--mono); font-size: 11px; line-height: 1.8; color: #8e99b0; }
 #worldPanel .wp-links, #worldPanel .wp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #worldPanel .wp-links a, #worldPanel .wp-actions button {
   font-family: var(--mono); font-size: 12px; color: inherit; text-decoration: none; background: transparent; cursor: pointer;
-  border: 1px solid rgba(142, 162, 255, .5); padding: 8px 11px; border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--wp-accent2) 50%, transparent); padding: 8px 11px; border-radius: 2px;
 }
-#worldPanel .wp-links a:hover, #worldPanel .wp-links a:focus-visible, #worldPanel .wp-actions button:hover, #worldPanel .wp-actions button:focus-visible { border-color: #3fe0e0; color: #3fe0e0; outline: none; }
-#worldPanel .wp-actions button.primary { border-color: #3fe0e0; color: #3fe0e0; }
+#worldPanel .wp-links a:hover, #worldPanel .wp-links a:focus-visible, #worldPanel .wp-actions button:hover, #worldPanel .wp-actions button:focus-visible { border-color: var(--wp-accent); color: var(--wp-accent); outline: none; }
+#worldPanel .wp-actions button.primary { border-color: var(--wp-accent); color: var(--wp-accent); }
 @media (max-width: 760px) {
   #worldPanel {
-    top: auto; left: 0; width: auto; max-height: 52vh; border-left: 0; border-top: 1px solid rgba(63, 224, 224, .22);
+    top: auto; left: 0; width: auto; max-height: 52vh; border-left: 0; border-top: 1px solid color-mix(in srgb, var(--wp-accent) 22%, transparent);
     padding-top: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 12px;
   }
   #worldPanel .wp-head { gap: 12px; }
   #worldPanel .wp-logo { width: 42px; height: 42px; }
   #worldPanel h2 { font-size: 20px; }
   #worldPanel .wp-tag { display: none; }
-  #worldPanel .wp-toggle { display: block; font-family: var(--mono); font-size: 12px; background: transparent; color: #3fe0e0; border: 1px solid #3fe0e0; border-radius: 2px; padding: 8px 10px; cursor: pointer; }
+  #worldPanel .wp-toggle { display: block; font-family: var(--mono); font-size: 12px; background: transparent; color: var(--wp-accent); border: 1px solid var(--wp-accent); border-radius: 2px; padding: 8px 10px; cursor: pointer; }
   #worldPanel.collapsed .wp-body { display: none; }
   body.in-world #prompt { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -663,7 +665,7 @@ addEventListener('keydown', e => {
   if (mode === 'inside') { if (e.key === 'Escape') exitRoom(); return; }
   keys[e.code] = true;
   if (world && e.key === 'Escape') { exitWorld(); return; }
-  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) showStation(near); else enter(near, new THREE.Vector2(.5, .5)); }
+  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -711,13 +713,15 @@ function clickAt(x, y) {
   if (mode !== 'walk' && mode !== 'auto') return;
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < 5.5) showStation(st); else walkTo(st); } return; }
+  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const hit = ray.intersectObjects(paintings.map(p => p.mesh))[0];
   if (!hit) return;
   const pt = paintings.find(p => p.mesh === hit.object);
   if (hit.distance < 6.5) enter(pt, hit.uv); else walkTo(pt);
 }
 
+// in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
+function worldAct(st, uv) { if (st.portal) enter(st, uv); else showStation(st); }
 function showStation(st) {
   highlightStation(st.id);
   if (worldPanel._setOpen) worldPanel._setOpen(true);
@@ -769,7 +773,7 @@ function exitRoom() {
   if (!current) return;
   const pt = current; current = null;
   room.hidden = true; room.innerHTML = '';
-  if (world) { mode = 'walk'; canvas.focus(); try { history.replaceState(null, '', '#platform-world'); } catch (e) {} return; }
+  if (world) { mode = 'walk'; canvas.focus(); try { history.replaceState(null, '', '#' + world.pt.p.id + '-world'); } catch (e) {} return; }
   resetView(); canvas.focus();
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
@@ -801,7 +805,7 @@ const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.V
   b.textContent = 'Double slit'; b.addEventListener('click', () => walkTo(slitStop)); dir.appendChild(b);
 }
 const promptEl = document.getElementById('prompt');
-promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world) showStation(near); else enter(near); } });
+promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world) worldAct(near); else enter(near); } });
 
 /* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
@@ -836,6 +840,48 @@ function bitTex(ch) {
   g.font = '600 46px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.shadowColor = '#3fe0e0'; g.shadowBlur = 12; g.fillStyle = '#c8fbff'; g.fillText(ch, 32, 34);
   return new THREE.CanvasTexture(c);
+}
+
+/* Exit painting: a framed view of the Quantum Hall, taken from its entrance as you arrive.
+   It ripples like the hall's paintings; diving into it takes you back. Shared by every world. */
+function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
+  const hallShot = new THREE.WebGLRenderTarget(640, 840);
+  {
+    const shotCam = new THREE.PerspectiveCamera(62, 640 / 840, 0.05, 100);
+    shotCam.position.copy(START.pos); shotCam.rotation.order = 'YXZ'; shotCam.rotation.set(START.pitch + 0.08, START.yaw, 0);
+    shotCam.updateMatrixWorld(true);
+    renderer.setRenderTarget(hallShot); renderer.render(scene, shotCam); renderer.setRenderTarget(null);
+  }
+  const PW = 2.4, PH = 3.15;
+  const portalU = { map: { value: hallShot.texture }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: PW / PH } };
+  const portalG = new THREE.Group();
+  const pa = THREE.MathUtils.degToRad(angleDeg);
+  portalG.position.set(Math.sin(pa) * R, 0, -Math.cos(pa) * R); portalG.lookAt(0, 0, 0); ws.add(portalG);
+  const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH, 64, 84), new THREE.ShaderMaterial({ uniforms: portalU, vertexShader: vert, fragmentShader: frag }));
+  canvasMesh.position.set(0, 2.05, 0.06); portalG.add(canvasMesh);
+  const ft = 0.22;
+  [[PW + ft * 2, ft, 0, PH / 2 + ft / 2], [PW + ft * 2, ft, 0, -PH / 2 - ft / 2], [ft, PH, -PW / 2 - ft / 2, 0], [ft, PH, PW / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.16), gold); f.position.set(x, 2.05 + y, 0.08); portalG.add(f);
+  });
+  const easel = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.9, 0.12, 0.9), pedMat); easel.position.set(0, 0.06, 0.2); portalG.add(easel);
+  const pl = stationLabel('EXIT PAINTING', 'Quantum Hall'); pl.position.set(0, 4.55, 0); portalG.add(pl);
+  const portalLight = new THREE.PointLight(0xe6eeff, 1.0, 7, 2); portalLight.position.set(0, 3.6, 1.6); portalG.add(portalLight);
+  const portal = {
+    id: 'portal', portal: true, exhibit: true, info: { title: 'Quantum Hall' }, standOff: 3.4, pitch: 0.12,
+    center: new THREE.Vector3(portalG.position.x, 2.05, portalG.position.z),
+    normal: new THREE.Vector3(-portalG.position.x, 0, -portalG.position.z).normalize(),
+    uniforms: portalU, amp: 0
+  };
+  canvasMesh.userData.station = portal; hit.push(canvasMesh); stations.push(portal);
+  updates.push((dt, t) => {
+    if (!(mode === 'entering' && anim && anim.pt === portal)) {
+      portal.amp += ((near === portal ? 0.045 : 0) - portal.amp) * Math.min(1, dt * 2.5);
+      if (near !== portal) portalU.uHit.value.lerp(new THREE.Vector2(.5, .5), dt);
+    }
+    portalU.uAmp.value = reduceMotion ? Math.min(portal.amp, 0.02) : portal.amp;
+    portalU.uTime.value = t;
+  });
+  return { portal, hallShot };
 }
 
 const SHARED_MATS = new Set([gold, colMat, silver, copper]);   // also used by the hall
@@ -1048,11 +1094,143 @@ function buildPlatformWorld() {
     });
   }, { r: 10.5, labelY: 3.5, eyebrow: 'KEY EXCHANGE', standOff: 6.2, noPedestal: true });
 
+  // 7. Exit painting back to the hall
+  const exit = makeExitPainting(ws, { R, angleDeg: -100, pedMat, hit, stations, updates });
+  const portal = exit.portal, hallShot = exit.hallShot;
+
   return {
-    scene: ws, stations, hit, radius: RADIUS,
+    kind: 'platform', accent: '#3fe0e0', accent2: '#8ea2ff',
+    scene: ws, stations, hit, radius: RADIUS, portal,
     start: { pos: new THREE.Vector3(0, 1.7, 7.6), yaw: 0, pitch: 0.1 },
     update(dt, t) { for (const u of updates) u(dt, t); },
     dispose() {
+      hallShot.dispose();
+      ws.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+        for (const m of mats) { if (SHARED_MATS.has(m)) continue; if (m.map) m.map.dispose(); m.dispose(); }
+      });
+    }
+  };
+}
+
+/* ---------- Product showroom world (KaizenDoku, Handheld) ----------
+   A standard layout for app paintings: a large main screen with the logo,
+   name and description, and one screen per module card in an arc in front,
+   all in the app's own colours. Same ground, stars and exit painting as the
+   Platform world. */
+function productScreenCanvas(p, title, text) {
+  const W2 = 1024, H2 = 640, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme;
+  const bg = g.createLinearGradient(0, 0, 0, H2); bg.addColorStop(0, t.bg); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
+  const logo = LOGOS[p.logo];
+  if (logo) g.drawImage(logo, 56, 48, 64, 64);
+  g.fillStyle = t.accent; g.font = '600 24px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
+  g.fillText(p.name.toUpperCase(), 140, 82);
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = t.fg; g.font = '72px "Young Serif", Georgia, serif'; g.fillText(title, 56, 232);
+  g.fillStyle = t.accent; g.fillRect(58, 268, 120, 6);
+  g.fillStyle = t.fg; g.globalAlpha = 0.88; g.font = '48px "IBM Plex Sans", sans-serif';
+  wrapText(g, text, 56, 360, 912, 64); g.globalAlpha = 1;
+  return c;
+}
+function productHeroCanvas(p) {
+  const W2 = 1600, H2 = 1000, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme;
+  const bg = g.createLinearGradient(0, 0, W2, H2); bg.addColorStop(0, t.bg); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
+  const logo = LOGOS[p.logo];
+  if (logo) g.drawImage(logo, 90, 210, 500, 500);
+  const x = 660;
+  g.fillStyle = t.accent; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText(p.wing.toUpperCase() + ' WING', x, 190);
+  g.fillStyle = t.fg; g.font = '92px "Young Serif", Georgia, serif';
+  let y = wrapText(g, p.name, x, 300, 860, 100);
+  g.fillStyle = t.accent; g.font = '44px "IBM Plex Sans", sans-serif'; g.fillText(p.tagline, x, y + 4); y += 80;
+  g.fillStyle = t.fg; g.globalAlpha = 0.85; g.font = '32px "IBM Plex Sans", sans-serif';
+  y = wrapText(g, p.desc, x, y, 860, 46); g.globalAlpha = 1;
+  g.fillStyle = t.accent; g.globalAlpha = 0.75; g.font = '26px "IBM Plex Mono", monospace'; g.fillText(p.stack, 90, 900); g.globalAlpha = 1;
+  return c;
+}
+function buildProductWorld(p) {
+  const A = new THREE.Color(p.theme.accent);
+  const ws = new THREE.Scene();
+  ws.background = new THREE.Color(0x05060c); ws.fog = new THREE.Fog(0x05060c, 20, 55);
+  ws.add(new THREE.HemisphereLight(0xc8d4ff, 0x05060c, 0.6));
+  const updates = [], hit = [], stations = [];
+  const R = 8, RADIUS = 12;
+
+  // ground, rings in the app's accent, stars
+  const gc = mk(512, 512), gg = gc.getContext('2d');
+  gg.fillStyle = '#0c0f17'; gg.fillRect(0, 0, 512, 512); gg.strokeStyle = '#1d2433'; gg.lineWidth = 2;
+  for (let i = 0; i <= 512; i += 64) { gg.beginPath(); gg.moveTo(i, 0); gg.lineTo(i, 512); gg.stroke(); gg.beginPath(); gg.moveTo(0, i); gg.lineTo(512, i); gg.stroke(); }
+  const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(6, 6); gt.anisotropy = 8;
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(RADIUS + 1.5, 96), new THREE.MeshStandardMaterial({ map: gt, roughness: 0.35, metalness: 0.3 }));
+  ground.rotation.x = -Math.PI / 2; ws.add(ground);
+  for (const [r, w, op] of [[R, 0.025, 0.5], [RADIUS + 1.4, 0.04, 0.8]]) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(r - w, r + w, 128), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: op, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.position.y = 0.01; ws.add(m);
+  }
+  const sp = new Float32Array(800 * 3);
+  for (let i = 0; i < 800; i++) {
+    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, k = Math.sqrt(1 - u * u);
+    sp[i * 3] = Math.cos(a) * k * 70; sp[i * 3 + 1] = Math.abs(u) * 63 + 2; sp[i * 3 + 2] = Math.sin(a) * k * 70;
+  }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  ws.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xc8d4ff, size: 0.25, map: dotTex(), transparent: true, depthWrite: false })));
+
+  const pedMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.4 });
+  const bezel = new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.35 });
+  const accentMat = new THREE.MeshBasicMaterial({ color: A });
+  function display(canvas, w, h) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.16, h + 0.16, 0.12), bezel));
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas) }));
+    scr.position.z = 0.062; g.add(scr);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.5, 0.03, 0.03), accentMat); strip.position.set(0, -h / 2 - 0.14, 0.05); g.add(strip);
+    return g;
+  }
+  function place(angleDeg, r) {
+    const a = THREE.MathUtils.degToRad(angleDeg), g = new THREE.Group();
+    g.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r); g.lookAt(0, 0, 0); ws.add(g); return g;
+  }
+  function addStation(g, st, y) {
+    st.center = new THREE.Vector3(g.position.x, y, g.position.z);
+    st.normal = new THREE.Vector3(-g.position.x, 0, -g.position.z).normalize();
+    g.traverse(o => { if (o.isMesh) { o.userData.station = st; hit.push(o); } });
+    stations.push(st);
+  }
+
+  // main screen, raised behind the arc
+  const heroG = place(0, 10.5);
+  const hero = display(productHeroCanvas(p), 6.4, 4.0); hero.position.y = 5.4; heroG.add(hero);   // high enough to clear the module screens
+  for (const x of [-2.4, 2.4]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 3.4, 0.14), pedMat); leg.position.set(x, 1.7, -0.05); heroG.add(leg); }
+  const heroLight = new THREE.PointLight(A, 0.7, 10, 2); heroLight.position.set(0, 3, 2.5); heroG.add(heroLight);
+  addStation(heroG, { id: 'hero', info: { title: p.name }, exhibit: true, standOff: 7, pitch: 0.36 }, 5.4);
+
+  // one screen per module card
+  const n = p.modules.length, span = n > 4 ? 116 : 100;
+  p.modules.forEach(([title, text], i) => {
+    const ang = n === 1 ? 0 : -span / 2 + span * i / (n - 1);
+    const g = place(ang, R);
+    const scr = display(productScreenCanvas(p, title, text), 2.6, 1.625); scr.position.y = 1.95; g.add(scr);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 12), pedMat); post.position.y = 0.6; g.add(post);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.08, 32), pedMat); base.position.y = 0.04; g.add(base);
+    const glowM = new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.6 });
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.018, 8, 64), glowM); glow.rotation.x = Math.PI / 2; glow.position.y = 0.02; g.add(glow);
+    const st = { id: 'm' + i, info: { title, text }, exhibit: true, standOff: 3.1, pitch: 0.06, glowM };
+    addStation(g, st, 1.95);
+    updates.push((dt, t) => { glowM.opacity = near === st ? 0.95 : 0.35 + 0.15 * Math.sin(t * 1.6 + i); });
+  });
+
+  const exit = makeExitPainting(ws, { R: 9, angleDeg: -112, pedMat, hit, stations, updates });
+  const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
+
+  return {
+    kind: 'product', accent: p.theme.accent, accent2,
+    scene: ws, stations, hit, radius: RADIUS, portal: exit.portal,
+    start: { pos: new THREE.Vector3(0, 1.7, 7.5), yaw: 0, pitch: 0.12 },
+    update(dt, t) { for (const u of updates) u(dt, t); },
+    dispose() {
+      exit.hallShot.dispose();
       ws.traverse(o => {
         if (o.geometry) o.geometry.dispose();
         const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
@@ -1064,6 +1242,7 @@ function buildPlatformWorld() {
 
 function renderWorldPanel(pt) {
   const p = pt.p;
+  worldPanel.style.setProperty('--wp-accent', world.accent); worldPanel.style.setProperty('--wp-accent2', world.accent2);
   worldPanel.innerHTML = `
     <div class="wp-head">
       <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
@@ -1076,10 +1255,13 @@ function renderWorldPanel(pt) {
     </div>
     <div class="wp-body" id="wpBody">
       <p class="wp-desc">${esc(p.desc)}</p>
+      ${world.kind === 'platform' ? `
       <h3 class="wp-sub">Modules</h3>
       <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <h3 class="wp-sub">In this world</h3>
-      <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>
+      <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
+      <h3 class="wp-sub">Modules · one screen each</h3>
+      <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>`}
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
@@ -1101,13 +1283,15 @@ function highlightStation(id) {
   worldPanel.querySelectorAll('.st').forEach(b => b.classList.toggle('active', b.dataset.st === id));
 }
 function openWorld(pt) {
-  world = buildPlatformWorld(); world.pt = pt;
+  // settle the hall paintings first, so the exit painting's view of the hall is calm
+  for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
+  world = pt.p.id === 'platform' ? buildPlatformWorld() : buildProductWorld(pt.p); world.pt = pt;
   renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize();
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
   mode = 'walk'; auto = null; near = null;
   camera.fov = baseFov; camera.updateProjectionMatrix();
   for (const p of paintings) { p.amp = 0; p.uniforms.uGlow.value = 0; }
-  try { history.replaceState(null, '', '#platform-world'); } catch (e) {}
+  try { history.replaceState(null, '', '#' + pt.p.id + '-world'); } catch (e) {}
   canvas.focus();
 }
 function exitWorld() {
@@ -1150,7 +1334,7 @@ function tick() {
       const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
+      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
@@ -1179,7 +1363,7 @@ function tick() {
         if (d < best && facing > 0.35) { best = d; near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk') { promptEl.innerHTML = `<span>Press E or tap for details</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
+      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.portal ? 'Press E or tap to go back to' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
@@ -1202,7 +1386,7 @@ function tick() {
     if (k > 0.72 && !anim.flashed) { anim.flashed = true; flash.style.opacity = 1; }
     if (k >= 1) {
       mode = 'inside'; const pt = anim.pt; anim = null;
-      if (pt.p.id === 'platform') openWorld(pt); else openRoom(pt);
+      if (pt.portal) exitWorld(); else openWorld(pt);
       pt.uniforms.uGlow.value = 0;
       setTimeout(() => { flash.style.opacity = 0; }, 80);
     }
@@ -1234,7 +1418,8 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
   if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
-  if (hash === 'platform-world') { const pf = paintings.find(p => p.p.id === 'platform'); if (pf) openWorld(pf); }
+  const wm = hash.match(/^(.+)-world$/);
+  if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
   tick();
 });
 })();
