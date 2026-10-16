@@ -2361,7 +2361,7 @@ function buildOfficeWorld(p) {
   [[NW + 0.24, 0.12, 0, NH / 2 + 0.06], [NW + 0.24, 0.12, 0, -NH / 2 - 0.06], [0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
     const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
   });
-  const nestLabel = stationLabel("VEE'S NEST", 'Micro-drone dock'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); nestG.add(nestLabel);
+  const nestLabel = stationLabel("VEE'S NEST", 'Nesting Station'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); nestG.add(nestLabel);
   // parked drones resting in the cells
   const parkU = { uTime: { value: 0 }, uDim: { value: 1 }, uGlow: { value: 0 }, uPx: { value: 800 }, uSize: { value: 0.012 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
   const parkMat = new THREE.ShaderMaterial({ uniforms: parkU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
