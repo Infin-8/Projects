@@ -102,6 +102,20 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 }
 .dir-btn:hover, .dir-btn:focus-visible { border-color: var(--gilt); color: var(--gilt); outline: none; }
 
+/* the guided tour's controls, above the bottom buttons */
+#tourBar {
+  left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  background: color-mix(in srgb, var(--night) 88%, transparent); border: 1px solid #5ff0ff; border-radius: 2px; padding: 8px 10px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #c8fbff;
+}
+#tourBar button { font-family: var(--mono); font-size: 12px; background: transparent; color: #5ff0ff; border: 1px solid #5ff0ff; border-radius: 2px; padding: 7px 10px; cursor: pointer; }
+#tourBar #tourNext { background: #5ff0ff; color: #05070b; }
+#tourBar button:hover, #tourBar button:focus-visible { filter: brightness(1.15); outline: none; }
+body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 760px) { body.in-world #tourBar { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
+.dir-btn.tour-btn { border-color: #5ff0ff; color: #5ff0ff; }
 #prompt {
   left: 0; right: 0; margin-inline: auto; width: fit-content;
   max-width: min(520px, calc(100vw - 2 * max(16px, env(safe-area-inset-left, 0px))));
@@ -158,7 +172,9 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   padding-left: 20px; padding-right: max(20px, env(safe-area-inset-right, 0px));
   display: grid; align-content: start; gap: 16px;
 }
-#worldPanel .wp-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+#worldPanel .wp-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+#worldPanel .wp-tourbtn { font-family: var(--mono); font-size: 12px; background: var(--wp-accent); color: #05070b; border: 1px solid var(--wp-accent); border-radius: 2px; padding: 8px 10px; cursor: pointer; align-self: start; }
+#worldPanel .wp-tourbtn:hover, #worldPanel .wp-tourbtn:focus-visible { filter: brightness(1.12); outline: none; }
 #worldPanel .wp-logo { width: 56px; height: 56px; display: block; box-shadow: 0 8px 20px #0008; }
 #worldPanel .wp-titles { display: grid; gap: 4px; min-width: 0; }
 #worldPanel .wp-sub { margin: 4px 0 -6px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
@@ -250,16 +266,17 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
   <p>Walk up to a display and step inside to see the project. <a class="listlink" href="https://github.com/Infin-8/Projects#apps">Prefer a list?</a></p>
 </div>
 <div id="controls">
-  <div class="desk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look</div>
+  <div class="desk"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>T</kbd> guided tour</div>
   <div class="desk hall-only"><kbd>E</kbd> or click a display to enter</div>
   <div class="desk world-only"><kbd>E</kbd> or click a station for details · <kbd>Esc</kbd> back to the hall</div>
-  <div class="touch">Left thumb walks · drag to look</div>
+  <div class="touch">Left thumb walks · drag to look · tap Tour for a guided tour</div>
   <div class="touch hall-only">Tap a display to enter</div>
   <div class="touch world-only">Tap a station for details</div>
 </div>
 </header>
 <nav class="hud" id="directory" aria-label="Displays"></nav>
 <div class="hud" id="prompt" hidden></div>
+<div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
 <section id="room" hidden aria-modal="true" role="dialog"></section>
@@ -720,9 +737,11 @@ function buildPaintings() {
   });
 }
 
-/* ---------- Vee: the hall's holographic guide ----------
-   An original hologram figure on a projector pad by the entrance. She turns to
-   face you, waves when you come close, and leads into the About world. */
+/* ---------- Vee: the gallery's holographic guide ----------
+   An original hologram figure. She turns to face you and waves as you come close,
+   types out what she says while she gestures, points at whatever she mentions,
+   and can lead a guided tour, floating beside you from stop to stop.
+   In the hall she also leads into the About world. */
 const VEE_POS = new THREE.Vector3(-3.6, 0, 5.6);   // just beyond walk-up range of the start, so no prompt on arrival
 let vee = null;
 const holoVert = `
@@ -730,113 +749,200 @@ varying vec3 vN; varying vec3 vV; varying float vY;
 void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vY = wp.y; vec4 mv = viewMatrix * wp;
   vN = normalize(normalMatrix * normal); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`;
 const holoFrag = `
-uniform float uTime; uniform float uGlow; uniform vec3 uColor;
+uniform float uTime; uniform float uGlow; uniform float uDim; uniform vec3 uColor;
 varying vec3 vN; varying vec3 vV; varying float vY;
 void main(){
   float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.6);      // bright rim, see-through middle
   float scan = 0.55 + 0.45 * sin(vY * 90.0 - uTime * 6.0);               // scanlines drifting up
   float flick = 0.93 + 0.07 * sin(uTime * 37.0) * sin(uTime * 11.0);
   float fade = smoothstep(0.12, 0.7, vY);                                 // the legs dissolve into the beam
-  gl_FragColor = vec4(uColor * (0.16 + 1.25 * f) * scan * flick * (1.0 + 2.0 * uGlow) * fade, 1.0);
+  gl_FragColor = vec4(uColor * (0.16 + 1.25 * f) * scan * flick * (1.0 + 2.0 * uGlow) * fade * uDim, 1.0);
 }`;
+const angleTo = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 // Builds one Vee in any scene. facing: the direction she rests facing. Returns a handle for updateVee().
 function makeVee(parent, pos, facing) {
-  const root = new THREE.Group(); root.position.copy(pos); parent.add(root);
-  const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uColor: { value: new THREE.Color(0x5ff0ff) } };
-  const holo = new THREE.ShaderMaterial({ uniforms: holoU, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const pad = new THREE.Group(); pad.position.copy(pos); parent.add(pad);        // the projector stays put
+  const body = new THREE.Group(); body.position.copy(pos); parent.add(body);     // the hologram can float off on a tour
+  const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uDim: { value: 1 }, uColor: { value: new THREE.Color(0x5ff0ff) } };
+  const holoMat = u => new THREE.ShaderMaterial({ uniforms: u, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const holo = holoMat(holoU);
+  const hair = holoMat({ uTime: holoU.uTime, uGlow: holoU.uGlow, uDim: holoU.uDim, uColor: { value: new THREE.Color(0x8fd2ff) } });
   const up = new THREE.Vector3(0, 1, 0);
-  function limb(par, a, b, r0, r1) {
-    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), holo);
+  function limb(par, a, b, r0, r1, mat = holo) {
+    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), mat);
     m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(up, d.clone().normalize()); par.add(m);
-    const jn = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), holo); jn.position.copy(b); par.add(jn);
+    const jn = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), mat); jn.position.copy(b); par.add(jn);
   }
   const V = (x, y, z = 0) => new THREE.Vector3(x, y, z);
+  const addBlend = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
 
   // projector pad, beam and particles
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.56, 0.14, 40), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 }));
-  pad.position.y = 0.07; root.add(pad);
-  const padRing = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.018, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); padRing.rotation.x = Math.PI / 2; padRing.position.y = 0.145; root.add(padRing);
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.46, 2.1, 40, 1, true), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
-  beam.position.y = 1.2; root.add(beam);
+  const padM = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.56, 0.14, 40), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 }));
+  padM.position.y = 0.07; pad.add(padM);
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.018, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); padRing.rotation.x = Math.PI / 2; padRing.position.y = 0.145; pad.add(padRing);
+  const beamM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, opacity: 0.06, side: THREE.DoubleSide, ...addBlend });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.46, 2.1, 40, 1, true), beamM); beam.position.y = 1.2; pad.add(beam);
   const NP = 70, pp = new Float32Array(NP * 3);
   for (let i = 0; i < NP; i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 0.36; pp[i * 3] = Math.cos(a) * r; pp[i * 3 + 1] = 0.15 + Math.random() * 2; pp[i * 3 + 2] = Math.sin(a) * r; }
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-  root.add(new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x9ff8ff, size: 0.035, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
-  const glowL = new THREE.PointLight(0x5ff0ff, 0.8, 4.5, 2); glowL.position.y = 1.3; root.add(glowL);
+  const motes = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0x9ff8ff, size: 0.035, map: dotTex(), ...addBlend })); pad.add(motes);
 
   // the figure (faces local +z)
-  const fig = new THREE.Group(); fig.position.y = 0.15; root.add(fig);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), holo); head.scale.set(1, 1.18, 1.02); head.position.y = 1.66; fig.add(head);
-  limb(fig, V(0, 1.48), V(0, 1.56), 0.05, 0.042);   // neck
-  const torso = new THREE.Mesh(new THREE.LatheGeometry([V(0, 0.93), V(0.13, 0.95), V(0.155, 1.04), V(0.12, 1.17), V(0.112, 1.25), V(0.15, 1.37), V(0.17, 1.43), V(0.12, 1.49), V(0.03, 1.5)].map(v => new THREE.Vector2(v.x, v.y)), 28), holo);
-  torso.scale.z = 0.68; fig.add(torso);
-  limb(fig, V(-0.19, 1.44), V(-0.235, 1.17), 0.048, 0.04); limb(fig, V(-0.235, 1.17), V(-0.25, 0.93), 0.04, 0.032);   // left arm
-  const shoulder = new THREE.Group(); shoulder.position.set(0.19, 1.44, 0); fig.add(shoulder);                       // right arm waves
+  const fig = new THREE.Group(); fig.position.y = 0.15; body.add(fig);
+  const headG = new THREE.Group(); headG.position.y = 1.66; fig.add(headG);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), holo); head.scale.set(1, 1.18, 1.02); headG.add(head);
+  const visorM = new THREE.MeshBasicMaterial({ color: 0xe8ffff, opacity: 0.9, side: THREE.DoubleSide, ...addBlend });
+  const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.122, 0.122, 0.022, 24, 1, true, -0.95, 1.9), visorM); visor.position.y = 0.018; headG.add(visor);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 12, 0, Math.PI * 2, 0, 1.2), hair); cap.scale.set(1.02, 1.18, 1.06); cap.position.set(0, 0.012, -0.012); headG.add(cap);
+  limb(headG, V(0, 0.06, -0.1), V(0, -0.2, -0.115), 0.07, 0.028, hair);          // hair swept back
+  limb(headG, V(0.085, 0.1, 0.07), V(0.128, -0.07, 0.045), 0.03, 0.011, hair);   // one side bang
+  limb(fig, V(0, 1.48), V(0, 1.56), 0.05, 0.042);                                  // neck
+  const torso = new THREE.Mesh(new THREE.LatheGeometry([V(0, 0.93), V(0.128, 0.95), V(0.15, 1.04), V(0.112, 1.17), V(0.1, 1.25), V(0.142, 1.37), V(0.165, 1.43), V(0.118, 1.49), V(0.03, 1.5)].map(v => new THREE.Vector2(v.x, v.y)), 28), holo);
+  torso.scale.z = 0.66; fig.add(torso);
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(0.104, 0.006, 6, 40), visorM); seam.rotation.x = Math.PI / 2; seam.scale.y = 0.66; seam.position.y = 1.2; fig.add(seam);   // a lit circuit line at the waist
+  const shoulderL = new THREE.Group(); shoulderL.position.set(-0.19, 1.44, 0); fig.add(shoulderL);   // left arm gestures while she talks
+  limb(shoulderL, V(0, 0), V(-0.045, -0.27), 0.048, 0.04);
+  const elbowL = new THREE.Group(); elbowL.position.set(-0.045, -0.27, 0); shoulderL.add(elbowL);
+  limb(elbowL, V(0, 0), V(-0.015, -0.24), 0.04, 0.032);
+  const shoulder = new THREE.Group(); shoulder.position.set(0.19, 1.44, 0); fig.add(shoulder);       // right arm waves and points
   limb(shoulder, V(0, 0), V(0.045, -0.27), 0.048, 0.04);
   const elbow = new THREE.Group(); elbow.position.set(0.045, -0.27, 0); shoulder.add(elbow);
   limb(elbow, V(0, 0), V(0.015, -0.24), 0.04, 0.032);
-  for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.07, 0.052); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.052, 0.04); }
-  const rings = [0.62, 1.22].map((y, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - i * 0.06, 0.008, 6, 80), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); r.position.y = y; r.rotation.x = Math.PI / 2 + 0.25; root.add(r); return r; });
+  for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.068, 0.05); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.05, 0.038); }
+  const rings = [0.62, 1.22].map((y, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.4 - i * 0.06, 0.008, 6, 80), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, opacity: 0.5, ...addBlend })); r.position.y = y; r.rotation.x = Math.PI / 2 + 0.25; body.add(r); return r; });
+  const hoverM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, opacity: 0, ...addBlend });
+  const hover = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.014, 6, 48), hoverM); hover.rotation.x = Math.PI / 2; hover.position.y = 0.1; body.add(hover);   // her own light ring when she floats away
+  const glowL = new THREE.PointLight(0x5ff0ff, 0.8, 4.5, 2); glowL.position.y = 1.3; body.add(glowL);
 
-  // name and speech bubble (redrawn for each line)
-  const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; root.add(name);
+  // name and speech bubble; the words type out one character at a time
+  const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; body.add(name);
   const bc = mk(1024, 300), bg = bc.getContext('2d'), bubbleTex = new THREE.CanvasTexture(bc);
-  function setLine(title, sub, step) {
+  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, opacity: 0 }));
+  bubble.scale.set(1.9, 0.56, 1); bubble.position.set(0, 2.32, 0); body.add(bubble);
+  function drawBubble(n) {
+    const { title, sub, step, tpx, spx, tw, sw } = v.text;
     bg.clearRect(0, 0, 1024, 300);
     bg.fillStyle = 'rgba(8,10,18,0.95)'; rr(bg, 10, 10, 1004, 230, 40); bg.fill();
     bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, 10, 1004, 230, 40); bg.stroke();
     bg.beginPath(); bg.moveTo(470, 238); bg.lineTo(512, 290); bg.lineTo(554, 238); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.95)'; bg.fill(); bg.stroke();
-    bg.textAlign = 'center';
-    let px = 60; do { bg.font = `${px}px "Young Serif", Georgia, serif`; } while (bg.measureText(title).width > 940 && --px > 30);
-    bg.fillStyle = '#f1e6cf'; bg.fillText(title, 512, 105);
-    px = 44; do { bg.font = `${px}px "IBM Plex Sans", sans-serif`; } while (bg.measureText(sub).width > 940 && --px > 24);
-    bg.fillStyle = '#5ff0ff'; bg.fillText(sub, 512, 180);
+    bg.textAlign = 'left';   // left-aligned from the full line's start, so text grows in place as it types
+    bg.font = `${tpx}px "Young Serif", Georgia, serif`; bg.fillStyle = '#f1e6cf'; bg.fillText(title.slice(0, Math.min(n, title.length)), 512 - tw / 2, 105);
+    bg.font = `${spx}px "IBM Plex Sans", sans-serif`; bg.fillStyle = '#5ff0ff'; bg.fillText(sub.slice(0, Math.max(0, n - title.length)), 512 - sw / 2, 180);
     if (step) { bg.fillStyle = '#8e99b0'; bg.font = '600 24px "IBM Plex Mono", monospace'; bg.textAlign = 'right'; bg.fillText(step, 984, 226); }
     bubbleTex.needsUpdate = true;
   }
-  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, opacity: 0 }));
-  bubble.scale.set(1.9, 0.56, 1); bubble.position.set(0, 2.32, 0); root.add(bubble);
 
   // invisible hit target
   const hitM = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.3, 12), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
-  hitM.position.y = 1.15; root.add(hitM);
-  const normal = facing.clone().setY(0).normalize();
-  fig.rotation.y = Math.atan2(normal.x, normal.z);
-  return { root, fig, shoulder, elbow, rings, bubble, holoU, hitM, pos: pos.clone(), normal, setLine, waveT: 0, wasNear: false, glow: 0 };
+  hitM.position.y = 1.15; body.add(hitM);
+  const normal = facing.clone().setY(0).normalize(), restYaw = Math.atan2(normal.x, normal.z);
+  fig.rotation.y = restYaw;
+  const v = { parent, pad, body, fig, headG, shoulder, elbow, shoulderL, elbowL, rings, bubble, hoverM, holoU, hitM,
+    home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
+    awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
+    pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
+  // say a line; target (a world position) makes her point at it and pings the spot
+  v.say = (title, sub, step, target) => {
+    let tpx = 60; do { bg.font = `${tpx}px "Young Serif", Georgia, serif`; } while (bg.measureText(title).width > 940 && --tpx > 30);
+    const tw = bg.measureText(title).width;
+    let spx = 44; do { bg.font = `${spx}px "IBM Plex Sans", sans-serif`; } while (bg.measureText(sub).width > 940 && --spx > 24);
+    const sw = bg.measureText(sub).width;
+    v.text = { title, sub, step, tpx, spx, tw, sw };
+    v.total = title.length + sub.length; v.reveal = reduceMotion ? v.total : 0; v.drawn = -1;
+    if (target) { v.pointTarget = target.clone(); v.pointT = 3.4; veePing(v, target); } else { v.pointTarget = null; v.pointT = 0; }
+    drawBubble(Math.floor(v.reveal)); v.drawn = Math.floor(v.reveal);
+  };
+  v.setLine = (title, sub, step) => v.say(title, sub, step, null);
+  v.draw = drawBubble;
+  return v;
+}
+// A pulse of light where Vee points: a ring spreading on the floor and a fading beam
+function veePing(v, target) {
+  const g = new THREE.Group(); g.position.set(target.x, 0, target.z); v.parent.add(g);
+  const ringM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.52, 64), ringM); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+  const beamM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+  const h = Math.max(1.2, target.y + 0.8);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.22, h, 20, 1, true), beamM); beam.position.y = h / 2; g.add(beam);
+  v.pings.push({ g, ring, ringM, beamM, t: 0 });
 }
 function updateVee(v, dt, t) {
-  const m = reduceMotion ? 0.2 : 1, cam = camera.position;
-  const dx = cam.x - v.pos.x, dz = cam.z - v.pos.z, dist = Math.hypot(dx, dz);
-  const want = dist < 9 ? Math.atan2(dx, dz) : Math.atan2(v.normal.x, v.normal.z);
-  let d = want - v.fig.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); v.fig.rotation.y += d * Math.min(1, dt * 3);
-  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
+  const m = reduceMotion ? 0.2 : 1, cam = camera.position, b = v.body.position, L = Math.min(1, dt * 8);
+  // float toward the tour spot, or back home to the pad
+  const goal = v.bodyTarget || v.home;
+  b.x += (goal.x - b.x) * Math.min(1, dt * (reduceMotion ? 20 : 2.4));
+  b.z += (goal.z - b.z) * Math.min(1, dt * (reduceMotion ? 20 : 2.4));
+  const away = Math.hypot(b.x - v.home.x, b.z - v.home.z);
+  b.y += ((away > 0.3 ? 0.12 : 0) - b.y) * Math.min(1, dt * 3);
+  v.hoverM.opacity = Math.min(1, away) * 0.75;
+  v.pos.copy(b);
+  const dx = cam.x - b.x, dz = cam.z - b.z, dist = Math.hypot(dx, dz);
   const isNear = dist < 5.5;
-  if (isNear && !v.wasNear) v.waveT = 2.4;              // wave hello on the way in
+  if (!isNear) v.awayT += dt;
+  if (isNear && !v.wasNear) { v.waveT = 2.4; if (v.awayT > 8 && !reduceMotion) v.spinT = 0.9; v.awayT = 0; }   // wave hello, with a twirl if you've been gone a while
   v.wasNear = isNear;
-  if (v.waveT > 0) {
+  // facing: what she's pointing at, else you, else her resting direction
+  v.pointT -= dt;
+  const pointing = v.pointT > 0 && v.pointTarget;
+  const want = pointing ? Math.atan2(v.pointTarget.x - b.x, v.pointTarget.z - b.z) : (dist < 9 || v.bodyTarget) ? Math.atan2(dx, dz) : v.restYaw;
+  v.baseYaw += angleTo(v.baseYaw, want) * Math.min(1, dt * 4);
+  let spin = 0;
+  if (v.spinT > 0) { v.spinT -= dt; const k = 1 - Math.max(0, v.spinT) / 0.9; spin = (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2) * Math.PI * 2; }
+  v.fig.rotation.y = v.baseYaw + spin;
+  v.fig.rotation.z = Math.sin(t * 0.8) * 0.02 * m;                       // a slight weight shift
+  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
+  // typing out the current line
+  const talking = v.text && v.reveal < v.total;
+  if (talking) { v.reveal = Math.min(v.total, v.reveal + dt * 42); const n = Math.floor(v.reveal); if (n !== v.drawn) { v.draw(n); v.drawn = n; } }
+  // right arm: point, else wave, else rest
+  if (pointing) {
+    const sh = new THREE.Vector3(); v.shoulder.getWorldPosition(sh);
+    const e = Math.max(-0.6, Math.min(1.1, Math.atan2(v.pointTarget.y - sh.y, Math.hypot(v.pointTarget.x - sh.x, v.pointTarget.z - sh.z))));
+    v.shoulder.rotation.x += (-(Math.PI / 2 + e) - v.shoulder.rotation.x) * L;
+    v.shoulder.rotation.z += (0 - v.shoulder.rotation.z) * L; v.elbow.rotation.z += (0 - v.elbow.rotation.z) * L;
+    if (v.waveT > 0) v.waveT -= dt;
+  } else if (v.waveT > 0) {
     v.waveT -= dt; const k = Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5);
+    v.shoulder.rotation.x += (0 - v.shoulder.rotation.x) * L;
     v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.45 * Math.sin(t * 9) * m) * k;
-  } else { v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9; }
+  } else {
+    v.shoulder.rotation.x *= 1 - L; v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9;
+  }
+  // left arm and head: gesture and nod while she talks, glance around when idle
+  v.shoulderL.rotation.x += ((talking ? -0.45 - 0.18 * Math.sin(t * 7) * m : 0) - v.shoulderL.rotation.x) * L;
+  v.elbowL.rotation.x += ((talking ? -0.6 : 0) - v.elbowL.rotation.x) * L;
+  v.headG.rotation.x = talking ? Math.sin(t * 13) * 0.07 * m : v.headG.rotation.x * 0.9;
+  v.headG.rotation.y += (((!isNear && !v.bodyTarget && !pointing) ? Math.sin(t * 0.45) * 0.45 * m : 0) - v.headG.rotation.y) * Math.min(1, dt * 2);
+  // blink: a brief dip in the hologram every few seconds
+  if (!reduceMotion) { v.blinkT -= dt; if (v.blinkT < 0) { v.blinkT = 3.5 + Math.random() * 4; v.blinkD = 0.13; } }
+  v.blinkD -= dt; v.holoU.uDim.value = v.blinkD > 0 ? 0.4 : 1;
   v.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.6 : 0.8) * m; });
-  v.bubble.material.opacity += ((isNear ? 1 : 0) - v.bubble.material.opacity) * Math.min(1, dt * 4);
+  v.bubble.material.opacity += ((isNear || v.bodyTarget ? 1 : 0) - v.bubble.material.opacity) * Math.min(1, dt * 4);
   v.bubble.position.y = 2.32 + Math.sin(t * 1.6) * 0.03 * m;
   v.holoU.uTime.value = t; v.holoU.uGlow.value = v.glow;
+  // pings fade out and clean up
+  for (let i = v.pings.length - 1; i >= 0; i--) {
+    const pg = v.pings[i]; pg.t += dt; const k = pg.t / 1.6;
+    if (k >= 1) { v.parent.remove(pg.g); pg.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); v.pings.splice(i, 1); continue; }
+    pg.ring.scale.setScalar(1 + 5 * k); pg.ringM.opacity = 0.9 * (1 - k); pg.beamM.opacity = 0.3 * (1 - k);
+  }
 }
-// In the hall: Vee by the entrance leads into the About world
+// In the hall: Vee by the entrance gives a short tour of the room and leads into the About world
 function buildMascot() {
   const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
   vee = makeVee(scene, VEE_POS, normal);
-  // A short tour of the hall that plays on its own while you stand near her; pressing E (or tapping her)
-  // always leads to the About world, so the last line is the invitation.
+  const kz = paintings.find(p => p.p.id === 'kaizendoku');
+  // the lines play on their own while you stand near her; pressing E (or tapping her) always leads to About
   vee.tour = [
-    ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Each display on the wall is a product.'],
-    ['Walk up to a display and step inside.', 'Every product has its own world to explore.'],
-    ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.'],
-    ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.'],
-    ['Want to meet the builder?', 'Press E or tap me.']];
+    ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Each display on the wall is a product.', null],
+    ['Walk up to a display and step inside.', 'Every product has its own world to explore.', kz ? kz.center : null],
+    ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.', new THREE.Vector3(0, ROOM.h - 2.4, 1.5)],
+    ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.', new THREE.Vector3(0, SLIT.y, SLIT.z - 0.2)],
+    ['Want a guided tour, or to meet the builder?', 'Press T for the tour, or E to meet the builder.', null]];
   vee.tourK = 0; vee.tourT = 0;
-  const sayTour = () => vee.setLine(vee.tour[vee.tourK][0], vee.tour[vee.tourK][1], `${vee.tourK + 1} / ${vee.tour.length}`);
-  vee.sayTour = sayTour; sayTour();
+  vee.sayTour = () => { const [a, b2, tg] = vee.tour[vee.tourK]; vee.say(a, b2, `${vee.tourK + 1} / ${vee.tour.length}`, tg); };
+  vee.restore = () => { vee.tourK = vee.tour.length - 1; vee.tourT = 0; vee.sayTour(); };
+  vee.sayTour();
   const pt = { p: ABOUT, mesh: vee.hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
     art: makeMonogram(), normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
   vee.hitM.userData.project = ABOUT;
@@ -845,42 +951,88 @@ function buildMascot() {
 function updateMascot(dt, t) {
   if (!vee) return;
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
-  if (vee.wasNear) {   // advance the tour while you're close; it rests on the invitation once it gets there
+  if (tour) return;   // the guided tour is speaking for her
+  if (vee.wasNear) {   // advance the room tour while you're close; it rests on the last line once it gets there
     vee.tourT += dt;
-    if (vee.tourT > 4.5 && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
+    if (vee.tourT > 5 && vee.reveal >= vee.total && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
   } else if (vee.tourK !== 0 && vee.bubble.material.opacity < 0.02) { vee.tourK = 0; vee.tourT = 0; vee.sayTour(); }   // start over next visit
 }
-
-// In a world: Vee greets you and talks you through the room, one tip per press
-function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
-  const short = p.name;   // always the full product name, e.g. STEADYWATCH™ HANDHELD
-  let lines;
-  if (kind === 'platform') lines = [
-    ['Welcome to STEADYWATCH™ PLATFORM.', 'Follow the bits from the cryostat to the key.'],
-    ['Each station has details.', 'Walk up to one and press E, or tap it.'],
-    ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.'],
-    ['Ready to head back?', 'The exit display is on your left.']];
-  else if (p.id === 'about') lines = [
-    ["This is the builder's room.", 'Each raised screen is a role from the resume.'],
-    ['The resume is straight ahead.', 'Walk up and press E to open the PDF.'],
-    ['Want to get in touch?', 'Open Details for LinkedIn, GitHub and email.'],
-    ['Ready to head back?', 'The exit display is on your left.']];
-  else {
-    lines = [[`Welcome to ${short}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`],
-             ['The features are up on the big screens.', 'Click one and I’ll walk you over.']];
-    if (p.links.some(([l]) => l === 'App Store')) lines.push(['Want the app?', 'The App Store screen is on your right.']);
-    if (p.shots) lines.push(['See it in action.', 'App Store screenshots are on your left.']);
-    lines.push(['Ready to head back?', 'The exit display is past the screenshots.']);
+// The hall's guided tour: the chandelier, each display, the double-slit wall, then back to Vee
+function hallTourStops() {
+  const P = id => paintings.find(p => p.p.id === id), stops = [];
+  stops.push({ center: new THREE.Vector3(0, ROOM.h - 2.4, 1.5), normal: new THREE.Vector3(0, 0, 1), standOff: 4.2, pitch: 0.55,
+    line: 'This is the Quantum Hall.', sub: 'Above us: a dilution refrigerator, cooled to about 10 mK.' });
+  for (const id of ['kaizendoku', 'handheld', 'platform']) {
+    const pt = P(id); if (!pt) continue;
+    stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
-  const pos = new THREE.Vector3(startPos.x - 2.1, 0, startPos.z - 4.4);   // ahead and to the left, fully in view on arrival
+  stops.push({ center: slitStop.center, normal: slitStop.normal, standOff: 7, pitch: -0.12, line: 'The double-slit experiment.', sub: 'Light interfering, one photon at a time.' });
+  stops.push({ center: new THREE.Vector3(VEE_POS.x, 1.6, VEE_POS.z), normal: vee.pt.normal, standOff: 2.8, pitch: 0.1, home: true,
+    line: "That's the hall.", sub: 'Press E or tap me to meet the builder.' });
+  return stops;
+}
+
+// In a world: Vee greets you, talks you through the room one tip per press, and leads its guided tour
+function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
+  const S = id => stations.find(x => x.id === id);
+  const at = id => { const s = S(id); return s ? s.center.clone() : null; };
+  let lines, stops;
+  if (kind === 'platform') {
+    lines = [
+      [`Welcome to ${p.name}.`, 'Follow the bits from the cryostat to the key.', 'quantum'],
+      ['Each station has details.', 'Walk up to one and press E, or tap it.', null],
+      ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.', 'shqkd'],
+      ['Want a guided tour?', 'Press T, or tap Tour.', null],
+      ['Ready to head back?', 'The exit display is on your left.', 'portal']];
+    stops = [
+      ['quantum', 'IBM Quantum', 'Random bits start here, measured on quantum hardware.'],
+      ['cloudflare', 'Cloudflare', 'The edge network in front of the platform.'],
+      ['pi', 'Raspberry Pi', 'Runs the Q-RNG API and the OIDC identity provider.'],
+      ['enclave', 'Apple Secure Enclave', 'On iPhone, keys stay bound to the Secure Enclave.'],
+      ['key', 'QES-256', 'A 32-byte key, linked to an IBM Quantum job ID.'],
+      ['shqkd', 'SHQKD', 'X25519 and ML-KEM-768, combined with HKDF.'],
+      ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
+  } else if (p.id === 'about') {
+    lines = [
+      ["This is the builder's room.", 'Each raised screen is a role from the resume.', 'hero'],
+      ['The resume is straight ahead.', 'Walk up and press E to open the PDF.', 'site'],
+      ['Want to get in touch?', 'Open Details for LinkedIn, GitHub and email.', null],
+      ['Want a guided tour?', 'Press T, or tap Tour.', null],
+      ['Ready to head back?', 'The exit display is on your left.', 'portal']];
+    stops = [
+      ['site', 'The resume', 'Walk up and press E to open the full PDF.'],
+      ['hero', 'Experience', 'Each big screen is a role; the middle one is the summary.'],
+      ['portal', 'Thanks for visiting.', 'Details has LinkedIn, GitHub and email.']];
+  } else {
+    lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
+             ['The features are up on the big screens.', 'Click one and I’ll walk you over.', 'hero']];
+    if (S('store')) lines.push(['Want the app?', 'The App Store screen is on your right.', 'store']);
+    if (S('shots')) lines.push(['See it in action.', 'App Store screenshots are on your left.', 'shots']);
+    lines.push(['Want a guided tour?', 'Press T, or tap Tour.', null]);
+    lines.push(['Ready to head back?', 'The exit display is past the screenshots.', 'portal']);
+    stops = [
+      ['site', p.site ? p.site.label : 'Website', 'The website. Walk up and press E to open it.'],
+      ['hero', 'The features', 'Each big screen is one feature; the middle one is the overview.'],
+      ['shots', 'Screenshots', 'Straight from the App Store listing.'],
+      ['store', 'Get the app', 'Scan the QR code, or press E to open the App Store.'],
+      ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
+  }
+  // on a narrow screen she stands nearer the middle so she's fully in view
+  const narrow = camera.aspect < 0.85;
+  const pos = new THREE.Vector3(startPos.x - (narrow ? 1.2 : 2.1), 0, startPos.z - (narrow ? 4.9 : 4.4));
   const v = makeVee(ws, pos, new THREE.Vector3(startPos.x - pos.x, 0, startPos.z - pos.z));
   let k = 0;
-  const say = () => v.setLine(lines[k][0], lines[k][1], `${k + 1} / ${lines.length}`);
+  const say = () => v.say(lines[k][0], lines[k][1], `${k + 1} / ${lines.length}`, lines[k][2] ? at(lines[k][2]) : null);
   say();
+  v.restore = say;
+  v.tourStops = stops.filter(([id]) => S(id)).map(([id, line, sub]) => {
+    const s = S(id);
+    return { center: s.center.clone(), normal: s.normal.clone(), standOff: s.standOff, pitch: s.pitch ?? 0.15, panelId: id, line, sub };
+  });
   const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
     center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
   v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
-  updates.push((dt, t) => updateVee(v, dt, t));
+  updates.push((dt, t) => { updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
   return v;
 }
 
@@ -895,6 +1047,10 @@ let auto = null, anim = null, near = null;
 addEventListener('keydown', e => {
   if (mode === 'inside') { if (e.key === 'Escape') exitRoom(); return; }
   keys[e.code] = true;
+  if (tour) {
+    if (e.key === 'Escape') { endTour(); return; }
+    if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'KeyN') && (e.target === document.body || e.target === canvas)) { nextStop(); return; }
+  } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
   if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
 });
@@ -967,12 +1123,14 @@ function showStation(st) {
   const b = worldPanel.querySelector(`.st[data-st="${st.id}"]`); if (b) b.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
 }
 function walkTo(pt) {
+  if (tour && !pt.tourStop) endTour();
   if (mode === 'inside' || mode === 'entering') return;
   const target = pt.center.clone().addScaledVector(pt.normal, pt.standOff || 3.6); target.y = 1.7;
   auto = { pt, target }; mode = 'auto';
 }
 
 function enter(pt, uv) {
+  if (tour) endTour();
   mode = 'entering'; near = null; promptEl.hidden = true;
   pt.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5));
   anim = {
@@ -1651,6 +1809,7 @@ function renderWorldPanel(pt) {
         <h2>${esc(p.name).replace('™', '\u2060™')}</h2>
         <p class="wp-tag">${taglineHTML(p)}</p>
       </div>
+      <button class="wp-tourbtn" type="button" id="wpTour">Tour</button>
       <button class="wp-toggle" type="button" id="wpToggle" aria-expanded="false">Details</button>
     </div>
     <div class="wp-body" id="wpBody">
@@ -1682,6 +1841,7 @@ function renderWorldPanel(pt) {
   setOpen(small ? false : panelOpenLarge);
   tog.addEventListener('click', () => { const open = worldPanel.classList.contains('collapsed'); if (!matchMedia('(max-width: 760px)').matches) panelOpenLarge = open; setOpen(open); });
   worldPanel.querySelector('#wpBack').addEventListener('click', exitWorld);
+  worldPanel.querySelector('#wpTour').addEventListener('click', () => { if (tour) endTour(); else startTour(); });
   worldPanel.querySelector('#wpPage').addEventListener('click', () => { mode = 'inside'; openRoom(pt); });
   worldPanel.querySelectorAll('.st').forEach(b => b.addEventListener('click', () => {
     const st = world && world.stations.find(s => s.id === b.dataset.st); if (st) walkTo(st);
@@ -1715,10 +1875,78 @@ function openWorld(pt) {
 }
 function exitWorld() {
   if (!world) return;
+  if (tour) endTour();
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
   resetView(); canvas.focus();
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+}
+
+/* ---------- Guided tour with Vee ----------
+   Walks you from stop to stop with the existing walk-to, while Vee floats beside you
+   and says a line at each stop. Moving yourself pauses it; Next / E carries on. */
+let tour = null;
+const tourBar = document.getElementById('tourBar'), tourText = document.getElementById('tourText');
+document.getElementById('tourNext').addEventListener('click', () => nextStop());
+document.getElementById('tourEnd').addEventListener('click', () => endTour());
+function tourGuide() { return world ? world.vee : vee; }
+function renderTourBar() {
+  if (!tour) { tourBar.hidden = true; return; }
+  tourBar.hidden = false;
+  tourText.textContent = `Tour · ${tour.i + 1} of ${tour.stops.length}${tour.auto ? '' : ' · paused'}`;
+  document.getElementById('tourNext').textContent = tour.i >= tour.stops.length - 1 ? 'Finish' : 'Next ▸';
+  const wb = document.getElementById('wpTour'); if (wb) wb.textContent = 'End tour';
+}
+function startTour() {
+  if (tour || !(mode === 'walk' || mode === 'auto')) return;
+  const g = tourGuide(); if (!g) return;
+  const stops = world ? world.vee.tourStops : hallTourStops();
+  if (!stops || !stops.length) return;
+  tour = { stops, i: -1, t: 0, auto: true, arrived: false };
+  promptEl.hidden = true;
+  nextStop();
+}
+function nextStop() {
+  if (!tour) return;
+  tour.i++;
+  if (tour.i >= tour.stops.length) { endTour(); return; }
+  const s = tour.stops[tour.i], g = tourGuide();
+  tour.arrived = false; tour.t = 0; tour.auto = true;
+  const stand = s.center.clone().addScaledVector(s.normal, s.standOff); stand.y = 0;
+  if (s.home) g.bodyTarget = null;
+  else {   // she floats beside you: a little to your left and a step toward what you're looking at
+    const toT = s.center.clone().sub(stand).setY(0).normalize(), left = new THREE.Vector3(toT.z, 0, -toT.x);
+    const ahead = Math.min(3.2, s.standOff * 0.6);   // far enough ahead to sit comfortably in view, never past what you're looking at
+    g.bodyTarget = stand.clone().addScaledVector(left, Math.max(1, ahead * 0.45)).addScaledVector(toT, ahead);   // about 25° to your left
+  }
+  g.say(s.line, s.sub, `Tour ${tour.i + 1} / ${tour.stops.length}`, s.home ? null : (s.point || s.center));
+  if (world) highlightStation(s.panelId || null);
+  // a moderate tilt keeps both Vee and what she's showing in frame, even for high things like the chandelier
+  walkTo({ exhibit: true, tourStop: true, center: s.center, normal: s.normal, standOff: s.standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
+  renderTourBar();
+}
+function endTour() {
+  if (!tour) return;
+  tour = null;
+  const g = tourGuide();
+  if (g) { g.bodyTarget = null; if (g.restore) g.restore(); }
+  if (world) highlightStation(null);
+  if (mode === 'auto' && auto && auto.pt.tourStop) { mode = 'walk'; auto = null; }
+  tourBar.hidden = true;
+  const wb = document.getElementById('wpTour'); if (wb) wb.textContent = 'Tour';
+}
+function updateTour(dt) {
+  if (!tour) return;
+  if (tour.arrived && tour.auto) {
+    tour.t += dt;
+    const g = tourGuide();
+    if (g && g.reveal >= g.total && tour.t > 4.5) nextStop();
+  }
+}
+{
+  const b = document.createElement('button'); b.className = 'dir-btn tour-btn'; b.type = 'button'; b.id = 'go-tour';
+  b.textContent = '▶ Tour'; b.addEventListener('click', () => { if (tour) endTour(); else startTour(); });
+  dir.prepend(b);
 }
 
 /* ---------- Loop ---------- */
@@ -1747,13 +1975,14 @@ function tick() {
     const kx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
     const kz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
     mv.addScaledVector(fwd, kz - joy.y).addScaledVector(right, kx + joy.x);
+    if (mv.lengthSq() > 0.01 && tour) { tour.arrived = true; if (tour.auto) { tour.auto = false; renderTourBar(); } }
     if (mv.lengthSq() > 0.01 && mode === 'auto') mode = 'walk';
     if (mode === 'auto' && auto) {
       const d = auto.target.clone().sub(player.pos); d.y = 0;
       const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
+      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
@@ -1762,7 +1991,7 @@ function tick() {
     if (world) {
       const r = Math.hypot(player.pos.x, player.pos.z);
       if (r > world.radius) player.pos.multiplyScalar(world.radius / r);
-      if (world.vee) { const vx = player.pos.x - world.vee.pos.x, vz = player.pos.z - world.vee.pos.z, vd = Math.hypot(vx, vz); if (vd < 0.8 && vd > 0.0001) { player.pos.x = world.vee.pos.x + vx / vd * 0.8; player.pos.z = world.vee.pos.z + vz / vd * 0.8; } }
+      if (world.vee && !tour) { const vp = world.vee.home, vx = player.pos.x - vp.x, vz = player.pos.z - vp.z, vd = Math.hypot(vx, vz); if (vd < 0.8 && vd > 0.0001) { player.pos.x = vp.x + vx / vd * 0.8; player.pos.z = vp.z + vz / vd * 0.8; } }
       player.pos.y = 1.7;
     } else {
       player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
@@ -1786,7 +2015,7 @@ function tick() {
         if (d < reach && d - reach < best && facing > 0.35) { best = d - reach; near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.vee ? 'Press E or tap to talk to' : near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
+      if (near && mode === 'walk' && !tour) { promptEl.innerHTML = `<span>${near.vee ? 'Press E or tap to talk to' : near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
@@ -1794,11 +2023,13 @@ function tick() {
         const dist = d.length(), facing = -d.normalize().dot(pt.normal);
         if (dist < best && facing > 0.3) { best = dist; near = pt; }
       }
-      if (near && mode === 'walk') {
+      if (near && mode === 'walk' && !tour) {
         promptEl.innerHTML = `<span>${esc(near.p.promptVerb || 'Press E or tap to enter')}</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
       } else promptEl.hidden = true;
     }
   }
+
+  updateTour(dt);
 
   if (mode === 'entering' && anim) {
     anim.t += dt / anim.dur; const k = Math.min(1, anim.t), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
