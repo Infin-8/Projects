@@ -770,7 +770,7 @@ varying float vB;
 void main(){
   vec3 p = position;
   float t = uTime * (1.4 + aRnd * 2.2) + aRnd * 40.0;
-  p += vec3(sin(t), sin(t * 1.31 + 1.7), cos(t * 0.87)) * 0.0055;          // each drone hovers in place
+  p += vec3(sin(t), sin(t * 1.31 + 1.7), cos(t * 0.87)) * 0.003;          // each drone hovers in place
   p += aDir * uScatter * (0.2 + aRnd * 0.6);                              // and scatters outward on cue
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
@@ -812,10 +812,10 @@ function sampleSurface(geom, info, count) {
 function makeVee(parent, pos, facing) {
   const pad = new THREE.Group(); pad.position.copy(pos); parent.add(pad);        // the projector stays put
   const body = new THREE.Group(); body.position.copy(pos); parent.add(body);     // the hologram can float off on a tour
-  const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uDim: { value: 1 }, uColor: { value: new THREE.Color(0x5ff0ff).multiplyScalar(0.32) } };   // a faint shell; the drones carry her shape
+  const holoU = { uTime: { value: 0 }, uGlow: { value: 0 }, uDim: { value: 1 }, uColor: { value: new THREE.Color(0x5ff0ff) } };   // the laser shell defines her shape; drones only sparkle over it
   const holoMat = u => new THREE.ShaderMaterial({ uniforms: u, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const holo = holoMat(holoU);
-  const hair = holoMat({ uTime: holoU.uTime, uGlow: holoU.uGlow, uDim: holoU.uDim, uColor: { value: new THREE.Color(0x8fd2ff).multiplyScalar(0.32) } });
+  const hair = holoMat({ uTime: holoU.uTime, uGlow: holoU.uGlow, uDim: holoU.uDim, uColor: { value: new THREE.Color(0x8fd2ff) } });
   const up = new THREE.Vector3(0, 1, 0);
   function limb(par, a, b, r0, r1, mat = holo) {
     const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), mat);
@@ -861,11 +861,11 @@ function makeVee(parent, pos, facing) {
   limb(elbow, V(0, 0), V(0.015, -0.24), 0.04, 0.032);
   for (const sx of [-1, 1]) { limb(fig, V(0.08 * sx, 0.97), V(0.09 * sx, 0.56), 0.068, 0.05); limb(fig, V(0.09 * sx, 0.56), V(0.09 * sx, 0.18), 0.05, 0.038); }
   // the swarm: each body part carries its share of drones as a child, so they move with her
-  const droneU = { uTime: holoU.uTime, uDim: holoU.uDim, uGlow: holoU.uGlow, uPx: { value: 800 }, uSize: { value: 0.0105 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
+  const droneU = { uTime: holoU.uTime, uDim: holoU.uDim, uGlow: holoU.uGlow, uPx: { value: 800 }, uSize: { value: 0.008 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff).multiplyScalar(0.55) } };
   const droneMat = new THREE.ShaderMaterial({ uniforms: droneU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const parts = [];
   fig.traverse(o => { if (o.isMesh && (o.material === holo || o.material === hair)) { const sc = o.scale; parts.push({ o, info: surfaceArea(o.geometry), k: Math.pow(Math.abs(sc.x * sc.y * sc.z), 2 / 3) }); } });
-  const totalArea = parts.reduce((a, q) => a + q.info.tot * q.k, 0), DRONES = camera.aspect < 0.85 ? 2600 : 4200;
+  const totalArea = parts.reduce((a, q) => a + q.info.tot * q.k, 0), DRONES = camera.aspect < 0.85 ? 1100 : 1800;
   for (const q of parts) {
     const n = Math.max(6, Math.round(DRONES * q.info.tot * q.k / totalArea));
     const g = new THREE.BufferGeometry(), rnd = new Float32Array(n), dir = new Float32Array(n * 3);
