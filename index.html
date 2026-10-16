@@ -204,6 +204,28 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   #worldPanel.collapsed .wp-body { display: none; }
   body.in-world #prompt { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
+/* Branded products (KaizenDoku): system font, heavy weights, card colours and gradient title from the product's own site */
+#worldPanel.branded { font-family: var(--wp-font); background: color-mix(in srgb, #0d0d0d 92%, transparent); }
+#worldPanel.branded h2 { font-family: var(--wp-font); font-weight: 900; letter-spacing: -1px; background: var(--wp-title-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+#worldPanel.branded .wp-eyebrow, #worldPanel.branded .wp-sub { font-family: var(--wp-font); font-weight: 700; letter-spacing: .06em; }
+#worldPanel.branded .wp-tag .tg-a, #room.branded .tagline .tg-a { color: var(--wp-muted, var(--room-muted)); }
+#worldPanel.branded .wp-tag .tg-b, #room.branded .tagline .tg-b { color: var(--wp-accent, var(--room-accent)); font-weight: 600; }
+#worldPanel.branded .wp-desc, #worldPanel.branded .st span, #worldPanel.branded .wp-stack { color: var(--wp-muted); font-family: var(--wp-font); }
+#worldPanel.branded .st { background: var(--wp-card); border-color: var(--wp-border); border-radius: var(--wp-radius); padding: 14px 16px; }
+#worldPanel.branded .st b { font-family: var(--wp-font); font-weight: 800; font-size: 16px; letter-spacing: -.3px; text-transform: none; color: #fff; }
+#worldPanel.branded .st.active { border-color: var(--wp-accent); background: var(--wp-card); box-shadow: 0 8px 32px color-mix(in srgb, var(--wp-accent) 10%, transparent); }
+#worldPanel.branded .st.active b { color: #fff; }
+#worldPanel.branded .wp-links a, #worldPanel.branded .wp-actions button { font-family: var(--wp-font); font-weight: 700; border-radius: 999px; padding: 9px 16px; border-color: var(--wp-border); }
+#worldPanel.branded .wp-actions button.primary { background: var(--wp-accent); color: #0d0d0d; border-color: var(--wp-accent); }
+#worldPanel.branded .wp-actions button.primary:hover, #worldPanel.branded .wp-actions button.primary:focus-visible { color: #0d0d0d; filter: brightness(1.08); }
+#room.branded { font-family: var(--room-font); }
+#room.branded h2 { font-family: var(--room-font); font-weight: 900; letter-spacing: -2px; background: var(--room-title-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+#room.branded .room-eyebrow, #room.branded #exit, #room.branded .stack, #room.branded .links a { font-family: var(--room-font); font-weight: 700; }
+#room.branded .desc, #room.branded .modules span { color: var(--room-muted); }
+#room.branded .modules li { background: var(--room-card); border: 1px solid var(--room-border); border-radius: var(--room-radius); padding: 18px 18px; }
+#room.branded .modules b { font-family: var(--room-font); font-weight: 800; font-size: 18px; letter-spacing: -.3px; color: #fff; }
+#room.branded .links a, #room.branded #exit { border-radius: 999px; }
+#room.branded canvas.art { border-radius: 22%; }
 body.in-world #directory { display: none; }
 body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, body.in-world #title { display: none !important; }
 
@@ -250,7 +272,11 @@ const PROJECTS = [
     modules: [['CO-OP','Matches played inside iMessage'],['TIME ATTACK','Solo best times'],['GAME CENTER','Leaderboards and achievements'],['HEALTH','Mindful minutes logged']],
     stack: 'iMessage · Game Center · Apple Health · QES-256 boards',
     links: [['App Store','https://apps.apple.com/us/app/kaizendoku/id6748037311'],['kaizendoku.com','https://kaizendoku.com']],
-    theme: { bg: '#1b1b1b', fg: '#e8ffe8', accent: '#00ff66' }, logo: 'assets/kaizendoku-icon.png',
+    // colours and type from the KaizenDoku site (kaizendoku_site/styles.css)
+    theme: { bg: '#0d0d0d', fg: '#ffffff', accent: '#00ff41',
+      brand: { font: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif', muted: '#a0a0a0', card: '#1a1a1a', border: '#2a2a2a', radius: 14,
+        titleGradient: 'linear-gradient(135deg, #ffffff 20%, #00ff41 100%)', taglineSplit: ['Sudoku.', 'With Friends.'] } },
+    logo: 'assets/kaizendoku-icon.png', site: { url: 'https://kaizendoku.com', label: 'kaizendoku.com', shot: 'assets/site-kaizendoku.jpg' },
     pos: [-7.92, 3.2, -3.5], rotY: Math.PI / 2, size: [3.7, 3.7]
   },
   {
@@ -259,7 +285,7 @@ const PROJECTS = [
     modules: [['ATOMIC','Clock synced to atomic time standards via NTP'],['HARMONIC','Real-time frequency spectrum and tuner'],['QUANTUM','Face ID-gated key generator bound to the Secure Enclave, seeded from platform quantum entropy'],['VAULT','Quantum-seeded credential storage'],['APPROVE','Biometric OIDC authorization']],
     stack: 'NTP · Face ID · Secure Enclave · OIDC',
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
-    theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png',
+    theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
     pos: [7.92, 3.2, -3.5], rotY: -Math.PI / 2, size: [3.7, 3.7]
   },
   {
@@ -713,7 +739,7 @@ function clickAt(x, y) {
   if (mode !== 'walk' && mode !== 'auto') return;
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
+  if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.portal || st.site ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const hit = ray.intersectObjects(paintings.map(p => p.mesh))[0];
   if (!hit) return;
   const pt = paintings.find(p => p.mesh === hit.object);
@@ -721,7 +747,10 @@ function clickAt(x, y) {
 }
 
 // in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
-function worldAct(st, uv) { if (st.portal) enter(st, uv); else showStation(st); }
+function worldAct(st, uv) { if (st.portal) enter(st, uv); else if (st.site) openSite(st.site.url); else showStation(st); }
+function openSite(url) {   // runs inside the click or key press, so the browser allows the new tab
+  const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.click();
+}
 function showStation(st) {
   highlightStation(st.id);
   if (worldPanel._setOpen) worldPanel._setOpen(true);
@@ -750,14 +779,15 @@ let current = null;
 function esc(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 function openRoom(pt) {
   current = pt; const p = pt.p, t = p.theme;
+  applyBrand(room, 'room', t.brand);
   room.style.setProperty('--room-bg', t.bg); room.style.setProperty('--room-fg', t.fg); room.style.setProperty('--room-accent', t.accent); room.style.setProperty('--art-max', pt.art.width === pt.art.height ? '440px' : '100%');
   room.innerHTML = `
     <div class="room-inner">
       <div class="room-top"><span class="room-eyebrow">${esc(p.wing)} wing</span><button id="exit" type="button">${world ? '← Back to the world' : '← Back to the hall'}</button></div>
-      <div><h2>${esc(p.name)}</h2><p class="tagline">${esc(p.tagline)}</p></div>
+      <div><h2>${esc(p.name)}</h2><p class="tagline">${taglineHTML(p)}</p></div>
       <canvas class="art" width="${pt.art.width}" height="${pt.art.height}"></canvas>
       <p class="desc">${esc(p.desc)}</p>
-      <ul class="modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
+      <ul class="modules">${p.modules.map(([k, v]) => `<li><b>${esc(t.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <div class="stack">${esc(p.stack)}</div>
       <div class="links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
     </div>`;
@@ -832,8 +862,9 @@ function textSprite(lines, w, h, scaleW) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
   sp.scale.set(scaleW, scaleW * h / w, 1); return sp;
 }
-function stationLabel(eyebrow, title) {
-  return textSprite([[eyebrow, '600 30px "IBM Plex Mono", monospace', '#3fe0e0'], [title, '58px "Young Serif", Georgia, serif', '#f1e6cf']], 1024, 220, 4.6);
+function stationLabel(eyebrow, title, color = '#3fe0e0', brand) {
+  if (brand) return textSprite([[eyebrow, `700 30px ${brand.font}`, color], [title, `800 62px ${brand.font}`, '#ffffff']], 1024, 220, 4.6);
+  return textSprite([[eyebrow, '600 30px "IBM Plex Mono", monospace', color], [title, '58px "Young Serif", Georgia, serif', '#f1e6cf']], 1024, 220, 4.6);
 }
 function bitTex(ch) {
   const c = mk(64, 64), g = c.getContext('2d');
@@ -1119,11 +1150,24 @@ function buildPlatformWorld() {
    name and description, and one screen per module card in an arc in front,
    all in the app's own colours. Same ground, stars and exit painting as the
    Platform world. */
+function niceTitle(t) { return t.toLowerCase().replace(/(^|\s)\S/g, m => m.toUpperCase()); }   // CO-OP → Co-op, GAME CENTER → Game Center
+function spacing(g, px) { if ('letterSpacing' in g) g.letterSpacing = px + 'px'; }
 function productScreenCanvas(p, title, text) {
-  const W2 = 1024, H2 = 640, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme;
+  const W2 = 1024, H2 = 640, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme, B = t.brand;
+  const logo = LOGOS[p.logo];
+  if (B) {   // the site's mode-card look
+    g.fillStyle = t.bg; g.fillRect(0, 0, W2, H2);
+    g.fillStyle = B.card; rr(g, 28, 28, W2 - 56, H2 - 56, B.radius * 2); g.fill();
+    g.strokeStyle = B.border; g.lineWidth = 3; rr(g, 28, 28, W2 - 56, H2 - 56, B.radius * 2); g.stroke();
+    if (logo) g.drawImage(logo, 72, 68, 64, 64);
+    g.textBaseline = 'middle'; g.fillStyle = t.accent; g.font = `800 28px ${B.font}`; spacing(g, -0.5); g.fillText(p.name, 154, 101);
+    g.textBaseline = 'alphabetic'; g.fillStyle = t.fg; g.font = `800 78px ${B.font}`; spacing(g, -1.5); g.fillText(niceTitle(title), 72, 250);
+    spacing(g, 0); g.fillStyle = t.accent; g.fillRect(74, 282, 110, 6);
+    g.fillStyle = B.muted; g.font = `400 46px ${B.font}`; wrapText(g, text, 72, 372, 880, 62);
+    return c;
+  }
   const bg = g.createLinearGradient(0, 0, 0, H2); bg.addColorStop(0, t.bg); bg.addColorStop(1, '#05070b');
   g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
-  const logo = LOGOS[p.logo];
   if (logo) g.drawImage(logo, 56, 48, 64, 64);
   g.fillStyle = t.accent; g.font = '600 24px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
   g.fillText(p.name.toUpperCase(), 140, 82);
@@ -1135,10 +1179,27 @@ function productScreenCanvas(p, title, text) {
   return c;
 }
 function productHeroCanvas(p) {
-  const W2 = 1600, H2 = 1000, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme;
+  const W2 = 1600, H2 = 1000, c = mk(W2, H2), g = c.getContext('2d'), t = p.theme, B = t.brand;
+  const logo = LOGOS[p.logo];
+  if (B) {   // the site's hero: gradient title, split tagline, muted body
+    g.fillStyle = t.bg; g.fillRect(0, 0, W2, H2);
+    const glow = g.createRadialGradient(340, 460, 40, 340, 460, 420); glow.addColorStop(0, 'rgba(0,255,65,0.16)'); glow.addColorStop(1, 'rgba(0,255,65,0)');
+    g.fillStyle = glow; g.fillRect(0, 0, 800, 1000);
+    if (logo) { g.save(); rr(g, 90, 210, 500, 500, 110); g.clip(); g.drawImage(logo, 90, 210, 500, 500); g.restore(); }
+    const x = 660;
+    g.fillStyle = t.accent; g.font = `700 28px ${B.font}`; spacing(g, 1); g.fillText(p.wing.toUpperCase() + ' WING', x, 210);
+    g.font = `900 132px ${B.font}`; spacing(g, -3);
+    const tw = g.measureText(p.name).width, grad = g.createLinearGradient(x, 230, x + tw, 330);
+    grad.addColorStop(0.2, '#ffffff'); grad.addColorStop(1, t.accent); g.fillStyle = grad; g.fillText(p.name, x, 340);
+    spacing(g, 0.2); g.font = `400 54px ${B.font}`; g.fillStyle = B.muted;
+    const [ta, tb] = B.taglineSplit; g.fillText(ta + ' ', x, 420);
+    const tx = x + g.measureText(ta + ' ').width; g.font = `600 54px ${B.font}`; g.fillStyle = t.accent; g.fillText(tb, tx, 420);
+    spacing(g, 0); g.fillStyle = B.muted; g.font = `400 30px ${B.font}`; wrapText(g, p.desc, x, 500, 860, 44);
+    g.fillStyle = '#6f6f6f'; g.font = `600 24px ${B.font}`; g.fillText(p.stack, 90, 900);
+    return c;
+  }
   const bg = g.createLinearGradient(0, 0, W2, H2); bg.addColorStop(0, t.bg); bg.addColorStop(1, '#05070b');
   g.fillStyle = bg; g.fillRect(0, 0, W2, H2);
-  const logo = LOGOS[p.logo];
   if (logo) g.drawImage(logo, 90, 210, 500, 500);
   const x = 660;
   g.fillStyle = t.accent; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText(p.wing.toUpperCase() + ' WING', x, 190);
@@ -1222,6 +1283,33 @@ function buildProductWorld(p) {
   });
 
   const exit = makeExitPainting(ws, { R: 9, angleDeg: -112, pedMat, hit, stations, updates });
+
+  // website display: a browser-style screen showing the product site; acting on it opens the real site
+  if (p.site) {
+    const g = place(112, 9);
+    const bc = mk(1280, 860), bg2 = bc.getContext('2d'), siteTex = new THREE.CanvasTexture(bc);
+    const chrome = () => {
+      bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
+      ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => { bg2.fillStyle = c; bg2.beginPath(); bg2.arc(32 + i * 26, 30, 8, 0, Math.PI * 2); bg2.fill(); });
+      bg2.fillStyle = '#0b0d12'; rr(bg2, 130, 14, 1020, 32, 16); bg2.fill();
+      bg2.fillStyle = '#c9d2e3'; bg2.font = '20px "IBM Plex Mono", monospace'; bg2.textBaseline = 'middle'; bg2.fillText('https://' + p.site.label, 154, 31);
+    };
+    bg2.fillStyle = '#05070b'; bg2.fillRect(0, 60, 1280, 800);
+    bg2.fillStyle = '#8e99b0'; bg2.font = '32px "IBM Plex Sans", sans-serif'; bg2.textAlign = 'center'; bg2.fillText(p.site.label, 640, 460); bg2.textAlign = 'left';
+    chrome();
+    const shot = new Image();
+    shot.onload = () => { bg2.drawImage(shot, 0, 60, 1280, 800); chrome(); siteTex.needsUpdate = true; };
+    shot.src = p.site.shot;
+    const W3 = 3.6, H3 = W3 * 860 / 1280;
+    const frame = new THREE.Group(); frame.position.y = 2.25; g.add(frame);
+    frame.add(new THREE.Mesh(new THREE.BoxGeometry(W3 + 0.16, H3 + 0.16, 0.12), bezel));
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3), new THREE.MeshBasicMaterial({ map: siteTex })); scr.position.z = 0.062; frame.add(scr);
+    for (const x of [-1.2, 1.2]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), pedMat); leg.position.set(x, 0.45, -0.05); g.add(leg); }
+    const lbl = stationLabel('WEBSITE', p.site.label, p.theme.accent, p.theme.brand); lbl.position.set(0, 4.2, 0); g.add(lbl);
+    const cta = textSprite([['OPEN ' + p.site.label.toUpperCase() + '  ↗', '600 30px "IBM Plex Mono", monospace', p.theme.accent]], 1024, 70, 2.6); cta.position.set(0, 0.62, 0.2); g.add(cta);
+    const siteLight = new THREE.PointLight(A, 0.6, 7, 2); siteLight.position.set(0, 3, 2); g.add(siteLight);
+    addStation(g, { id: 'site', site: p.site, info: { title: p.site.label }, exhibit: true, standOff: 4.2, pitch: 0.1 }, 2.25);
+  }
   const accent2 = '#' + A.clone().lerp(new THREE.Color(0xffffff), 0.45).getHexString();
 
   return {
@@ -1243,13 +1331,14 @@ function buildProductWorld(p) {
 function renderWorldPanel(pt) {
   const p = pt.p;
   worldPanel.style.setProperty('--wp-accent', world.accent); worldPanel.style.setProperty('--wp-accent2', world.accent2);
+  applyBrand(worldPanel, 'wp', p.theme.brand);
   worldPanel.innerHTML = `
     <div class="wp-head">
       <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
       <div class="wp-titles">
         <span class="wp-eyebrow">${esc(p.wing)} wing · inside the display</span>
         <h2>${esc(p.name)}</h2>
-        <p class="wp-tag">${esc(p.tagline)}</p>
+        <p class="wp-tag">${taglineHTML(p)}</p>
       </div>
       <button class="wp-toggle" type="button" id="wpToggle" aria-expanded="false">Details</button>
     </div>
@@ -1261,7 +1350,9 @@ function renderWorldPanel(pt) {
       <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
       <h3 class="wp-sub">Modules · one screen each</h3>
-      <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>`}
+      <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
+      ${p.site ? `<h3 class="wp-sub">Website</h3>
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>On the screen to your right. Walk up and press E, or tap it, to open the site.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
       <div class="wp-links">${p.links.map(([l, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join('')}</div>
       <div class="wp-actions"><button type="button" class="primary" id="wpBack">← Back to the hall</button><button type="button" id="wpPage">View as page</button></div>
@@ -1278,6 +1369,16 @@ function renderWorldPanel(pt) {
     const st = world && world.stations.find(s => s.id === b.dataset.st); if (st) walkTo(st);
   }));
   worldPanel._setOpen = setOpen;
+}
+// a product's own site styling (fonts, card colours, gradient title), applied to its panel and page view
+function applyBrand(el, prefix, B) {
+  el.classList.toggle('branded', !!B);
+  const props = { font: B && B.font, muted: B && B.muted, card: B && B.card, border: B && B.border, radius: B && B.radius + 'px', 'title-gradient': B && B.titleGradient };
+  for (const [k, v] of Object.entries(props)) { if (v) el.style.setProperty(`--${prefix}-${k}`, v); else el.style.removeProperty(`--${prefix}-${k}`); }
+}
+function taglineHTML(p) {
+  const B = p.theme.brand;
+  return B && B.taglineSplit ? `<span class="tg-a">${esc(B.taglineSplit[0])}</span> <span class="tg-b">${esc(B.taglineSplit[1])}</span>` : esc(p.tagline);
 }
 function highlightStation(id) {
   worldPanel.querySelectorAll('.st').forEach(b => b.classList.toggle('active', b.dataset.st === id));
@@ -1363,7 +1464,7 @@ function tick() {
         if (d < best && facing > 0.35) { best = d; near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.portal ? 'Press E or tap to go back to' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
+      if (near && mode === 'walk') { promptEl.innerHTML = `<span>${near.portal ? 'Press E or tap to go back to' : near.site ? 'Press E or tap to open' : 'Press E or tap for details'}</span><b style="font-weight:400">${esc(near.info.title)}</b>`; promptEl.hidden = false; }
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
