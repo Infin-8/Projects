@@ -344,9 +344,26 @@ const ABOUT = {
     ['Freescale Semiconductor', 'Process Engineer, Test Wafer Distribution, 2005 to 2011. Semiconductor fabrication.']
   ],
   stack: 'Swift · SwiftUI · Python · JavaScript · React Native · Flask · Node.js · Qiskit · CryptoKit',
+  roles: [
+    { co: 'American Manufacturing & Embroidery', title: 'CNC Operator', years: 'MAY 2026 – NOW', line: 'Precision CO2 laser and pneumatic cutting of leather, shearling and liner materials.' },
+    { co: 'Persevere NOW', title: 'Senior Software Developer & Teaching Assistant', years: '2022 – 2025', line: 'Taught software engineering to cohorts of 20 students.' },
+    { co: 'Express Scripts', title: 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team', years: '2012 – 2018', line: 'Led a team of about 20 licensed professionals.' },
+    { co: 'Freescale Semiconductor', title: 'Process Engineer, Test Wafer Distribution', years: '2005 – 2011', line: 'Microprocessor fabrication: CVD, diffusion, EPI and photolithography.' }],
+  skills: [
+    ['Languages', 'Swift · SwiftUI · Python · JavaScript · HTML/CSS'],
+    ['Mobile', 'iOS · watchOS · React Native · Expo · CoreMotion · HealthKit · WatchConnectivity · LocalAuthentication · CryptoKit · Secure Enclave'],
+    ['Backend', 'Python · Flask · Node.js · Express · Socket.IO · REST API design · JSON · SQLite'],
+    ['Quantum computing', 'Qiskit · IBM Quantum hardware · AerSimulator · GHZ circuits · QKD protocols · Mermin inequality'],
+    ['Cryptography', 'P256 ECDSA · SHA-256 · Post-quantum encryption · Secure Enclave key management · Biometric key derivation'],
+    ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
+  work: [
+    { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
+    { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
+  contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
-    heading: 'Resume', cardText: 'On the centre screen in front of you. Walk up and press E, or tap it, to open the PDF.' },
+    heading: 'Resume', cardText: 'The main screen of the operator desk. Walk up and press E, or tap it, to open the PDF.' },
   theme: { bg: '#141826', fg: '#f1e6cf', accent: '#3fe0e0' },
   logo: null   // a monogram drawn at load, see makeMonogram()
 };
@@ -1157,7 +1174,7 @@ function updateKiosk(dt, t) {
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
 const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'about'];
-const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'STEADYWATCH™ PLATFORM', about: "the builder's room" };
+const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'STEADYWATCH™ PLATFORM', about: "the builder's office" };
 const visit = (() => {
   let d = { seen: [], visits: 0, last: 0 };
   try { const r = JSON.parse(localStorage.getItem(VISIT_KEY)); if (r && Array.isArray(r.seen)) d = Object.assign(d, r); } catch (e) {}
@@ -1265,15 +1282,18 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
     lines = [
-      ["This is the builder's room.", 'Each raised screen is a role from the Resume.', 'hero'],
-      ['The Resume is straight ahead.', 'Walk up and press E to open the PDF.', 'site'],
-      ['Want to get in touch?', 'Open Details for LinkedIn, GitHub and email.', null],
+      ["Welcome to the builder's office.", 'This is the operator desk.', 'site'],
+      ['The main screen holds the Resume.', 'It decodes out of a stream of QES-256 keys. Press E to open it.', 'site'],
+      ['Career on the left, skills on the right.', 'Tap any screen for details.', 'm0'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
-      ['Ready to head back?', 'The exit display is on your left.', 'portal']];
+      ['Ready to head back?', 'The door on your left goes to the hall.', 'portal']];
     stops = [
-      ['site', 'The Resume', 'Walk up and press E to open the full PDF.'],
-      ['hero', 'Experience', 'Each big screen is a role; the middle one is the summary.'],
-      ['portal', 'Thanks for visiting.', 'Details has LinkedIn, GitHub and email.']];
+      ['site', 'The Resume', 'Decoded from a stream of QES-256 keys. Press E to open the PDF.'],
+      ['m0', 'Experience', 'Four roles, newest first.'],
+      ['skills', 'Skills', 'From languages and mobile to quantum computing and cryptography.'],
+      ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku, both on the App Store.'],
+      ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
+      ['portal', "That's the office.", 'The door takes you back to the hall.']];
   } else {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
              ['The features are up on the big screens.', 'Click one and I’ll walk you over.', 'hero']];
@@ -1294,7 +1314,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   const v = makeVee(ws, pos, new THREE.Vector3(startPos.x - pos.x, 0, startPos.z - pos.z));
   const R0 = kind === 'platform' ? 12.5 : 11.5;
   v.bounds = q => { const r = Math.hypot(q.x, q.z); if (r > R0) q.multiplyScalar(R0 / r); };   // stay on the platform
-  if (visit.d.seen.includes(p.id)) lines[0] = [`Welcome back to ${p.id === 'about' ? "the builder's room" : p.name}.`, lines[0][1], lines[0][2]];
+  if (visit.d.seen.includes(p.id)) lines[0] = [`Welcome back to ${p.id === 'about' ? "the builder's office" : p.name}.`, lines[0][1], lines[0][2]];
   let k = 0;
   const say = () => v.say(lines[k][0], lines[k][1], `${k + 1} / ${lines.length}`, lines[k][2] ? at(lines[k][2]) : null);
   say();
@@ -2100,6 +2120,234 @@ function buildProductWorld(p) {
 }
 
 let panelOpenLarge = false;   // the world panel starts hidden; Details opens it, and that choice carries over between worlds
+/* ---------- The builder's office (About & Resume) ----------
+   An enclosed office behind the hall door, centred on an operator desk: an arc of monitors in
+   different sizes, each covering one part of the builder. The main screen streams QES-256 keys
+   as falling hex (illustrative keys made in the browser) and decodes the Resume out of the stream. */
+function officeScreenBase(c, eyebrow) {
+  const g = c.getContext('2d'), W = c.width, H = c.height;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#0d1626'); bg.addColorStop(1, '#060a12');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = 'rgba(63,224,224,0.12)'; g.fillRect(0, 0, W, 54);
+  g.fillStyle = '#3fe0e0'; g.font = '600 24px "IBM Plex Mono", monospace'; g.textBaseline = 'middle'; g.fillText(eyebrow, 28, 28); g.textBaseline = 'alphabetic';
+  return g;
+}
+function officeRoleCanvas(role, i, n) {
+  const c = mk(640, 400), g = officeScreenBase(c, `EXPERIENCE · ${String(i + 1).padStart(2, '0')}/${String(n).padStart(2, '0')}`);
+  g.fillStyle = '#8e99b0'; g.font = '600 22px "IBM Plex Mono", monospace'; g.textAlign = 'right'; g.fillText(role.years, 612, 36); g.textAlign = 'left';
+  g.fillStyle = '#f1e6cf'; let px = 40; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(role.co).width > 584 && --px > 24); g.fillText(role.co, 28, 118);
+  g.fillStyle = '#3fe0e0'; g.font = '600 24px "IBM Plex Sans", sans-serif'; let y = wrapText(g, role.title, 28, 168, 584, 32);
+  g.fillStyle = '#c9d2e3'; g.font = '24px "IBM Plex Sans", sans-serif'; wrapText(g, role.line, 28, y + 14, 584, 32);
+  return c;
+}
+function officeSkillsCanvas(skills) {
+  const c = mk(512, 800), g = officeScreenBase(c, 'TECHNICAL SKILLS');
+  let y = 100;
+  for (const [cat, items] of skills) {
+    g.fillStyle = '#3fe0e0'; g.font = '600 20px "IBM Plex Mono", monospace'; g.fillText(cat.toUpperCase(), 26, y);
+    g.fillStyle = '#c9d2e3'; g.font = '20px "IBM Plex Sans", sans-serif'; y = wrapText(g, items, 26, y + 30, 460, 26) + 18;
+  }
+  return c;
+}
+function officeWorkCanvas(work) {
+  const c = mk(640, 400), g = officeScreenBase(c, 'NOTABLE WORK');
+  work.forEach((w, i) => {
+    const y = 84 + i * 150, logo = LOGOS[w.logo];
+    if (logo) { g.save(); rr(g, 28, y, 110, 110, 24); g.clip(); g.drawImage(logo, 28, y, 110, 110); g.restore(); }
+    g.fillStyle = '#f1e6cf'; let px = 32; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(w.name).width > 450 && --px > 18); g.fillText(w.name, 160, y + 42);
+    g.fillStyle = '#3fe0e0'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText(w.version, 160, y + 80);
+  });
+  return c;
+}
+function officeContactCanvas(rows) {
+  const c = mk(640, 400), g = officeScreenBase(c, 'CONTACT');
+  rows.forEach(([k, v], i) => {
+    const y = 104 + i * 58;
+    g.fillStyle = '#8e99b0'; g.font = '600 20px "IBM Plex Mono", monospace'; g.fillText(k, 28, y);
+    g.fillStyle = '#f1e6cf'; let px = 24; do { g.font = `${px}px "IBM Plex Sans", sans-serif`; } while (g.measureText(v).width > 440 && --px > 14); g.fillText(v, 170, y);
+  });
+  return c;
+}
+function buildOfficeWorld(p) {
+  const ws = new THREE.Scene();
+  ws.background = new THREE.Color(0x07090f); ws.fog = new THREE.Fog(0x07090f, 14, 30);
+  ws.add(new THREE.HemisphereLight(0xc8d4ff, 0x0a0c14, 0.5));
+  const updates = [], hit = [], stations = [];
+  const RX = 6, RZ0 = -4.6, RZ1 = 5.4, RH = 3.6, deskZ = -2.6;   // room bounds and desk line
+
+  // the room: floor, ceiling, panelled walls (the hall's walls, warmer light)
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(RX * 2, RZ1 - RZ0), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.4, metalness: 0.3 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.z = (RZ0 + RZ1) / 2; ws.add(floor);
+  const ceilM = new THREE.Mesh(new THREE.PlaneGeometry(RX * 2, RZ1 - RZ0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
+  ceilM.rotation.x = Math.PI / 2; ceilM.position.set(0, RH, (RZ0 + RZ1) / 2); ws.add(ceilM);
+  const wt2 = wallTex(false), wg2 = wallTex(true);
+  const wall = (w, x, z, ry) => {
+    const t = wt2.clone(), e = wg2.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, RH / 4); e.repeat.copy(t.repeat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, RH), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.4, roughness: 0.7, metalness: 0.1 }));
+    m.position.set(x, RH / 2, z); m.rotation.y = ry; ws.add(m);
+  };
+  wall(RZ1 - RZ0, -RX, (RZ0 + RZ1) / 2, Math.PI / 2); wall(RZ1 - RZ0, RX, (RZ0 + RZ1) / 2, -Math.PI / 2);
+  wall(RX * 2, 0, RZ0, 0); wall(RX * 2, 0, RZ1, Math.PI);
+  const lamp = new THREE.PointLight(0xffe2b0, 0.9, 12, 2); lamp.position.set(0, RH - 0.4, -0.9); ws.add(lamp);
+  const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.32, 0.18, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe2b0, side: THREE.DoubleSide }));
+  lampShade.position.set(0, RH - 0.15, -0.9); ws.add(lampShade);
+
+  // the operator desk
+  const deskMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.35 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.08, 1.1), deskMat); top.position.set(0, 0.78, deskZ - 0.2); ws.add(top);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.02, 0.02), new THREE.MeshBasicMaterial({ color: 0x3fe0e0 })); edge.position.set(0, 0.8, deskZ + 0.36); ws.add(edge);
+  const front = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.7, 0.06), deskMat); front.position.set(0, 0.4, deskZ + 0.3); ws.add(front);
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, 0.3), new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.5, roughness: 0.4 })); kb.position.set(0, 0.835, deskZ + 0.05); ws.add(kb);
+  const kbGlow = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.005, 0.26), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.25 })); kbGlow.position.set(0, 0.853, deskZ + 0.05); ws.add(kbGlow);
+  // the operator's chair, pushed in
+  const chair = new THREE.Group(); chair.position.set(0, 0, deskZ + 0.95); ws.add(chair);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.55), deskMat); seat.position.y = 0.5; chair.add(seat);
+  const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.75, 0.08), deskMat); backrest.position.set(0, 0.9, 0.26); chair.add(backrest);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 12), silver); stem.position.y = 0.25; chair.add(stem);
+
+  // monitors
+  const bezel = new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.35 });
+  function monitor(canvas, x, y, z, w, h, yaw, arm = true) {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = yaw; ws.add(g);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.06), bezel));
+    const tex = new THREE.CanvasTexture(canvas); tex.anisotropy = 8;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); scr.position.z = 0.032; g.add(scr);
+    if (arm) { const a = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, y - h / 2 - 0.82, 8), silver); a.position.set(0, -(y - h / 2 - 0.82) / 2 - h / 2, -0.06); g.add(a); }
+    const normal = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+    return { g, scr, tex, center: new THREE.Vector3(x, y, z).addScaledVector(normal, 0.04), normal, h };
+  }
+  function addStation(m, st) {
+    st.center = m.center; st.normal = m.normal; st.mesh = m.scr;
+    m.g.traverse(o => { if (o.isMesh) { o.userData.station = st; hit.push(o); } });
+    stations.push(st);
+  }
+
+  // main screen: QES-256 keys streaming as falling hex, with the Resume decoding out of it
+  const MW = 1024, MH = 640, mainC = mk(MW, MH), mg = mainC.getContext('2d');
+  const rainC = mk(MW, MH), rg = rainC.getContext('2d'); rg.fillStyle = '#000'; rg.fillRect(0, 0, MW, MH);
+  const CW = 18, COLS = Math.floor(MW / CW), ROWS = Math.ceil(MH / 22);
+  const newKey = () => { const b = new Uint8Array(32); crypto.getRandomValues(b); return [...b].map(x => x.toString(16).padStart(2, '0')).join(''); };
+  const cols = Array.from({ length: COLS }, () => ({ key: newKey(), k: Math.floor(Math.random() * 64), y: -Math.random() * ROWS, speed: 0.35 + Math.random() * 0.6 }));
+  const HEX = '0123456789abcdef';
+  const decodeLines = [['RESUME', '700 112px "IBM Plex Mono", monospace', 240], ['NATHANIEL VAZQUEZ · SOFTWARE ENGINEER', '600 30px "IBM Plex Mono", monospace', 318], ['PRESS E TO OPEN  ▸  RESUME.PDF', '600 26px "IBM Plex Mono", monospace', 390]];
+  let rainAcc = 0, decodeT = 0;
+  function drawMain(dt) {
+    rainAcc += dt;
+    if (rainAcc > (reduceMotion ? 0.3 : 0.045)) {
+      rainAcc = 0;
+      rg.fillStyle = 'rgba(0,0,0,0.13)'; rg.fillRect(0, 0, MW, MH);
+      rg.font = '600 19px "IBM Plex Mono", monospace'; rg.textAlign = 'center';
+      cols.forEach((c, i) => {
+        c.y += c.speed; const row = Math.floor(c.y);
+        if (row >= 0) {
+          const ch = c.key[(c.k + row) % 64];   // each column reads down its own 64-hex-digit key
+          rg.fillStyle = '#c8ffe0'; rg.fillText(ch, i * CW + CW / 2, row * 22 + 18);
+          if (row > 0) { rg.fillStyle = '#00e86a'; rg.fillText(c.key[(c.k + row - 1) % 64], i * CW + CW / 2, (row - 1) * 22 + 18); }
+        }
+        if (row > ROWS + Math.random() * 12) { c.key = newKey(); c.k = Math.floor(Math.random() * 64); c.y = -Math.random() * 8; }
+      });
+    }
+    mg.drawImage(rainC, 0, 0);
+    // the decode panel
+    decodeT += dt;
+    if (decodeT > 14) decodeT = 0;
+    const show = Math.min(1, Math.max(0, (decodeT - 1.2) * 2));
+    if (show > 0) {
+      mg.globalAlpha = show; mg.fillStyle = 'rgba(0,10,4,0.82)'; rr(mg, 112, 132, 800, 300, 18); mg.fill();
+      mg.strokeStyle = '#00ff66'; mg.lineWidth = 3; rr(mg, 112, 132, 800, 300, 18); mg.stroke();
+      mg.textAlign = 'center';
+      let idx = 0;
+      for (const [text, font, y] of decodeLines) {
+        mg.font = font; let out = '';
+        for (const ch of text) { const lock = 1.6 + idx * 0.035; out += (ch === ' ' || reduceMotion || decodeT > lock) ? ch : HEX[Math.floor(Math.random() * 16)].toUpperCase(); idx++; }
+        mg.fillStyle = y === 240 ? '#d8ffe6' : '#00ff66'; mg.fillText(out, MW / 2, y);
+      }
+      mg.globalAlpha = 1;
+    }
+    mg.textAlign = 'left'; mg.fillStyle = 'rgba(0,255,102,0.7)'; mg.font = '600 18px "IBM Plex Mono", monospace'; mg.fillText('QES-256 KEY STREAM · 32-BYTE KEYS · ILLUSTRATION', 20, MH - 18);
+  }
+  drawMain(0);
+  const main = monitor(mainC, 0, 1.78, deskZ - 0.42, 2.4, 1.5, 0);
+  addStation(main, { id: 'site', site: p.site, info: { title: 'Resume' }, exhibit: true, standOff: 2.6, pitch: 0.06 });
+  updates.push(dt => { drawMain(dt); main.tex.needsUpdate = true; });
+
+  // ticker across the top
+  const tC = mk(1024, 96), tg = tC.getContext('2d');
+  const tickerText = `OPERATOR · NATHANIEL VAZQUEZ · SOFTWARE ENGINEER · QUANTUM COMPUTING × APPLIED CRYPTOGRAPHY · STATUS: ONLINE · `;
+  let tOff = 0;
+  const ticker = monitor(tC, 0, 2.86, deskZ - 0.46, 3.6, 0.34, 0, false);
+  updates.push(dt => {
+    tOff = (tOff + dt * (reduceMotion ? 0 : 60)) % 4000;
+    tg.fillStyle = '#060a12'; tg.fillRect(0, 0, 1024, 96);
+    tg.font = '600 40px "IBM Plex Mono", monospace'; tg.fillStyle = '#3fe0e0'; tg.textBaseline = 'middle';
+    const w = tg.measureText(tickerText).width; let x = -(tOff % w); while (x < 1024) { tg.fillText(tickerText, x, 50); x += w; }
+    tg.textBaseline = 'alphabetic'; ticker.tex.needsUpdate = true;
+  });
+
+  // left bank: one screen per role, newest first
+  const L = (x) => deskZ - 0.42 + (Math.abs(x) - 1.25) * 0.42;
+  p.roles.forEach((role, i) => {
+    const x = i % 2 ? -1.95 : -2.95, y = i < 2 ? 2.12 : 1.42;   // reads 01 02 / 03 04 left to right
+    const m = monitor(officeRoleCanvas(role, i, p.roles.length), x, y, L(x), 0.92, 0.575, 0.38);
+    addStation(m, { id: 'm' + i, info: { title: role.co, text: p.modules[i][1] }, exhibit: true, standOff: 1.9, pitch: 0.12 });
+  });
+  // right bank: skills (tall), notable work, contact
+  const skills = monitor(officeSkillsCanvas(p.skills), 1.95, 1.77, L(1.95), 0.86, 1.345, -0.38);
+  addStation(skills, { id: 'skills', info: { title: 'Skills' }, exhibit: true, standOff: 2.1, pitch: 0.06 });
+  const work = monitor(officeWorkCanvas(p.work), 2.95, 2.12, L(2.95), 0.92, 0.575, -0.38);
+  addStation(work, { id: 'work', info: { title: 'Notable work' }, exhibit: true, standOff: 1.9, pitch: 0.12 });
+  const contact = monitor(officeContactCanvas(p.contactRows), 2.95, 1.42, L(2.95), 0.92, 0.575, -0.38);
+  addStation(contact, { id: 'contact', info: { title: 'Contact' }, exhibit: true, standOff: 1.9, pitch: 0.12 });
+  // screen glow onto the desk
+  const sg = new THREE.PointLight(0x3fe0e0, 0.6, 5, 2); sg.position.set(0, 1.6, deskZ + 0.6); ws.add(sg);
+  const rgL = new THREE.PointLight(0x00ff66, 0.35, 4, 2); rgL.position.set(0, 1.8, deskZ - 0.1); ws.add(rgL);
+
+  // the monogram on the right wall
+  const mono = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(makeMonogram()) }));
+  mono.position.set(RX - 0.02, 2.0, 1.2); mono.rotation.y = -Math.PI / 2; ws.add(mono);
+  [[1.56, 0.08, 0, 0.74], [1.56, 0.08, 0, -0.74], [0.08, 1.4, 0.74, 0], [0.08, 1.4, -0.74, 0]].forEach(([fw, fh, a, b]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.06, fh, fw), gold); f.position.set(RX - 0.04, 2.0 + b, 1.2 + a); ws.add(f);
+  });
+
+  // the door back to the hall, on the left wall
+  const doorG = new THREE.Group(); doorG.position.set(-RX + 0.12, 0, 1.6); doorG.rotation.y = Math.PI / 2; ws.add(doorG);
+  const DW = 1.4, DH = 2.6, ft = 0.15;
+  const doorGlowM = new THREE.MeshBasicMaterial({ color: 0x8fe8ff, transparent: true, opacity: 0, depthWrite: false });
+  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(DW, DH), doorGlowM); beyond.position.set(0, DH / 2, -0.02); doorG.add(beyond);
+  [[DW + ft * 2, ft, 0, DH + ft / 2], [ft, DH + ft, -DW / 2 - ft / 2, (DH + ft) / 2], [ft, DH + ft, DW / 2 + ft / 2, (DH + ft) / 2]].forEach(([fw, fh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.2), gold); f.position.set(x, y, 0.05); doorG.add(f);
+  });
+  const hinge = new THREE.Group(); hinge.position.set(-DW / 2, 0, 0.04); doorG.add(hinge);
+  const leaf = new THREE.Mesh(new THREE.BoxGeometry(DW - 0.02, DH - 0.02, 0.07), deskMat); leaf.position.set(DW / 2, DH / 2, 0); hinge.add(leaf);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), gold); knob.position.set(DW - 0.16, DH * 0.47, 0.08); hinge.add(knob);
+  const exitLabel = stationLabel('BACK TO', 'Quantum Hall'); exitLabel.scale.multiplyScalar(0.5); exitLabel.position.set(0, DH + 0.55, 0.1); doorG.add(exitLabel);
+  const portal = {
+    id: 'portal', portal: true, exhibit: true, info: { title: 'Quantum Hall' }, standOff: 2.8, pitch: 0.08,
+    center: new THREE.Vector3(-RX + 0.18, DH / 2, 1.6), normal: new THREE.Vector3(1, 0, 0),
+    uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } }, amp: 0,
+    setOpen(k) { hinge.rotation.y = -k * 1.75; doorGlowM.opacity = Math.min(1, k * 1.6); }
+  };
+  leaf.userData.station = portal; hit.push(leaf); stations.push(portal);
+
+  const start = { pos: new THREE.Vector3(0, 1.7, 3.4), yaw: 0, pitch: 0.05 };
+  const worldVee = addWorldVee(ws, p, 'office', hit, stations, updates, start.pos);
+  const clamp = q => { q.x = Math.max(-RX + 0.8, Math.min(RX - 0.8, q.x)); q.z = Math.max(deskZ + 1.2, Math.min(RZ1 - 0.6, q.z)); };
+  worldVee.bounds = q => { q.x = Math.max(-RX + 1, Math.min(RX - 1, q.x)); q.z = Math.max(deskZ + 1.4, Math.min(RZ1 - 0.8, q.z)); };
+
+  return {
+    kind: 'office', accent: '#3fe0e0', accent2: '#8ea2ff', vee: worldVee,
+    scene: ws, stations, hit, radius: 99, clamp, portal, start,
+    update(dt, t) { for (const u of updates) u(dt, t); },
+    dispose() {
+      ws.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+        for (const m of mats) { if (SHARED_MATS.has(m)) continue; if (m.map) m.map.dispose(); m.dispose(); }
+      });
+    }
+  };
+}
+
 function renderWorldPanel(pt) {
   const p = pt.p;
   worldPanel.style.setProperty('--wp-accent', world.accent); worldPanel.style.setProperty('--wp-accent2', world.accent2);
@@ -2125,6 +2373,8 @@ function renderWorldPanel(pt) {
       <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
       ${p.site ? `<h3 class="wp-sub">${esc(p.site.heading || 'Website')}</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>${esc(p.site.cardText || 'On the centre screen in front of you. Walk up and press E, or tap it, to open the site.')}</span></button></li></ul>` : ''}
+      ${p.extra ? `<h3 class="wp-sub">At the desk</h3>
+      <ul class="wp-stations">${p.extra.map(([id, t, d]) => `<li><button class="st" type="button" data-st="${id}"><b>${esc(t)}</b><span>${esc(d)}</span></button></li>`).join('')}</ul>` : ''}
       ${p.shots ? `<h3 class="wp-sub">Screenshots</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="shots"><b>App Store screenshots</b><span>On your left: ${p.shots.length} screens from the App Store listing.</span></button></li></ul>` : ''}
       ${p.links.some(([l]) => l === 'App Store') ? `<h3 class="wp-sub">App Store</h3>
@@ -2166,7 +2416,7 @@ function highlightStation(id) {
 function openWorld(pt) {
   // settle the hall paintings first, so the exit painting's view of the hall is calm
   for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
-  world = pt.p.id === 'platform' ? buildPlatformWorld() : buildProductWorld(pt.p); world.pt = pt;
+  world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
   markSeen(pt.p.id);
   renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize();
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
@@ -2307,8 +2557,8 @@ function tick() {
     const speed = mode === 'auto' ? 6 : (keys.ShiftLeft ? 7 : 4.2);
     player.pos.addScaledVector(mv, speed * dt);
     if (world) {
-      const r = Math.hypot(player.pos.x, player.pos.z);
-      if (r > world.radius) player.pos.multiplyScalar(world.radius / r);
+      if (world.clamp) world.clamp(player.pos);
+      else { const r = Math.hypot(player.pos.x, player.pos.z); if (r > world.radius) player.pos.multiplyScalar(world.radius / r); }
       player.pos.y = 1.7;
     } else {
       player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
@@ -2377,6 +2627,7 @@ function tick() {
     camera.fov = 65 + e * 25; camera.updateProjectionMatrix();
     anim.pt.amp = 0.06 + e * 0.3; anim.pt.uniforms.uGlow.value = e * 0.25;
     if (anim.pt.door && kiosk) kiosk.setOpen(Math.min(1, e * 1.8));
+    if (anim.pt.setOpen) anim.pt.setOpen(Math.min(1, e * 1.8));
     if (k > 0.72 && !anim.flashed) { anim.flashed = true; flash.style.opacity = 1; }
     if (k >= 1) {
       mode = 'inside'; const pt = anim.pt; anim = null;
