@@ -892,6 +892,11 @@ function makeVee(parent, pos, facing) {
   // a soft pool of light on the floor beneath her, and a faint trail when she glides
   const poolM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, map: dotTex(), opacity: 0.35, ...addBlend });
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), poolM); pool.rotation.x = -Math.PI / 2; pool.position.set(pos.x, 0.025, pos.z); parent.add(pool);
+  // a disc of drones on the floor beneath her, swirling and rippling outward
+  const FN = 240, fPos = new Float32Array(FN * 3), fRnd = new Float32Array(FN), fDir = new Float32Array(FN * 3), floorData = [];
+  for (let i = 0; i < FN; i++) { floorData.push({ a: Math.random() * Math.PI * 2, r: Math.random(), spin: 0.4 + Math.random() * 0.6 }); fRnd[i] = Math.random(); fDir[i * 3 + 1] = 1; }
+  const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(fPos, 3)); fg.setAttribute('aRnd', new THREE.BufferAttribute(fRnd, 1)); fg.setAttribute('aDir', new THREE.BufferAttribute(fDir, 3));
+  const floorSwarm = new THREE.Points(fg, droneMat); floorSwarm.frustumCulled = false; parent.add(floorSwarm);
   const TN = 44, tPos = new Float32Array(TN * 3), tCol = new Float32Array(TN * 3);
   const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tg.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
   const trail = new THREE.Points(tg, new THREE.PointsMaterial({ size: 0.09, map: dotTex(), vertexColors: true, ...addBlend })); trail.frustumCulled = false; parent.add(trail);
@@ -921,7 +926,7 @@ function makeVee(parent, pos, facing) {
   fig.rotation.y = restYaw;
   const v = { parent, pad, body, fig, headG, mouth, eyes, shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
     droneU, follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null, motes, moteData, moteSpeed: 1,
-    pool, poolM, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 6 + Math.random() * 5, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
+    pool, poolM, floorSwarm, floorData, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 6 + Math.random() * 5, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
     awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
@@ -995,7 +1000,15 @@ function updateVee(v, dt, t) {
   v.droneU.uScatter.value += ((reduceMotion ? 0 : scatter + (v.glitchD > 0 ? 0.12 : 0)) - v.droneU.uScatter.value) * Math.min(1, dt * 14);
   v.droneU.uPx.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
   v.body.scale.setScalar(Math.max(0.001, v.scale)); v.body.visible = v.scale > 0.01;
-  v.pool.position.set(b.x, 0.025, b.z); v.poolM.opacity = 0.38 * v.scale * (1 - Math.min(0.6, b.y)); v.pool.scale.setScalar(1 + b.y * 0.8);
+  v.pool.position.set(b.x, 0.025, b.z); v.poolM.opacity = 0.16 * v.scale * (1 - Math.min(0.6, b.y)); v.pool.scale.setScalar(1 + b.y * 0.8);
+  // floor drones: each drifts outward in a slow spiral, then starts again near the centre, so rings ripple out under her
+  const fp = v.floorSwarm.geometry.attributes.position.array, spread = 0.75 * (1 + b.y * 0.8) * v.scale;
+  v.floorData.forEach((d, i) => {
+    d.a += d.spin * dt * m; d.r += 0.12 * dt * m; if (d.r > 1) d.r -= 1;
+    const r = Math.sqrt(d.r) * spread;
+    fp[i * 3] = b.x + Math.cos(d.a) * r; fp[i * 3 + 1] = 0.03; fp[i * 3 + 2] = b.z + Math.sin(d.a) * r;
+  });
+  v.floorSwarm.geometry.attributes.position.needsUpdate = true; v.floorSwarm.visible = v.scale > 0.01;
   // trail: orbs shed from her swirl as she glides; each keeps circling, rises and spreads out as it fades
   for (const smp of v.tSamples) smp.age += dt;
   v.tSamples.unshift({ x: b.x, y: b.y + 0.4 + Math.random() * 1.5, z: b.z, a: Math.random() * Math.PI * 2, r: 0.15 + Math.random() * 0.25,
