@@ -150,7 +150,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
    --wp-accent / --wp-accent2 are set per world from the product's colours. */
 #worldPanel {
   --wp-accent: #3fe0e0; --wp-accent2: #8ea2ff;
-  position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: min(380px, 100%);
+  position: fixed; z-index: 3; top: 0; right: 0; bottom: 0; width: min(400px, 100%);
   overflow-y: auto; overscroll-behavior: contain;
   background: color-mix(in srgb, #080a12 88%, transparent); border-left: 1px solid color-mix(in srgb, var(--wp-accent) 22%, transparent);
   color: #e6e6ff; backdrop-filter: blur(6px);
@@ -159,7 +159,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
   display: grid; align-content: start; gap: 16px;
 }
 #worldPanel .wp-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; }
-#worldPanel .wp-logo { width: 64px; height: 64px; display: block; box-shadow: 0 8px 20px #0008; }
+#worldPanel .wp-logo { width: 56px; height: 56px; display: block; box-shadow: 0 8px 20px #0008; }
 #worldPanel .wp-titles { display: grid; gap: 4px; min-width: 0; }
 #worldPanel .wp-sub { margin: 4px 0 -6px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
 #worldPanel .wp-modules { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -167,7 +167,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 #worldPanel .wp-modules b { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--wp-accent); font-weight: 600; }
 #worldPanel .wp-modules span { font-size: 13px; line-height: 1.5; color: #b9c2d6; }
 #worldPanel .wp-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--wp-accent); }
-#worldPanel h2 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+#worldPanel h2 { font-family: var(--display); font-weight: 400; font-size: 23px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: break-word; }
 #worldPanel .wp-tag { margin: 0; color: var(--wp-accent2); font-size: 15px; }
 #worldPanel .wp-toggle { font-family: var(--mono); font-size: 12px; background: transparent; color: var(--wp-accent); border: 1px solid var(--wp-accent); border-radius: 2px; padding: 8px 10px; cursor: pointer; align-self: start; }
 #worldPanel .wp-toggle:hover, #worldPanel .wp-toggle:focus-visible { background: color-mix(in srgb, var(--wp-accent) 12%, transparent); outline: none; }
@@ -1370,8 +1370,7 @@ function renderWorldPanel(pt) {
     <div class="wp-head">
       <img class="wp-logo" src="${esc(p.logo)}" alt="${esc(p.name)} logo" width="64" height="64">
       <div class="wp-titles">
-        <span class="wp-eyebrow">${esc(p.wing)} wing · inside the display</span>
-        <h2>${esc(p.name)}</h2>
+        <h2>${esc(p.name).replace('™', '\u2060™')}</h2>
         <p class="wp-tag">${taglineHTML(p)}</p>
       </div>
       <button class="wp-toggle" type="button" id="wpToggle" aria-expanded="false">Details</button>
