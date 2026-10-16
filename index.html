@@ -2303,7 +2303,16 @@ function buildOfficeWorld(p) {
   const rgL = new THREE.PointLight(0x00ff66, 0.35, 4, 2); rgL.position.set(0, 1.8, deskZ - 0.1); ws.add(rgL);
 
   // the monogram on the right wall
-  const mono = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(makeMonogram()) }));
+  // the framed picture: the Quantum V^ mark on its own
+  const qc = mk(512, 512), qg = qc.getContext('2d');
+  const qbg = qg.createLinearGradient(0, 0, 512, 512); qbg.addColorStop(0, '#1b2236'); qbg.addColorStop(1, '#070910');
+  qg.fillStyle = qbg; qg.fillRect(0, 0, 512, 512);
+  qg.strokeStyle = 'rgba(63,224,224,.55)'; qg.lineWidth = 6; qg.beginPath(); qg.arc(256, 256, 200, 0, Math.PI * 2); qg.stroke();
+  qg.textAlign = 'center'; qg.textBaseline = 'middle';
+  let qpx = 92; do { qg.font = `${qpx}px "Young Serif", Georgia, serif`; } while (qg.measureText('QUANTUM').width > 360 && --qpx > 30);   // fits inside the ring
+  qg.fillStyle = '#f1e6cf'; qg.fillText('QUANTUM', 256, 226);
+  qg.fillStyle = '#3fe0e0'; qg.font = '600 120px "IBM Plex Mono", monospace'; qg.fillText('V^', 256, 318);
+  const mono = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(qc) }));
   mono.position.set(RX - 0.02, 2.0, 1.2); mono.rotation.y = -Math.PI / 2; ws.add(mono);
   [[1.56, 0.08, 0, 0.74], [1.56, 0.08, 0, -0.74], [0.08, 1.4, 0.74, 0], [0.08, 1.4, -0.74, 0]].forEach(([fw, fh, a, b]) => {
     const f = new THREE.Mesh(new THREE.BoxGeometry(0.06, fh, fw), gold); f.position.set(RX - 0.04, 2.0 + b, 1.2 + a); ws.add(f);
