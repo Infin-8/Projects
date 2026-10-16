@@ -815,6 +815,12 @@ function makeVee(parent, pos, facing) {
   const hoverM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, opacity: 0, ...addBlend });
   const hover = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.014, 6, 48), hoverM); hover.rotation.x = Math.PI / 2; hover.position.y = 0.1; body.add(hover);   // her own light ring when she floats away
   const glowL = new THREE.PointLight(0x5ff0ff, 0.8, 4.5, 2); glowL.position.y = 1.3; body.add(glowL);
+  // a soft pool of light on the floor beneath her, and a faint trail when she glides
+  const poolM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, map: dotTex(), opacity: 0.35, ...addBlend });
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), poolM); pool.rotation.x = -Math.PI / 2; pool.position.set(pos.x, 0.025, pos.z); parent.add(pool);
+  const TN = 30, tPos = new Float32Array(TN * 3), tCol = new Float32Array(TN * 3);
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tg.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
+  const trail = new THREE.Points(tg, new THREE.PointsMaterial({ size: 0.09, map: dotTex(), vertexColors: true, ...addBlend })); trail.frustumCulled = false; parent.add(trail);
 
   // name and speech bubble; the words type out one character at a time
   const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; body.add(name);   // shown with her speech bubble
@@ -840,7 +846,8 @@ function makeVee(parent, pos, facing) {
   const normal = facing.clone().setY(0).normalize(), restYaw = Math.atan2(normal.x, normal.z);
   fig.rotation.y = restYaw;
   const v = { parent, pad, body, fig, headG, mouth, eyes, shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
-    follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
+    follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null,
+    pool, poolM, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 6 + Math.random() * 5, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
     awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
@@ -911,6 +918,17 @@ function updateVee(v, dt, t) {
   else if (v.appearT > 0) { v.appearT = Math.max(0, v.appearT - dt); const k = 1 - v.appearT / 0.8; v.scale = 1 + 0.12 * Math.sin(k * Math.PI) - (1 - k) * (1 - k); v.glow = Math.max(v.glow, 1 - k); }
   else v.scale = 1;
   v.body.scale.setScalar(Math.max(0.001, v.scale)); v.body.visible = v.scale > 0.01;
+  v.pool.position.set(b.x, 0.025, b.z); v.poolM.opacity = 0.38 * v.scale * (1 - Math.min(0.6, b.y)); v.pool.scale.setScalar(1 + b.y * 0.8);
+  // trail: recent positions at chest height, brighter the farther she has moved since
+  v.tSamples.unshift({ x: b.x, y: b.y + 1.15, z: b.z });
+  if (v.tSamples.length > v.TN) v.tSamples.pop();
+  for (let i = 0; i < v.TN; i++) {
+    const smp = v.tSamples[i] || v.tSamples[v.tSamples.length - 1];
+    v.tPos[i * 3] = smp.x; v.tPos[i * 3 + 1] = smp.y; v.tPos[i * 3 + 2] = smp.z;
+    const far = Math.min(1, Math.hypot(smp.x - b.x, smp.z - b.z) * 2.2), fade = (1 - i / v.TN) * far * v.scale * (reduceMotion ? 0 : 0.8);
+    v.tCol[i * 3] = 0.37 * fade; v.tCol[i * 3 + 1] = 0.94 * fade; v.tCol[i * 3 + 2] = fade;
+  }
+  v.trail.geometry.attributes.position.needsUpdate = true; v.trail.geometry.attributes.color.needsUpdate = true;
   const dx = cam.x - b.x, dz = cam.z - b.z, dist = Math.hypot(dx, dz);
   const isNear = dist < 5.5;
   if (!isNear) v.awayT += dt;
@@ -939,7 +957,7 @@ function updateVee(v, dt, t) {
   } else if (v.waveT > 0) {
     v.waveT -= dt; const k = Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5);
     v.shoulder.rotation.x += (0 - v.shoulder.rotation.x) * L;
-    v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.45 * Math.sin(t * 9) * m) * k;
+    v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.5 * Math.sin(t * 11) * m) * k;
   } else {
     v.shoulder.rotation.x *= 1 - L; v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9;
   }
@@ -956,6 +974,13 @@ function updateVee(v, dt, t) {
   blinkAt(0); if (Math.floor(now / P) % 3 === 0) blinkAt(240);
   for (const e of v.eyes) e.scale.y = Math.max(0.08, open);
   v.holoU.uDim.value = 1;
+  // now and then the hologram glitches: a brief sideways jolt and flicker
+  if (!reduceMotion) {
+    v.glitchT -= dt;
+    if (v.glitchT < 0) { v.glitchT = 6 + Math.random() * 7; v.glitchD = 0.16; }
+    if (v.glitchD > 0) { v.glitchD -= dt; v.fig.position.x = (Math.random() - 0.5) * 0.09; v.holoU.uDim.value = 0.45 + Math.random() * 0.5; }
+    else v.fig.position.x = 0;
+  }
   v.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.6 : 0.8) * m; });
   if (v.text && v.reveal >= v.total) v.doneT += dt;
   const showBubble = v.bodyTarget || (v.text && v.reveal < v.total) || v.doneT < 6 || dist < 2.2;   // she speaks, then goes quiet
@@ -1144,6 +1169,17 @@ addEventListener('keydown', e => {
   if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
+// for Vee's idle nudges: when did the visitor last do anything?
+let lastInput = performance.now(), hintK = 0;
+for (const ev of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart']) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true });
+const HALL_HINTS = [
+  ['Psst, want a guided tour?', 'Press T, or tap ▶ Tour.'],
+  ['Each display opens a world.', 'Walk up to one and press E to step inside.'],
+  ['Curious who built all this?', 'Tap me to meet the builder.']];
+const WORLD_HINTS = [
+  ['Want me to show you around?', 'Press T, or tap Tour.'],
+  ['Tap any screen.', "I'll walk you over to it."],
+  ['Ready to head back?', 'Press Esc, or use the exit display.']];
 
 // pointer: drag to look, click to enter, left-bottom touch = joystick
 const stick = document.getElementById('stick');
@@ -2126,6 +2162,14 @@ function tick() {
         const dx = vee.body.position.x - camera.position.x, dz = vee.body.position.z - camera.position.z, d = Math.hypot(dx, dz);
         if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = vee.pt;
       }
+      // the first time you walk up to a display, she points at it and says what it is
+      if (vee && near && !near.mascot && !tour && mode === 'walk' && near !== vee.lastReact) {
+        vee.lastReact = near;
+        if (!vee.reacted.has(near.p.id)) {
+          vee.reacted.add(near.p.id); vee.tourK = vee.tour.length - 1;
+          vee.say(`That's ${near.p.name}.`, `${near.p.tagline}. Press E to step inside.`.replace('..', '.'), null, near.center);
+        }
+      } else if (vee && !near) vee.lastReact = null;
       if (near && mode === 'walk' && !tour) {
         promptEl.innerHTML = `<span>${esc(near.p.promptVerb || 'Press E or tap to enter')}</span><b style="font-weight:400">${esc(near.p.name)}</b>`; promptEl.hidden = false;
       } else promptEl.hidden = true;
@@ -2133,6 +2177,15 @@ function tick() {
   }
 
   updateTour(dt);
+  // stand still a while and she offers a hint
+  if (!tour && mode === 'walk' && performance.now() - lastInput > 16000) {
+    const g = world ? world.vee : vee;
+    if (g && g.scale > 0.9 && g.reveal >= g.total && g.doneT > 6) {
+      lastInput = performance.now();
+      const hints = world ? WORLD_HINTS : HALL_HINTS, h = hints[hintK++ % hints.length];
+      g.say(h[0], h[1], null, null); g.waveT = 1.4;
+    }
+  }
 
   if (mode === 'entering' && anim) {
     anim.t += dt / anim.dur; const k = Math.min(1, anim.t), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
