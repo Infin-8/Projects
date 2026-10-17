@@ -841,27 +841,27 @@ class UnifiedQubitStyling {
 function makeShellObject(p, color, color2, R, pointSize, seed = true) {
   const nodes = hurwitzShell(p), edges = shellEdges(nodes), s = Math.sqrt(p), n = nodes.length;
   const pos = new Float32Array(n * 3), lo = new THREE.Color(color).multiplyScalar(0.55), hi = new THREE.Color(color2);
-  const coreR = R * 0.0183, group = new THREE.Group();   // the pool pages' proportions: core 0.055 and halo 0.12 on a radius-3 shell
+  const coreR = R * 0.011, group = new THREE.Group();   // small enough that the shell's structure reads clearly
   const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(coreR, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.88 }), n);
-  const halos = new THREE.InstancedMesh(new THREE.SphereGeometry(coreR * 2.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), n);
+  const halos = new THREE.InstancedMesh(new THREE.SphereGeometry(coreR * 1.9, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), n);
   cores.frustumCulled = halos.frustumCulled = false;
   const lpos = new Float32Array(edges.length * 3), lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lpos, 3));
-  const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: new THREE.Color(color2), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));   // the nearest-neighbour edges carry the structure
   lines.frustumCulled = false;
   group.add(lines, halos, cores);
   // the central seed and its corona
   let seedMat = null; const coronas = [];
   if (seed) {
     seedMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color2).lerp(new THREE.Color(0xffffff), 0.6) });
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(R * 0.05, 24, 16), seedMat));
-    [[0.09, 0.18, 0], [0.16, 0.1, 1.2], [0.26, 0.05, 2.5]].forEach(([r, op, ph]) => {
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R * 0.03, 24, 16), seedMat));
+    [[0.06, 0.12, 0], [0.1, 0.06, 1.2], [0.15, 0.03, 2.5]].forEach(([r, op, ph]) => {
       const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: op, depthWrite: false, side: THREE.BackSide });
       group.add(new THREE.Mesh(new THREE.SphereGeometry(R * r, 24, 16), m)); coronas.push({ m, op, ph });
     });
   }
-  // each node's colour from its height, as nodeColor() does on the pool pages
-  nodes.forEach((nd, i) => projectNode(nd.q, s, 0.55, 0.35, R, pos, i * 3));
-  const base = nodes.map((nd, i) => lo.clone().lerp(hi, Math.max(0, Math.min(1, (pos[i * 3 + 1] / R + 1) / 2))));
+  // each node's colour by family: integer quaternions in the pool colour, half-integer ones in its lighter tint
+  const intC = new THREE.Color(color), halfC = new THREE.Color(color2);
+  const base = nodes.map(nd => (nd.half ? halfC : intC).clone());
   const styling = new UnifiedQubitStyling(), M = new THREE.Matrix4(), C = new THREE.Color(), bp = new THREE.Vector3();
   function update(t1, t2) {
     nodes.forEach((nd, i) => projectNode(nd.q, s, t1, t2, R, pos, i * 3));
@@ -875,7 +875,7 @@ function makeShellObject(p, color, color2, R, pointSize, seed = true) {
       M.makeTranslation(bp.x, bp.y, bp.z); cores.setMatrixAt(i, M); halos.setMatrixAt(i, M);
       const emissive = (1.2 + pulse * 0.8 + st.lightingFactor * 0.4) * st.noiseFactor;   // 1.8 … 2.4
       cores.setColorAt(i, C.copy(base[i]).multiplyScalar(0.55 + emissive * 0.25));
-      halos.setColorAt(i, C.copy(base[i]).multiplyScalar(st.glowIntensity * 2.0 * pulse * 0.6));   // additive, so a little lower than the page's opacity
+      halos.setColorAt(i, C.copy(base[i]).multiplyScalar(st.glowIntensity * 2.0 * pulse * 0.3));   // a faint halo, so neighbours stay distinct
     }
     cores.instanceMatrix.needsUpdate = halos.instanceMatrix.needsUpdate = true;
     if (cores.instanceColor) cores.instanceColor.needsUpdate = true;
