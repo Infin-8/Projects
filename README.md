@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://infin-8.github.io/Projects/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum V^ gallery: a dark hall under a gold cryostat chandelier, with the KaizenDoku, STEADYWATCH Handheld and STEADYWATCH Platform displays on the walls"></a>
+  <a href="https://infin-8.github.io/Projects/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum V^ gallery: a dark hall under a gold cryostat chandelier, with the KaizenDoku, STEADYWATCH Handheld and STEADYWATCH Platform displays, a glowing light path down the middle and Vee, the holographic guide"></a>
 </p>
 
 <p align="center">
