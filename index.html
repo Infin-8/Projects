@@ -432,6 +432,126 @@ function drawPlatform(c, img) {
   g.fillStyle = '#5b6bc9'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('X25519 + ML-KEM-768 → HKDF', 562, 660);
 }
 const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, platform: drawPlatform };
+/* ---------- The Platform Wing: VAULT™, VIPER™, LOTUS™ (entropy pools) and OIDC ----------
+   Each pool's nodes are exactly the Hurwitz quaternions of norm p (prime p = 5, 13, 17):
+   integer quaternions (a, b, c, d) and half-integer ones (all four coordinates odd/2) with
+   a² + b² + c² + d² = p. There are 24 × (p + 1) of them: 144, 336 and 432. */
+function hurwitzShell(p) {
+  const out = [], r = Math.ceil(Math.sqrt(p));
+  for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++) for (let c = -r; c <= r; c++) for (let d = -r; d <= r; d++)
+    if (a * a + b * b + c * c + d * d === p) out.push({ q: [a, b, c, d], half: false });
+  const R = 2 * r + 1;
+  for (let a = -R; a <= R; a += 2) for (let b = -R; b <= R; b += 2) for (let c = -R; c <= R; c += 2) for (let d = -R; d <= R; d += 2)
+    if (a * a + b * b + c * c + d * d === 4 * p) out.push({ q: [a / 2, b / 2, c / 2, d / 2], half: true });
+  return out;
+}
+// Families: nodes grouped by their sorted absolute coordinates (all sign changes and orderings of one pattern)
+function shellFamilies(nodes) {
+  const fam = new Map();
+  for (const n of nodes) { const k = n.q.map(Math.abs).sort((x, y) => y - x).join(','); fam.set(k, { half: n.half, count: (fam.get(k)?.count || 0) + 1 }); }
+  return [...fam.entries()].map(([k, v]) => ({ abs: k.split(',').map(Number), ...v }));
+}
+function famLabel(f) {
+  if (!f.half) return `(${f.abs.map(x => x ? '±' + x : '0').join(', ')})`;
+  return `½(${f.abs.map(x => '±' + (x * 2)).join(', ')})`;
+}
+// Nearest-neighbour edges (pairs at the smallest 4D distance), computed exactly
+function shellEdges(nodes) {
+  let min = Infinity; const d2 = (u, v) => u.q.reduce((s, x, i) => s + (x - v.q[i]) ** 2, 0);
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) { const d = d2(nodes[i], nodes[j]); if (d > 1e-9 && d < min) min = d; }
+  const e = [];
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) if (Math.abs(d2(nodes[i], nodes[j]) - min) < 1e-9) e.push(i, j);
+  return e;
+}
+// 4D → 3D: a slow double rotation (planes a–d and b–c), then a perspective projection along a
+function projectNode(q, s, t1, t2, R, out, o) {
+  const a0 = q[0] / s, b0 = q[1] / s, c0 = q[2] / s, d0 = q[3] / s;
+  const a = a0 * Math.cos(t1) - d0 * Math.sin(t1), d = a0 * Math.sin(t1) + d0 * Math.cos(t1);
+  const b = b0 * Math.cos(t2) - c0 * Math.sin(t2), c = b0 * Math.sin(t2) + c0 * Math.cos(t2);
+  const k = R / (2.2 - a);
+  out[o] = b * k; out[o + 1] = c * k; out[o + 2] = d * k;
+}
+function poolModules(p) {
+  const nodes = hurwitzShell(p), fams = shellFamilies(nodes);
+  const ints = fams.filter(f => !f.half), halfs = fams.filter(f => f.half);
+  const sum = a => a.reduce((s, f) => s + f.count, 0);
+  const list = a => a.map(f => `${famLabel(f)}: ${f.count}`).join(' · ');
+  return [
+    [`PRIME p = ${p}`, `Every node is a Hurwitz quaternion a + bi + cj + dk with a² + b² + c² + d² = ${p}.`],
+    [`${nodes.length} NODES`, `Exactly 24 × (p + 1) Hurwitz quaternions have norm ${p}: 24 × ${p + 1} = ${nodes.length}.`],
+    [`INTEGER · ${sum(ints)}`, `${list(ints)}, counting every sign and ordering.`],
+    [`HALF-INTEGER · ${sum(halfs)}`, `${list(halfs)}, counting every sign and ordering.`]];
+}
+// Artwork for a pool: its shell projected from 4D, with nearest-neighbour edges
+function poolArtCanvas(p, name, color, color2, size = 1024) {
+  const c = mk(size, size), g = c.getContext('2d'), nodes = hurwitzShell(p), edges = shellEdges(nodes), s = Math.sqrt(p);
+  const bg = g.createRadialGradient(size / 2, size * 0.45, 40, size / 2, size * 0.45, size * 0.7); bg.addColorStop(0, '#141a2a'); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, size, size);
+  const pts = new Float32Array(nodes.length * 3); nodes.forEach((n, i) => projectNode(n.q, s, 0.55, 0.35, 1, pts, i * 3));
+  const sc = size * 0.42, cx = size / 2, cy = size * 0.44, X = i => cx + pts[i * 3] * sc + pts[i * 3 + 2] * sc * 0.35, Y = i => cy - pts[i * 3 + 1] * sc + pts[i * 3 + 2] * sc * 0.2;
+  g.strokeStyle = color; g.globalAlpha = 0.28; g.lineWidth = size / 900;
+  for (let k = 0; k < edges.length; k += 2) { g.beginPath(); g.moveTo(X(edges[k]), Y(edges[k])); g.lineTo(X(edges[k + 1]), Y(edges[k + 1])); g.stroke(); }
+  g.globalAlpha = 1;
+  nodes.forEach((n, i) => { g.fillStyle = n.half ? color2 : color; g.beginPath(); g.arc(X(i), Y(i), size / (n.half ? 230 : 170), 0, Math.PI * 2); g.fill(); });
+  g.textAlign = 'center';
+  g.fillStyle = '#f1e6cf'; g.font = `${size * 0.075}px "Young Serif", Georgia, serif`; g.fillText(name, cx, size * 0.86);
+  g.fillStyle = color; g.font = `600 ${size * 0.032}px "IBM Plex Mono", monospace`; g.fillText(`ENTROPY POOL · p = ${p} · ${nodes.length} NODES`, cx, size * 0.92);
+  return c;
+}
+function oidcArtCanvas(size = 1024) {
+  const c = mk(size, size), g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, 0, size); bg.addColorStop(0, '#0b1426'); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, size, size);
+  const k = size / 1024;
+  g.fillStyle = '#0d0f14'; rr(g, 362 * k, 130 * k, 300 * k, 560 * k, 46 * k); g.fill(); g.strokeStyle = '#3a4357'; g.lineWidth = 6 * k; rr(g, 362 * k, 130 * k, 300 * k, 560 * k, 46 * k); g.stroke();
+  g.strokeStyle = '#8ea2ff'; g.lineWidth = 10 * k; g.lineCap = 'round';
+  const fx = 512 * k, fy = 300 * k, fs = 70 * k;
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.beginPath(); g.moveTo(fx + sx * fs, fy + sy * (fs - 30 * k)); g.lineTo(fx + sx * fs, fy + sy * fs); g.lineTo(fx + sx * (fs - 30 * k), fy + sy * fs); g.stroke(); });
+  g.lineWidth = 7 * k; g.beginPath(); g.arc(fx, fy + 14 * k, 28 * k, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+  g.fillStyle = '#e6e6ff'; g.textAlign = 'center'; g.font = `${34 * k}px "Young Serif", Georgia, serif`; g.fillText('Approve sign-in?', fx, 450 * k);
+  g.fillStyle = '#8ea2ff'; rr(g, 412 * k, 560 * k, 200 * k, 64 * k, 32 * k); g.fill();
+  g.fillStyle = '#05070b'; g.font = `600 ${26 * k}px "IBM Plex Mono", monospace`; g.fillText('Approve', fx, 601 * k);
+  g.fillStyle = '#f1e6cf'; g.font = `${78 * k}px "Young Serif", Georgia, serif`; g.fillText('OIDC', fx, 860 * k);
+  g.fillStyle = '#8ea2ff'; g.font = `600 ${30 * k}px "IBM Plex Mono", monospace`; g.fillText('BIOMETRIC IDENTITY · RFC 8628', fx, 920 * k);
+  return c;
+}
+const POOLS = [
+  { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game.html' },
+  { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336.html' },
+  { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432.html' }];
+// wing room layout: entered from the hall through an arch at z = -8 in the right wall
+const WING = { x0: 11, x1: 23, z0: -14, z1: -2, h: 6, archZ: -8, archW: 2.4, archH: 3.4, cx: 17, cz: -8 };
+const WING_START = { pos: new THREE.Vector3(12.4, 1.7, WING.archZ), yaw: -Math.PI / 2, pitch: 0.06 };
+const WING_PROJECTS = [
+  ...POOLS.map((P, i) => ({
+    id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
+    tagline: `Entropy pool · p = ${P.prime} · ${24 * (P.prime + 1)} nodes`,
+    desc: `A quantum-harvested entropy pool. Its ${24 * (P.prime + 1)} nodes are exactly the Hurwitz quaternions of norm ${P.prime}: one shell of the F4 lattice, the Hurwitz order.`,
+    modules: poolModules(P.prime),
+    stack: 'IBM Quantum entropy · Hurwitz quaternions · F4 lattice',
+    links: [[`Open ${P.name}`, `https://steady-watch.com/${P.page}`], ['steady-watch.com', 'https://steady-watch.com']],
+    site: { url: `https://steady-watch.com/${P.page}`, label: 'steady-watch.com', addr: `https://steady-watch.com/${P.page}`, shot: `assets/site-${P.id}.jpg`,
+      heading: 'Live pool', cardText: 'The screen on your right opens the live pool on steady-watch.com.' },
+    theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
+    pos: i < 2 ? [WING.x0 + 3.5 + i * 5, 3.1, WING.z0 + 0.08] : [WING.x0 + 8.5, 3.1, WING.z1 - 0.08], rotY: i < 2 ? 0 : Math.PI, size: [3.3, 3.3]
+  })),
+  { id: 'oidc', name: 'STEADYWATCH™ OIDC', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Biometric identity provider',
+    desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved with Face ID in STEADYWATCH™ HANDHELD. Runs on a Raspberry Pi, with no per-seat fee.',
+    modules: [
+      ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
+      ['FACE ID APPROVAL', 'Sign-ins are approved with Face ID in STEADYWATCH™ HANDHELD.'],
+      ['RADIUS BRIDGE', 'Translates a RADIUS Access-Request into OIDC. Live on UDP 1812.'],
+      ['MULTI-TENANT', 'Full isolation per organization, with unlimited tenants in one deployment.'],
+      ['SELF-HOSTED', 'Docker Compose, 7 containers, on a Raspberry Pi 5 (8GB) or any Linux VM.']],
+    stack: 'RFC 8628 · OpenID Connect · JWT · RADIUS · Docker · Raspberry Pi',
+    links: [['Try the live demo', 'https://steady-watch.com/oidc.html'], ['steady-watch.com', 'https://steady-watch.com']],
+    site: { url: 'https://steady-watch.com/oidc.html', label: 'steady-watch.com', addr: 'https://steady-watch.com/oidc.html', shot: 'assets/site-oidc.jpg',
+      heading: 'Live demo', cardText: 'The screen on your right opens the live device-flow demo on steady-watch.com.' },
+    theme: { bg: '#0a0f24', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: null,
+    pos: [WING.x0 + 3.5, 3.1, WING.z1 - 0.08], rotY: Math.PI, size: [3.3, 3.3] }];
+for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
+DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
+
 
 /* ---------- Environment textures ---------- */
 function floorTex() {
@@ -542,7 +662,18 @@ function wall(w, h, x, z, ry) {
   m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
 }
 wall(len, ROOM.h, -ROOM.x, midZ, Math.PI / 2);
-wall(len, ROOM.h, ROOM.x, midZ, -Math.PI / 2);
+// the right wall has an arch into the Platform Wing
+function wallAt(w, h, x, y, z, ry) {
+  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
+  m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
+}
+{
+  const a0 = WING.archZ - WING.archW / 2, a1 = WING.archZ + WING.archW / 2;
+  wallAt(a0 - ROOM.zMin, ROOM.h, ROOM.x, ROOM.h / 2, (ROOM.zMin + a0) / 2, -Math.PI / 2);
+  wallAt(ROOM.zMax - a1, ROOM.h, ROOM.x, ROOM.h / 2, (a1 + ROOM.zMax) / 2, -Math.PI / 2);
+  wallAt(WING.archW, ROOM.h - WING.archH, ROOM.x, WING.archH + (ROOM.h - WING.archH) / 2, WING.archZ, -Math.PI / 2);
+}
 wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMin, 0);
 wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMax, Math.PI);
 const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
@@ -550,8 +681,10 @@ ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(cei
 
 // baseboard light line + columns (castle shapes, lab materials)
 const lineMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 });
-for (const x of [-ROOM.x + 0.03, ROOM.x - 0.03]) {
-  const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); b.position.set(x, 0.9, midZ); scene.add(b);
+{
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); b.position.set(-ROOM.x + 0.03, 0.9, midZ); scene.add(b);
+  const a0 = WING.archZ - WING.archW / 2, a1 = WING.archZ + WING.archW / 2;   // the right-hand line breaks for the arch
+  for (const [z0, z1] of [[ROOM.zMin, a0], [a1, ROOM.zMax]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, z1 - z0), lineMat); r.position.set(ROOM.x - 0.03, 0.9, (z0 + z1) / 2); scene.add(r); }
 }
 const gold = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
 const colMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 });
@@ -561,6 +694,154 @@ for (const z of COLS_Z) for (const x of [-ROOM.x + 0.5, ROOM.x - 0.5]) {
   const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, ROOM.h - 0.15, z); scene.add(cap);
   const base = cap.clone(); base.position.y = 0.15; scene.add(base);
 }
+
+// A pool's shell as a 3D object: every node a glowing point, nearest neighbours joined, turning slowly in 4D
+function makeShellObject(p, color, color2, R, pointSize) {
+  const nodes = hurwitzShell(p), edges = shellEdges(nodes), s = Math.sqrt(p), n = nodes.length;
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), c1 = new THREE.Color(color), c2 = new THREE.Color(color2);
+  nodes.forEach((nd, i) => { const c = nd.half ? c2 : c1; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; });
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const points = new THREE.Points(pg, new THREE.PointsMaterial({ size: pointSize, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const lpos = new Float32Array(edges.length * 3), lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lpos, 3));
+  const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending }));
+  points.frustumCulled = lines.frustumCulled = false;
+  const group = new THREE.Group(); group.add(points, lines);
+  function update(t1, t2) {
+    nodes.forEach((nd, i) => projectNode(nd.q, s, t1, t2, R, pos, i * 3));
+    for (let k = 0; k < edges.length; k++) { const i = edges[k]; lpos[k * 3] = pos[i * 3]; lpos[k * 3 + 1] = pos[i * 3 + 1]; lpos[k * 3 + 2] = pos[i * 3 + 2]; }
+    pg.attributes.position.needsUpdate = true; lg.attributes.position.needsUpdate = true;
+  }
+  update(0.55, 0.35);
+  return { group, update, count: n };
+}
+// In a pool's world: its shell, front and centre
+function poolSculpture(P) {
+  return (g, updates) => {
+    const sh = makeShellObject(P.prime, P.poolColor, P.poolColor2, 3.6, 0.16); sh.group.position.y = 3.0; g.add(sh.group);
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.25, 0.5, 48), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.4 })); plinth.position.y = 0.25; g.add(plinth);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.12, 0.02, 8, 96), new THREE.MeshBasicMaterial({ color: P.poolColor })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.5; g.add(ring);
+    const cap = textSprite([[`${sh.count} NODES · p = ${P.prime} · ROTATING IN 4D`, '600 30px "IBM Plex Mono", monospace', P.poolColor]], 1024, 70, 3.4); cap.position.y = 0.95; g.add(cap);
+    const hitM = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 5, 16), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })); hitM.position.y = 2.9; g.add(hitM);
+    const L = new THREE.PointLight(new THREE.Color(P.poolColor), 0.8, 8, 2); L.position.y = 2.8; g.add(L);
+    updates.push((dt, t) => { const m = reduceMotion ? 0.15 : 1; sh.update(0.55 + t * 0.14 * m, 0.35 + t * 0.09 * m); });
+  };
+}
+const placed = (m, x, y, z) => { m.position.set(x, y, z); return m; };
+// In the OIDC world: a sign-in plays out between a device, the OIDC server on a Pi, and a phone
+function oidcSculpture() {
+  return (g, updates) => {
+    const dark = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.4 });
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.0, 1.1), new THREE.MeshStandardMaterial({ color: 0x343b52, metalness: 0.25, roughness: 0.6 })); plinth.position.y = 0.5; g.add(plinth);
+    const edgeL = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.02, 0.02), new THREE.MeshBasicMaterial({ color: 0x8ea2ff })); edgeL.position.set(0, 1.0, 0.56); g.add(edgeL);
+    const screenTex = (draw, w, h) => { const c = mk(w, h); draw(c.getContext('2d'), w, h); return new THREE.CanvasTexture(c); };
+    // the device asking to sign in
+    const lap = new THREE.Group(); lap.position.set(-1.6, 1.0, 0); g.add(lap);
+    lap.add(placed(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.68), dark), 0, 0.02, 0));
+    const lapScr = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.6), new THREE.MeshBasicMaterial({ map: screenTex((x, w, h) => {
+      x.fillStyle = '#0b1426'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.fillStyle = '#c9d2e3'; x.font = '28px "IBM Plex Sans", sans-serif'; x.fillText('Sign in on your phone', w / 2, 90);
+      x.fillStyle = '#8e99b0'; x.font = '600 22px "IBM Plex Mono", monospace'; x.fillText('ENTER THIS CODE', w / 2, 150);
+      x.fillStyle = '#e6e6ff'; x.font = '600 64px "IBM Plex Mono", monospace'; x.fillText('KQ7F-29XD', w / 2, 236);
+      x.fillStyle = '#5b6bc9'; x.font = '20px "IBM Plex Mono", monospace'; x.fillText('example code', w / 2, 290); }, 512, 320) }));
+    lapScr.position.set(0, 0.34, -0.3); lapScr.rotation.x = -0.15; lap.add(lapScr);
+    // the OIDC server on a Raspberry Pi
+    const pi = new THREE.Group(); pi.position.set(0, 1.0, 0); g.add(pi);
+    pi.add(placed(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.48), new THREE.MeshStandardMaterial({ color: 0x1f7a42, roughness: 0.6 })), 0, 0.03, 0));
+    pi.add(placed(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.2), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.8, roughness: 0.3 })), -0.1, 0.065, 0));
+    const piLed = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0x3dff7a })); piLed.position.set(0.28, 0.07, 0.18); pi.add(piLed);
+    const piTag = textSprite([['OIDC SERVER · RASPBERRY PI', '600 30px "IBM Plex Mono", monospace', '#c9d2e3']], 768, 70, 1.6); piTag.position.set(0, 0.32, 0.2); pi.add(piTag);
+    // the phone with STEADYWATCH™ HANDHELD
+    const ph = new THREE.Group(); ph.position.set(1.6, 1.0, 0); g.add(ph);
+    ph.add(placed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.05), dark), 0, 0.55, 0));
+    const phTex = screenTex((x, w, h) => { const a = oidcArtCanvas(512); x.fillStyle = '#05070b'; x.fillRect(0, 0, w, h); x.drawImage(a, 0, 0, 512, 380, 0, 0, w, h * 0.74); }, 256, 512);
+    const phScr = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.92), new THREE.MeshBasicMaterial({ map: phTex })); phScr.position.set(0, 0.55, 0.027); ph.add(phScr);
+    const faceM = new THREE.MeshBasicMaterial({ color: 0x8ea2ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const face = new THREE.Mesh(new THREE.RingGeometry(0.11, 0.135, 32), faceM); face.position.set(0, 0.78, 0.03); ph.add(face);
+    // the token / request travelling between them, and a caption for each step
+    const pkt = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: 0xc8d4ff })); g.add(pkt);
+    const pktL = new THREE.PointLight(0x8ea2ff, 0.8, 2.5, 2); pkt.add(pktL);
+    const at = { lap: new THREE.Vector3(-1.6, 1.55, 0), pi: new THREE.Vector3(0, 1.25, 0), ph: new THREE.Vector3(1.6, 1.6, 0) };
+    const STEPS = [
+      ['1 · The device asks the OIDC server for a code', 'lap', 'pi'],
+      ['2 · You enter the code in STEADYWATCH™ HANDHELD', 'ph', 'pi'],
+      ['3 · Face ID approves the sign-in', 'ph', 'ph'],
+      ['4 · The device polls and receives its JWT', 'pi', 'lap']];
+    const capC = mk(1536, 90), cg = capC.getContext('2d'), capTex = new THREE.CanvasTexture(capC);
+    const cap = new THREE.Sprite(new THREE.SpriteMaterial({ map: capTex, transparent: true, depthWrite: false })); cap.scale.set(4.6, 0.27, 1); cap.position.y = 2.75; g.add(cap);
+    const rfc = textSprite([['RFC 8628 DEVICE AUTHORIZATION GRANT', '600 30px "IBM Plex Mono", monospace', '#8ea2ff']], 1024, 70, 2.8); rfc.position.y = 3.15; g.add(rfc);
+    let shown = -1;
+    const hitM = new THREE.Mesh(new THREE.BoxGeometry(4.6, 2.6, 1.2), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })); hitM.position.y = 1.4; g.add(hitM);
+    updates.push((dt, t) => {
+      const T = 3.2, step = Math.floor(t / T) % STEPS.length, u = (t % T) / T;
+      if (step !== shown) {
+        shown = step; cg.clearRect(0, 0, 1536, 90); cg.fillStyle = 'rgba(8,10,18,0.85)'; rr(cg, 4, 4, 1528, 82, 20); cg.fill();
+        cg.fillStyle = '#e6e6ff'; cg.font = '44px "IBM Plex Sans", sans-serif'; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.fillText(STEPS[step][0], 768, 47); capTex.needsUpdate = true;
+      }
+      const [, a, b] = STEPS[step], A = at[a], B = at[b], k = Math.min(1, u * 1.4);
+      if (a === b) { pkt.position.copy(A); faceM.opacity = 0.9 * Math.sin(u * Math.PI); }
+      else { pkt.position.lerpVectors(A, B, k); pkt.position.y += Math.sin(k * Math.PI) * 0.5; faceM.opacity = 0; }
+      piLed.visible = Math.sin(t * 9) > -0.2;
+    });
+    const fl = new THREE.PointLight(0xc8d4ff, 0.9, 7, 2); fl.position.set(0, 2.2, 2.2); g.add(fl);
+    g.scale.setScalar(1.5);   // large enough to read from where you arrive
+  };
+}
+
+for (const P of WING_PROJECTS) { P.sculpture = P.kind === 'pool' ? poolSculpture(P) : oidcSculpture(); P.coreTitle = P.kind === 'pool' ? `${P.name} shell` : 'Live sign-in'; }
+
+/* ---------- The Platform Wing: corridor and gallery off the hall ---------- */
+const wingUpdates = [];
+{
+  const { x0, x1, z0, z1, h, archZ, archW, archH, cx, cz } = WING, a0 = archZ - archW / 2, a1 = archZ + archW / 2;
+  const floorM = () => new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 });
+  // corridor
+  const cf = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x, archW), floorM()); cf.rotation.x = -Math.PI / 2; cf.position.set((ROOM.x + x0) / 2, 0, archZ); scene.add(cf);
+  const cc = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x, archW), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); cc.rotation.x = Math.PI / 2; cc.position.set((ROOM.x + x0) / 2, archH, archZ); scene.add(cc);
+  wallAt(x0 - ROOM.x, archH, (ROOM.x + x0) / 2, archH / 2, a0, 0);
+  wallAt(x0 - ROOM.x, archH, (ROOM.x + x0) / 2, archH / 2, a1, Math.PI);
+  const runner = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x + 6, 0.5), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, map: dotTex(), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+  runner.rotation.x = -Math.PI / 2; runner.position.set((ROOM.x + x0) / 2 + 3, 0.02, archZ); scene.add(runner);
+  // the gallery
+  const wf = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), floorM()); wf.rotation.x = -Math.PI / 2; wf.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); scene.add(wf);
+  const wc = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); wc.rotation.x = Math.PI / 2; wc.position.set((x0 + x1) / 2, h, (z0 + z1) / 2); scene.add(wc);
+  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z0, 0);
+  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z1, Math.PI);
+  wallAt(z1 - z0, h, x1, h / 2, (z0 + z1) / 2, -Math.PI / 2);
+  wallAt(a0 - z0, h, x0, h / 2, (z0 + a0) / 2, Math.PI / 2);
+  wallAt(z1 - a1, h, x0, h / 2, (a1 + z1) / 2, Math.PI / 2);
+  wallAt(archW, h - archH, x0, archH + (h - archH) / 2, archZ, Math.PI / 2);
+  for (const [z, ry] of [[z0 + 0.03, 0], [z1 - 0.03, Math.PI]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.03, 0.04), lineMat); b.position.set((x0 + x1) / 2, 0.9, z); scene.add(b); }
+  // gold arch frames at both ends of the corridor
+  for (const x of [ROOM.x - 0.02, x0 + 0.02]) {
+    for (const z of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, archH, 0.24), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, archW + 0.24), gold); beam.position.set(x, archH + 0.12, archZ); scene.add(beam);
+  }
+  // the sign over the hall-side arch
+  const sc = mk(1024, 200), sg = sc.getContext('2d');
+  sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
+  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText('STEADYWATCH™ PLATFORM', 512, 76);
+  sg.font = '70px "Young Serif", Georgia, serif'; sg.fillText('Platform Wing', 512, 158);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.51), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
+  sign.position.set(ROOM.x - 0.06, archH + 0.75, archZ); sign.rotation.y = -Math.PI / 2; scene.add(sign);
+  // a glow through the arch, so it reads as a way through from down the hall
+  const archGlow = new THREE.PointLight(0x7fe8ff, 0.9, 7, 2); archGlow.position.set(ROOM.x + 1.5, 2.2, archZ); scene.add(archGlow);
+  // gallery lights
+  for (const [lx, lz] of [[x0 + 3.5, (z0 + z1) / 2], [x1 - 3.5, (z0 + z1) / 2]]) { const L = new THREE.PointLight(0xdfe8ff, 0.9, 13, 2); L.position.set(lx, h - 1, lz); scene.add(L); }
+  // the centrepiece: all three pools nested, each turning in 4D
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.6, 48), colMat); plinth.position.set(cx, 0.3, cz); scene.add(plinth);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.02, 8, 96), lineMat); ring.rotation.x = Math.PI / 2; ring.position.set(cx, 0.6, cz); scene.add(ring);
+  const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012); o.group.position.set(cx, 2.9, cz); scene.add(o.group); return o; });
+  const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(cx, 5.15, cz); scene.add(nl);
+  const nLight = new THREE.PointLight(0xffe2b0, 0.6, 8, 2); nLight.position.set(cx, 3, cz); scene.add(nLight);
+  wingUpdates.push((dt, t) => { const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m)); });
+}
+// Where you can walk in the hall, the corridor and the wing
+function walkable(x, z) {
+  if (x >= -ROOM.x + 1 && x <= ROOM.x - 1 && z >= ROOM.zMin + 1 && z <= ROOM.zMax - 0.8) return true;
+  if (x >= ROOM.x - 1.2 && x <= WING.x0 + 0.8 && Math.abs(z - WING.archZ) <= WING.archW / 2 - 0.55) return true;
+  if (x >= WING.x0 + 0.6 && x <= WING.x1 - 0.8 && z >= WING.z0 + 0.8 && z <= WING.z1 - 0.8) return Math.hypot(x - WING.cx, z - WING.cz) > 1.6;
+  return false;
+}
+const inWing = (x) => x > ROOM.x - 0.5;
 
 /* ---------- Cryostat chandelier ----------
    A dilution refrigerator hangs like a gold chandelier: plates step down in
@@ -733,6 +1014,7 @@ function updateSlits(dt, t) {
 
 function updateQuantum(dt, t) {
   updateSlits(dt, t);
+  for (const u of wingUpdates) u(dt, t);
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
   pulseStages(pulses, t);
@@ -748,7 +1030,7 @@ function updateQuantum(dt, t) {
 const paintings = [];
 const frameMat = gold;
 function buildPaintings() {
-  PROJECTS.forEach(p => {
+  [...PROJECTS, ...WING_PROJECTS].forEach(p => {
     const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo]);
     const tex = new THREE.CanvasTexture(art); tex.anisotropy = 8;
     const uniforms = { map: { value: tex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: p.size[0] / p.size[1] } };
@@ -1196,8 +1478,8 @@ function updateKiosk(dt, t) {
 
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
-const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'about'];
-const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'STEADYWATCH™ PLATFORM', about: "the builder's office" };
+const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about'];
+const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'STEADYWATCH™ PLATFORM', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'STEADYWATCH™ OIDC', about: "the builder's office" };
 const visit = (() => {
   let d = { seen: [], visits: 0, last: 0 };
   try { const r = JSON.parse(localStorage.getItem(VISIT_KEY)); if (r && Array.isArray(r.seen)) d = Object.assign(d, r); } catch (e) {}
@@ -1217,7 +1499,7 @@ function renderExplored() {
 }
 function markSeen(id) { if (WORLD_IDS.includes(id) && !visit.d.seen.includes(id)) { visit.d.seen.push(id); saveVisit(); } renderExplored(); }
 // Keep her inside the hall
-const hallBounds = p => { p.x = Math.max(-ROOM.x + 1.2, Math.min(ROOM.x - 1.2, p.x)); p.z = Math.max(ROOM.zMin + 1.2, Math.min(ROOM.zMax - 0.8, p.z)); };
+const hallBounds = p => { if (walkable(p.x, p.z)) return; const c = camera.position; for (let k = 0.85; k > 0; k -= 0.15) { const x = c.x + (p.x - c.x) * k, z = c.z + (p.z - c.z) * k; if (walkable(x, z)) { p.x = x; p.z = z; return; } } p.x = c.x; p.z = c.z; };
 
 // In the hall: Vee follows you, gives a short tour of the room, and leads into the About world
 function buildMascot() {
@@ -1231,6 +1513,7 @@ function buildMascot() {
     ['Walk up to a display and step inside.', 'Every product has its own world to explore.', kz ? kz.center : null],
     ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.', new THREE.Vector3(0, ROOM.h - 2.4, 1.5)],
     ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.', new THREE.Vector3(0, SLIT.y, SLIT.z - 0.2)],
+    ['Through the arch on the right: the Platform Wing.', 'VAULT™, VIPER™, LOTUS™ and OIDC.', new THREE.Vector3(ROOM.x, 2.2, WING.archZ)],
     ['Want a guided tour?', "Press T. The builder's office is the door by the entrance.", kiosk ? kiosk.pt.center : null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
@@ -1276,6 +1559,7 @@ function hallTourStops() {
     const pt = P(id); if (!pt) continue;
     stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
+  stops.push({ center: new THREE.Vector3(ROOM.x, 2.2, WING.archZ), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.2, pitch: 0.1, line: 'The Platform Wing.', sub: 'VAULT™, VIPER™, LOTUS™ and OIDC are through this arch.' });
   stops.push({ center: slitStop.center, normal: slitStop.normal, standOff: 7, pitch: -0.12, line: 'The double-slit experiment.', sub: 'Light interfering, one photon at a time.' });
   if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
   stops.push({ center: new THREE.Vector3(0, 3.2, ROOM.zMin), normal: new THREE.Vector3(0, 0, 1), standOff: ROOM.zMax - 2.4 - ROOM.zMin, pitch: 0.05, home: true,
@@ -1319,6 +1603,30 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
       ['dock', 'My Nesting Station', 'The thousands of nanobots that compile my image rest and recharge here.'],
       ['portal', "That's the office.", 'The door takes you back to the hall.']];
+  } else if (p.kind === 'pool') {
+    lines = [
+      [`Welcome to ${p.name}.`, `An entropy pool of ${24 * (p.prime + 1)} nodes, right in front of you.`, 'core'],
+      [`Each node is a Hurwitz quaternion of norm ${p.prime}.`, 'The big screens break the shell down.', 'hero'],
+      ['The live pool is on your right.', 'Walk up and press E to open it.', 'site'],
+      ['Want a guided tour?', 'Press T, or tap Tour.', null],
+      ['Ready to head back?', 'The exit display is on your left.', 'portal']];
+    stops = [
+      ['core', `The ${p.name} shell`, `${24 * (p.prime + 1)} nodes, joined to their nearest neighbours, turning in 4D.`],
+      ['hero', 'The numbers', `Prime ${p.prime}, ${24 * (p.prime + 1)} nodes, and their integer and half-integer families.`],
+      ['site', 'The live pool', 'Press E to open it on steady-watch.com.'],
+      ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
+  } else if (p.kind === 'oidc') {
+    lines = [
+      [`Welcome to ${p.name}.`, 'Watch a sign-in play out in front of you.', 'core'],
+      ['Device flow, Face ID, RADIUS and tenants.', 'The big screens cover each one.', 'hero'],
+      ['The live demo is on your right.', 'Walk up and press E to try it.', 'site'],
+      ['Want a guided tour?', 'Press T, or tap Tour.', null],
+      ['Ready to head back?', 'The exit display is on your left.', 'portal']];
+    stops = [
+      ['core', 'A live sign-in', 'Device to OIDC server to phone, approved with Face ID, then a JWT.'],
+      ['hero', 'The platform', 'Device flow, Face ID approval, RADIUS bridge, multi-tenant, self-hosted.'],
+      ['site', 'The live demo', 'Press E to run a real device-flow sign-in.'],
+      ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
   } else {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
              ['The features are up on the big screens.', 'Click one and I’ll walk you over.', 'hero']];
@@ -1456,7 +1764,13 @@ function walkTo(pt) {
   if (tour && !pt.tourStop) endTour();
   if (mode === 'inside' || mode === 'entering') return;
   const target = pt.center.clone().addScaledVector(pt.normal, pt.standOff || 3.6); target.y = 1.7;
-  auto = { pt, target }; mode = 'auto';
+  const via = [];
+  if (!world && inWing(player.pos.x) !== inWing(target.x)) {   // route through the arch and corridor
+    const hallSide = new THREE.Vector3(ROOM.x - 1.8, 1.7, WING.archZ), wingSide = new THREE.Vector3(WING.x0 + 1.2, 1.7, WING.archZ);
+    if (inWing(target.x)) via.push(hallSide, wingSide); else via.push(wingSide, hallSide);
+  }
+  via.push(target);
+  auto = { pt, target: via.shift(), via }; mode = 'auto';
 }
 
 function enter(pt, uv) {
@@ -1534,6 +1848,11 @@ PROJECTS.forEach((p, i) => {
 {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
   b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
+}
+const wingStop = { exhibit: true, center: new THREE.Vector3(WING.cx, 2.6, WING.cz), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.2, pitch: 0.12 };
+{
+  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-wing';
+  b.textContent = 'Platform Wing'; b.addEventListener('click', () => walkTo(wingStop)); dir.insertBefore(b, document.getElementById('go-about'));
 }
 const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
 const promptEl = document.getElementById('prompt');
@@ -2080,9 +2399,12 @@ function buildProductWorld(p) {
     });
   }
 
+  // a centrepiece for the wing worlds: the pool's shell, or a live sign-in
+  if (p.sculpture) { const sgp = place(0, 3.4); p.sculpture(sgp, updates); addStation(sgp, { id: 'core', info: { title: p.coreTitle }, exhibit: true, standOff: 4.6, pitch: 0.14 }, 2.6); }
+
   // website display: a browser-style screen showing the product site; acting on it opens the real site
   if (p.site) {
-    const slot = { angle: 0, r: 3, w: 3.2, y: 2.15, standOff: 3.2, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
+    const slot = p.sculpture ? { angle: 108, r: 8.6, w: 3.2, y: 2.15, standOff: 3.2, pitch: 0.08, labelScale: 1 } : { angle: 0, r: 3, w: 3.2, y: 2.15, standOff: 3.2, pitch: 0.08, labelScale: 1 }, g = place(slot.angle, slot.r);
     const bc = mk(1280, 860), bg2 = bc.getContext('2d'), siteTex = new THREE.CanvasTexture(bc);
     const chrome = () => {
       bg2.fillStyle = '#16181f'; bg2.fillRect(0, 0, 1280, 60);
@@ -2553,9 +2875,11 @@ function exitWorld() {
   if (!world) return;
   showHeader();
   if (tour) endTour();
+  const fromWing = !!world.pt.p.inWing;
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
   resetView(); canvas.focus();
+  if (fromWing) { player.pos.copy(WING_START.pos); player.yaw = WING_START.yaw; player.pitch = WING_START.pitch; }
   if (vee) { vee.arrive(); vee.sayExplored(); }   // she appears beside you again, with a word on what's left
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
@@ -2671,22 +2995,28 @@ function tick() {
     if (mv.lengthSq() > 0.01 && mode === 'auto') mode = 'walk';
     if (mode === 'auto' && auto) {
       const d = auto.target.clone().sub(player.pos); d.y = 0;
-      const want = Math.atan2(-(auto.pt.center.x - player.pos.x), -(auto.pt.center.z - player.pos.z));
+      const look = auto.via.length ? auto.target : auto.pt.center;   // face where you're going until the last leg
+      const want = Math.atan2(-(look.x - player.pos.x), -(look.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
+      if (d.length() < 0.15 && auto.via.length) { auto.target = auto.via.shift(); }
+      else if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
     const speed = mode === 'auto' ? 6 : (keys.ShiftLeft ? 7 : 4.2);
+    const prevX = player.pos.x, prevZ = player.pos.z;
     player.pos.addScaledVector(mv, speed * dt);
     if (world) {
       if (world.clamp) world.clamp(player.pos);
       else { const r = Math.hypot(player.pos.x, player.pos.z); if (r > world.radius) player.pos.multiplyScalar(world.radius / r); }
       player.pos.y = 1.7;
     } else {
-      player.pos.x = Math.max(-ROOM.x + 1, Math.min(ROOM.x - 1, player.pos.x));
-      player.pos.z = Math.max(ROOM.zMin + 1, Math.min(ROOM.zMax - 0.8, player.pos.z));
+      if (!walkable(player.pos.x, player.pos.z)) {   // slide along the wall instead of passing through it
+        if (walkable(player.pos.x, prevZ)) player.pos.z = prevZ;
+        else if (walkable(prevX, player.pos.z)) player.pos.x = prevX;
+        else { player.pos.x = prevX; player.pos.z = prevZ; }
+      }
     }
     const bob = mv.lengthSq() > 0.01 && !reduceMotion ? Math.sin(t * 10) * 0.04 : 0;
     camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
@@ -2784,6 +3114,7 @@ Promise.all([
   document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
+  for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   buildPaintings(); buildSlitExhibit(); buildKiosk(); buildMascot();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
