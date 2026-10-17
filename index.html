@@ -103,7 +103,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 #directory {
   bottom: 0; left: 0; right: 0; padding-top: 32px;
   background: linear-gradient(to top, color-mix(in srgb, var(--night) 85%, transparent), transparent);
-  display: flex; justify-content: center; flex-wrap: wrap; gap: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -119,7 +119,7 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 /* the guided tour's controls, above the bottom buttons */
 #tourBar {
   left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dir-h, 76px) + 6px);   /* just above the navigation, however many rows it wraps to */
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
   background: color-mix(in srgb, var(--night) 88%, transparent); border: 1px solid #5ff0ff; border-radius: 2px; padding: 8px 10px;
   font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #c8fbff;
@@ -130,17 +130,25 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 @media (max-width: 760px) { body.in-world #tourBar { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
 .dir-btn.tour-btn { border-color: #5ff0ff; color: #5ff0ff; }
+.dir-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+.dir-btn.floor-btn b { font-weight: 600; color: #5ff0ff; margin-right: 3px; }
+.dir-btn.floor-btn[aria-current="true"] { background: #5ff0ff; border-color: #5ff0ff; color: #05070b; }
+.dir-btn.floor-btn[aria-current="true"] b { color: #05070b; }
+.dir-here { gap: 6px; }
+.dir-btn.sub-btn { font-size: 11px; padding: 5px 9px; border-color: color-mix(in srgb, var(--gilt-dim) 70%, transparent); color: var(--muted); }
+.here-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5ff0ff; margin-right: 2px; }
+@media (max-width: 560px) { .dir-row { gap: 6px; } .dir-btn.sub-btn { font-size: 10px; padding: 5px 7px; } .here-label { width: 100%; text-align: center; } }
 /* the glass lift's floor buttons, shown while you stand in it */
 #liftPanel {
   left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;
+  top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 6px; align-items: stretch;
   background: color-mix(in srgb, var(--night) 88%, transparent); border: 1px solid #5ff0ff; border-radius: 2px; padding: 8px 10px;
   font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #c8fbff;
 }
-#liftPanel .lp-title { width: 100%; text-align: center; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
-#liftPanel button { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; background: transparent; color: #5ff0ff; border: 1px solid #5ff0ff; border-radius: 2px; padding: 7px 10px; cursor: pointer; }
-#liftPanel button b { font-weight: 600; margin-right: 4px; }
+#liftPanel .lp-title { text-align: center; margin-bottom: 2px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
+#liftPanel button { text-align: left; min-width: 200px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; background: color-mix(in srgb, var(--night) 60%, transparent); color: #5ff0ff; border: 1px solid #5ff0ff; border-radius: 2px; padding: 7px 10px; cursor: pointer; }
+#liftPanel button b { font-weight: 600; display: inline-block; width: 2.6em; }
 #liftPanel button[aria-current="true"] { background: #5ff0ff; color: #05070b; cursor: default; }
 #liftPanel button:not([disabled]):hover, #liftPanel button:focus-visible { filter: brightness(1.2); outline: none; }
 @media (pointer: coarse) { #liftPanel .desk { display: none; } }
@@ -314,7 +322,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
   <div id="explored" aria-live="polite"></div>
 </div>
 </header>
-<nav class="hud" id="directory" aria-label="Displays"></nav>
+<nav class="hud" id="directory" aria-label="Floors and displays"></nav>
 <div class="hud" id="prompt" hidden></div>
 <div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
 <div class="hud" id="floorToast" aria-live="polite"></div>
@@ -683,11 +691,11 @@ const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
-  { id: 'b1', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2] },
-  { id: 'l1', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
-  { id: 'l2', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06] },
-  { id: 'l3', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1] },
-  { id: 'l4', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05] }];
+  { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where the entropy starts. Walk all the way around it.'] },
+  { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
+  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD, both on the App Store.'] },
+  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and STEADYWATCH™ OIDC.'] },
+  { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 
 scene.add(new THREE.HemisphereLight(0xb8c8ff, 0x0a0c14, 0.7));
@@ -964,7 +972,7 @@ const silver = new THREE.MeshStandardMaterial({ color: 0xb9c0cc, metalness: 0.9,
 const copper = new THREE.MeshStandardMaterial({ color: 0xc8743a, metalness: 0.8, roughness: 0.35 });
 // Builds one cryostat hanging down from y = 0. Returns the group, the glow materials to pulse, and the chip's local y.
 function makeCryostat() {
-  const cryo = new THREE.Group(), pulses = [];
+  const cryo = new THREE.Group(), pulses = [], tags = [];
   const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.6, 32), colMat); mount.position.y = -0.3; cryo.add(mount);
   let y = -0.75;
   STAGES.forEach(([label, r], i) => {
@@ -973,7 +981,7 @@ function makeCryostat() {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.01, 0.018, 8, 64), ringM); ring.rotation.x = Math.PI / 2; ring.position.y = y; cryo.add(ring);
     pulses.push(ringM);
     const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(label), transparent: true, depthWrite: false }));
-    tag.scale.set(2.75, 0.275, 1); tag.center.set(0, 0.5); tag.position.set(r + 0.12, y, 0); cryo.add(tag);
+    tag.scale.set(2.75, 0.275, 1); tag.center.set(0, 0.5); tag.position.set(r + 0.12, y, 0); cryo.add(tag); tags.push({ sprite: tag, r, y });
     const next = STAGES[i + 1];
     if (next) {
       const gap = 0.62 - i * 0.04, rr = next[1] * 0.85;
@@ -999,7 +1007,7 @@ function makeCryostat() {
   pulses.push(chipGlowM);
   const plateLight = new THREE.PointLight(0xffe2b0, 1.2, 7, 2); plateLight.position.set(0, -1.6, 2.2); cryo.add(plateLight);
   const cryoLight = new THREE.PointLight(0x7fe8ff, 0.8, 8, 2); cryoLight.position.y = y - 0.8; cryo.add(cryoLight);
-  return { group: cryo, pulses, chipY: y - 0.4 };
+  return { group: cryo, pulses, tags, chipY: y - 0.4 };
 }
 function pulseStages(list, t) {   // a pulse of cold travels down the stages, top to bottom
   list.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
@@ -1111,7 +1119,7 @@ const liftCab = new THREE.Group(); liftCab.position.set(LIFT.x, 0, LIFT.z); scen
   const capT = new THREE.Mesh(new THREE.CircleGeometry(LIFT.r, 48), new THREE.MeshBasicMaterial({ color: 0x1a3a44 })); capT.rotation.x = Math.PI / 2; capT.position.set(LIFT.x, yT - 0.01, LIFT.z); scene.add(capT);
   FLOORS.forEach((F, i) => {
     const sill = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r, 0.018, 6, 64), steel); sill.rotation.x = Math.PI / 2; sill.position.set(LIFT.x, F.y + 0.02, LIFT.z); scene.add(sill);
-    const lintel = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r + 0.01, 0.012, 6, 64), lineMat); lintel.rotation.x = Math.PI / 2; lintel.position.set(LIFT.x, F.y + 2.9, LIFT.z); scene.add(lintel);
+    const lintel = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r + 0.01, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.45 })); lintel.rotation.x = Math.PI / 2; lintel.position.set(LIFT.x, F.y + 2.9, LIFT.z); scene.add(lintel);
     if (i > 0) { const e = new THREE.Mesh(new THREE.CylinderGeometry(LIFT.r + 0.02, LIFT.r + 0.02, 0.4, 48, 1, true), edgeMat); e.position.set(LIFT.x, F.y - 0.2, LIFT.z); scene.add(e); }
   });
   // the cab: a lit floor disc, a handrail open at the door, a ring overhead
@@ -1143,6 +1151,28 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
   [[W + 0.16, 0.08, 0, Hd + 0.04], [0.08, Hd + 0.08, -W / 2 - 0.04, Hd / 2], [0.08, Hd + 0.08, W / 2 + 0.04, Hd / 2], [0.06, Hd, 0, Hd / 2]].forEach(([bw, bh, x, y]) => {
     const f = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.1), steel); f.position.set(x, y, 0.03); g.add(f);
   });
+}
+// the floor guide on the east wall, between the entrance and the lift
+{
+  const c = mk(768, 1024), p = c.getContext('2d');
+  p.fillStyle = '#0b1220'; p.fillRect(0, 0, 768, 1024);
+  p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
+  p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('QUANTUM HALL', 56, 92);
+  p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Floor guide', 56, 172);
+  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · STEADYWATCH™ OIDC'],
+    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'STEADYWATCH™ PLATFORM'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
+  rows.forEach(([tag, name, sub], i) => {
+    const y = 270 + i * 150, here = tag === 'L1';
+    p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
+    p.fillStyle = here ? '#05070b' : '#5ff0ff'; p.textAlign = 'center'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(tag, 108, y + 8);
+    p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '40px "Young Serif", Georgia, serif'; p.fillText(name, 190, y - 6);
+    p.fillStyle = '#8e99b0'; let px = 24; do { p.font = `${px}px "IBM Plex Sans", sans-serif`; } while (p.measureText(sub).width > 520 && --px > 16); p.fillText(sub, 190, y + 32);
+    if (here) { p.fillStyle = '#5ff0ff'; p.font = '600 20px "IBM Plex Mono", monospace'; p.textAlign = 'right'; p.fillText('YOU ARE HERE', 712, y - 8); }
+  });
+  p.fillStyle = '#8e99b0'; p.font = '600 22px "IBM Plex Mono", monospace'; p.textAlign = 'left'; p.fillText('← GLASS LIFT', 56, 990);
+  const W = 2.3, H = W * 1024 / 768, gd = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+  gd.position.set(L1.x1 - 0.08, 2.4, 5.25); gd.rotation.y = -Math.PI / 2; L1.g.add(gd);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(L1.x1 - 0.04, 2.4, 5.25); L1.g.add(fr);
 }
 // the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
 const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
@@ -1204,17 +1234,101 @@ const bannerU = { map: { value: null }, uTime: { value: 0 }, uGlow: { value: 0 }
 }
 
 /* ---------- B1 · Cryostat Lab ----------
-   The dilution refrigerator hangs from a gantry right under the atrium, so it sits at the
-   foot of the building. Stage temperatures are typical, not exact. */
+   The source, at the foot of the building: a dilution refrigerator with its vacuum can hoisted off,
+   hung low enough to walk all the way around, every stage at eye level. Three panels on the far wall
+   tell the story from cold to key, and a wall monitor reads out the stage temperatures.
+   Stage temperatures are typical values, not live readings. */
 const B1 = FLOORS[FI.b1];
-const labCryo = makeCryostat(); labCryo.group.position.set(ATRIUM.x, 8.1, ATRIUM.z); labCryo.group.scale.setScalar(1.45); B1.g.add(labCryo.group);
+const CRYO_Y = 5.6, CRYO_S = 1.45;   // where its top plate hangs from, and how large
+const labCryo = makeCryostat(); labCryo.group.position.set(ATRIUM.x, CRYO_Y, ATRIUM.z); labCryo.group.scale.setScalar(CRYO_S); B1.g.add(labCryo.group);
 const pulses = labCryo.pulses;
+for (const tg of labCryo.tags) tg.sprite.scale.set(2.75 * 0.62, 0.275 * 0.62, 1);   // smaller up close
 {
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(ATRIUM.r * 2 + 1.2, 0.3, 0.4), colMat); beam.position.set(ATRIUM.x, B1.h - 0.15, ATRIUM.z); B1.g.add(beam);
-  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, B1.h - 0.3 - 8.1, 12), steel); rod.position.set(ATRIUM.x, (8.1 + B1.h - 0.3) / 2, ATRIUM.z); B1.g.add(rod);
+  const C = new THREE.Vector3(ATRIUM.x, 0, ATRIUM.z);
+  // the frame it hangs from: a room-temperature top plate on four legs
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(2.36, 2.36, 0.12, 64), steel); top.position.set(C.x, CRYO_Y + 0.06, C.z); B1.g.add(top);
+  const topRing = new THREE.Mesh(new THREE.TorusGeometry(2.37, 0.02, 6, 96), lineMat); topRing.rotation.x = Math.PI / 2; topRing.position.set(C.x, CRYO_Y + 0.12, C.z); B1.g.add(topRing);
+  for (let k = 0; k < 4; k++) {
+    const a = Math.PI / 4 + k * Math.PI / 2, leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, CRYO_Y, 10), colMat);   // out by the rail, on the diagonals so they frame it
+    leg.position.set(C.x + Math.cos(a) * 2.3, CRYO_Y / 2, C.z + Math.sin(a) * 2.3); B1.g.add(leg);
+  }
+  // the outer vacuum can, hoisted up on the gantry so you can see inside
+  const canY = CRYO_Y + 0.55, canH = 2.0;
+  const can = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.75, canH, 64, 1, true), new THREE.MeshStandardMaterial({ color: 0xb9c0cc, metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide }));
+  can.position.set(C.x, canY + canH / 2, C.z); B1.g.add(can);
+  const lid = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.1, 64), steel); lid.position.set(C.x, canY + canH + 0.05, C.z); B1.g.add(lid);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(1.76, 0.04, 8, 96), steel); lip.rotation.x = Math.PI / 2; lip.position.set(C.x, canY, C.z); B1.g.add(lip);
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(ATRIUM.r * 2 + 1.2, 0.3, 0.4), colMat); beam.position.set(C.x, B1.h - 0.15, C.z); B1.g.add(beam);
+  const hoistL = B1.h - 0.3 - (canY + canH + 0.1);
+  for (const dx of [-0.6, 0.6]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, hoistL, 6), steel); ch.position.set(C.x + dx, canY + canH + 0.1 + hoistL / 2, C.z); B1.g.add(ch); }
+  // a ring of lettering on the floor around the rail
+  {
+    const c = mk(1024, 1024), g = c.getContext('2d'), text = 'DILUTION REFRIGERATOR · 300 K TO 10 mK · ', R = 430;
+    g.translate(512, 512); g.fillStyle = 'rgba(63,224,224,0.85)'; g.font = '600 34px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const full = text + text, step = (Math.PI * 2) / full.length;
+    [...full].forEach((ch, i) => { g.save(); g.rotate(i * step); g.translate(0, -R); g.fillText(ch, 0, 0); g.restore(); });
+    g.strokeStyle = 'rgba(63,224,224,0.4)'; g.lineWidth = 3; for (const r of [R - 32, R + 32]) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); }
+    const size = (ATRIUM.r + 0.95) * 2 * 512 / (R + 40);
+    const decal = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    decal.rotation.x = -Math.PI / 2; decal.position.set(C.x, 0.011, C.z); B1.g.add(decal);
+  }
+  // the stage labels turn to stay on your side of the cryostat as you walk around it
+  const tmp = new THREE.Vector3();
+  buildingUpdates.push(() => {
+    if (!B1.g.visible) return;
+    const dx = camera.position.x - C.x, dz = camera.position.z - C.z, ang = Math.atan2(dz, dx) - 0.55;   // a little to the right of the line to you
+    for (const tg of labCryo.tags) tg.sprite.position.set(Math.cos(ang) * (tg.r + 0.12), tg.y, Math.sin(ang) * (tg.r + 0.12));
+  });
   floorSign(B1.g, 'LEVEL B1 · THE SOURCE', 'Cryostat Lab', B1.x0 + 0.06, 6.2, ATRIUM.z, Math.PI / 2);
 }
-const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 4.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.6, pitch: 0.3 };
+// a wall panel of text: eyebrow, title, body
+function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
+  const c = mk(768, 576), p = c.getContext('2d');
+  p.fillStyle = '#0b1220'; p.fillRect(0, 0, 768, 576);
+  p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 548);
+  p.fillStyle = '#3fe0e0'; p.fillRect(48, 70, 56, 4);
+  p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText(eyebrow, 48, 120);
+  p.fillStyle = '#f1e6cf'; let px = 58; do { p.font = `${px}px "Young Serif", Georgia, serif`; } while (p.measureText(title).width > 672 && --px > 30); p.fillText(title, 48, 196);
+  p.fillStyle = '#c9d2e3'; p.font = '30px "IBM Plex Sans", sans-serif'; wrapText(p, body, 48, 262, 672, 44);
+  if (foot) { p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText(foot, 48, 530); }
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.75), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+  m.position.set(x, y, z); m.rotation.y = ry; g.add(m);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, w * 0.75 + 0.12, 0.06), colMat); fr.position.copy(m.position); fr.rotation.y = ry; fr.translateZ(-0.04); g.add(fr);
+  return m;
+}
+// the story, left to right on the far wall: cold, measure, key
+[
+  { eyebrow: '1 · COLD', title: 'Colder than deep space', body: 'A dilution refrigerator cools a quantum chip to about 10 mK, a hundredth of a degree above absolute zero, so its qubits can hold quantum states.' },
+  { eyebrow: '2 · MEASURE', title: 'Random by physics', body: 'Qubits on IBM Quantum hardware are measured, and each outcome, 0 or 1, is random. Each batch of bits is tied to a verifiable IBM Quantum job ID.' },
+  { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'The STEADYWATCH™ PLATFORM turns those bits into 32-byte QES-256 keys, each linked back to its IBM Quantum job ID.' }
+].forEach((d, i) => infoPanel(B1.g, d, -4.4 + i * 4.4, 2.5, B1.z0 + 0.06, 0));
+// the wall monitor: stage temperatures, gently fluctuating
+{
+  const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const TEMPS = [['50 K plate', 50, 'K'], ['4 K plate', 4.0, 'K'], ['Still', 0.9, 'K'], ['Cold plate', 100, 'mK'], ['Mixing chamber', 10, 'mK']];
+  const draw = t => {
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 640);
+    p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1004, 620);
+    p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText('STAGE TEMPERATURES', 48, 72);
+    p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.textAlign = 'right'; p.fillText('TYPICAL VALUES · ILLUSTRATION', 976, 72);
+    TEMPS.forEach(([name, v, u], i) => {
+      const y = 150 + i * 92, j = 1 + 0.006 * Math.sin(t * (0.7 + i * 0.37) + i * 2.1) + 0.003 * Math.sin(t * 2.3 + i);
+      const val = v * j, txt = val >= 10 ? val.toFixed(1) : val.toFixed(2);
+      p.textAlign = 'left'; p.fillStyle = '#c9d2e3'; p.font = '34px "IBM Plex Sans", sans-serif'; p.fillText(name, 48, y);
+      p.textAlign = 'right'; p.fillStyle = i === 4 ? '#5ff0ff' : '#f1e6cf'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(`${txt} ${u}`, 976, y);
+      p.fillStyle = 'rgba(63,224,224,0.18)'; p.fillRect(48, y + 22, 928, 6);
+      p.fillStyle = '#3fe0e0'; p.fillRect(48, y + 22, 928 * (1 - i / 5) * (0.98 + 0.02 * Math.sin(t + i)), 6);   // colder down the list
+    });
+    tex.needsUpdate = true;
+  };
+  draw(0);
+  const W = 3.0, mon = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 0.625), new THREE.MeshBasicMaterial({ map: tex }));
+  mon.position.set(B1.x0 + 0.08, 2.5, ATRIUM.z); mon.rotation.y = Math.PI / 2; B1.g.add(mon);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, W * 0.625 + 0.12, W + 0.12), colMat); fr.position.set(B1.x0 + 0.04, 2.5, ATRIUM.z); B1.g.add(fr);
+  let last = -1;
+  buildingUpdates.push((dt, t) => { if (!B1.g.visible || t - last < 0.5) return; last = t; draw(reduceMotion ? 0 : t); });
+}
+const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
 /* ---------- L2 · Apps ----------
    The two apps face you as you step out of the lift; empty frames wait for the next ones. */
@@ -1854,7 +1968,7 @@ function buildMascot() {
       ['Welcome back to the Quantum Hall.', u.length ? `You haven't seen ${listNames(u)} yet.` : "You've explored every world. Thanks for coming back.", firstTarget ? firstTarget.center : null],
       vee.tour[vee.tour.length - 1]];
   }
-  vee.tourK = 0; vee.tourT = 0;
+  vee.tourK = 0; vee.tourT = 0; vee.greeted = new Set();
   vee.sayTour = () => { const [a, b2, tg] = vee.tour[vee.tourK]; vee.say(a, b2, `${vee.tourK + 1} / ${vee.tour.length}`, tg); };
   vee.restore = () => { vee.tourK = vee.tour.length - 1; vee.tourT = 0; vee.sayTour(); };
   vee.sayTour();
@@ -2157,7 +2271,7 @@ const liftPanel = document.getElementById('liftPanel'), floorToast = document.ge
   b.innerHTML = `<b>${F.tag}</b> ${esc(F.name)}`; b.addEventListener('click', () => { if (FI[F.id] !== player.floor) startRide(FI[F.id]); });
   liftPanel.appendChild(b);
 });
-function renderLiftPanel() { liftPanel.querySelectorAll('button').forEach(b => { const cur = +b.dataset.floor === player.floor; b.disabled = cur; b.setAttribute('aria-current', cur ? 'true' : 'false'); }); }
+function renderLiftPanel() { renderNav(); liftPanel.querySelectorAll('button').forEach(b => { const cur = +b.dataset.floor === player.floor; b.disabled = cur; b.setAttribute('aria-current', cur ? 'true' : 'false'); }); }
 let toastTimer = null;
 function toastFloor(i) {
   const F = FLOORS[i]; floorToast.textContent = `${F.tag} · ${F.name}`; floorToast.classList.add('show');
@@ -2182,15 +2296,20 @@ function updateRide(dt) {
   camera.position.copy(player.pos); camera.rotation.order = 'YXZ'; camera.rotation.set(player.pitch, player.yaw, 0);
   if (k < 1) return;
   const r = ride; ride = null;
-  player.floor = r.to; setFloorVis(r.to - 1, r.to + 1); mode = 'walk'; renderLiftPanel(); toastFloor(r.to);
-  if (vee) {   // she gathers again beside you, or where the tour wants her
-    veeRoot.position.y = FLOORS[r.to].y;
-    if (tour && tour.pendingBody) { vee.bodyTarget = tour.pendingBody; tour.pendingBody = null; }
-    vee.vanishT = -1; vee.appearT = 0.8; vee.heading = player.yaw; vee.lastP = null;
-    vee.body.position.copy(vee.bodyTarget || veeFollowSpot(vee)); vee.body.position.y = 0;
-    if (tour && tour.pendingSay) { vee.say(...tour.pendingSay); tour.pendingSay = null; }
-  }
+  player.floor = r.to; setFloorVis(r.to - 1, r.to + 1); mode = 'walk'; renderLiftPanel();
+  arriveOnFloor(r.to);
   if (r.then) r.then();
+}
+// on a new floor (by lift or by jumping): its name shows, and Vee gathers again beside you with a word about it
+function arriveOnFloor(i) {
+  toastFloor(i); lastInput = performance.now();
+  if (!vee) return;
+  veeRoot.position.y = FLOORS[i].y;
+  if (tour && tour.pendingBody) { vee.bodyTarget = tour.pendingBody; tour.pendingBody = null; }
+  vee.vanishT = -1; vee.appearT = 0.8; vee.heading = player.yaw; vee.lastP = null;
+  vee.body.position.copy(vee.bodyTarget || veeFollowSpot(vee)); vee.body.position.y = 0;
+  if (tour && tour.pendingSay) { vee.say(...tour.pendingSay); tour.pendingSay = null; }
+  else if (!tour && FLOORS[i].hello && !vee.greeted.has(i)) { vee.greeted.add(i); vee.say(...FLOORS[i].hello, null, i === FI.b1 ? CRYO_STOP.center : null); }
 }
 // put you on a floor at its lift landing (or the lobby entrance)
 function placeOnFloor(i) {
@@ -2264,21 +2383,46 @@ function resetView() {
 addEventListener('pageshow', e => { if (!e.persisted) return; if (current) exitRoom(); if (world) exitWorld(); else resetView(); });
 
 /* ---------- Directory ---------- */
+/* ---------- Quick navigation ----------
+   The top row is the building: a button per floor jumps you straight there (a quicker way than the lift),
+   landing at the floor's lift door. The row under it lists what's on the floor you're on; each walks you over. */
 const dir = document.getElementById('directory');
-PROJECTS.forEach((p, i) => {
-  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-' + p.id;
-  b.textContent = p.name.replace('STEADYWATCH™ ', 'SW ');
-  b.addEventListener('click', () => { if (paintings[i]) walkTo(paintings[i]); });
-  dir.appendChild(b);
-});
-{
-  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
-  b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
-}
+const floorRow = document.createElement('div'), hereRow = document.createElement('div');
+floorRow.className = 'dir-row'; hereRow.className = 'dir-row dir-here'; floorRow.setAttribute('aria-label', 'Floors'); hereRow.setAttribute('aria-label', 'On this floor');
+dir.append(floorRow, hereRow);
 const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM.x, FLOORS[FI.l3].y + 2.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
-for (const [id, label, stop] of [['go-wing', 'Platform Wing', wingStop], ['go-lab', 'Cryostat Lab', CRYO_STOP]]) {
-  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = id;
-  b.textContent = label; b.addEventListener('click', () => walkTo(stop)); dir.insertBefore(b, document.getElementById('go-about'));
+[...FLOORS].reverse().forEach(F => {
+  const b = document.createElement('button'); b.className = 'dir-btn floor-btn'; b.type = 'button'; b.id = 'go-' + F.id; b.dataset.floor = FI[F.id];
+  b.innerHTML = `<b>${F.tag}</b> ${esc(F.short)}`; b.title = `${F.tag} · ${F.name}`;
+  b.addEventListener('click', () => jumpToFloor(FI[F.id])); floorRow.appendChild(b);
+});
+// what's on each floor, in the order you meet it
+function floorStops(i) {
+  const out = [];
+  if (i === FI.b1) out.push(['Cryostat', CRYO_STOP]);
+  if (i === FI.l3) out.push(['Entropy pools', wingStop]);
+  for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name.replace('STEADYWATCH™ ', 'SW '), pt]);
+  return out;
+}
+function renderNav() {
+  floorRow.querySelectorAll('.floor-btn').forEach(b => b.setAttribute('aria-current', +b.dataset.floor === player.floor ? 'true' : 'false'));
+  hereRow.innerHTML = '';
+  const F = FLOORS[player.floor], lab = document.createElement('span'); lab.className = 'here-label'; lab.textContent = `${F.tag} · ${F.name}`; hereRow.appendChild(lab);
+  for (const [label, stop] of floorStops(player.floor)) {
+    const b = document.createElement('button'); b.className = 'dir-btn sub-btn'; b.type = 'button'; b.textContent = label;
+    b.addEventListener('click', () => walkTo(stop)); hereRow.appendChild(b);
+  }
+  measureNav();
+}
+function measureNav() { document.documentElement.style.setProperty('--dir-h', dir.offsetHeight + 'px'); }
+addEventListener('resize', measureNav);
+// jump straight to a floor: a quick blink, and you're at its lift door
+function jumpToFloor(i) {
+  if (world || !(mode === 'walk' || mode === 'auto')) return;
+  if (tour) endTour();
+  auto = null; mode = 'walk'; near = null; promptEl.hidden = true;
+  flash.style.opacity = 0.6; setTimeout(() => { flash.style.opacity = 0; }, 140);
+  placeOnFloor(i); arriveOnFloor(i);
 }
 const promptEl = document.getElementById('prompt');
 // Show the small indicator floating just above the thing you're near (projected to the screen)
@@ -3387,7 +3531,7 @@ function updateTour(dt) {
 {
   const b = document.createElement('button'); b.className = 'dir-btn tour-btn'; b.type = 'button'; b.id = 'go-tour';
   b.textContent = '▶ Tour'; b.addEventListener('click', () => { if (tour) endTour(); else startTour(); });
-  dir.prepend(b);
+  floorRow.prepend(b);
 }
 
 /* ---------- Loop ---------- */
