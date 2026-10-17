@@ -392,7 +392,7 @@ const ABOUT = {
   ],
   stack: 'Swift · SwiftUI · Python · JavaScript · React Native · Flask · Node.js · Qiskit · CryptoKit',
   roles: [
-    { co: 'American Manufacturing & Embroidery', title: 'CNC Operator', years: 'MAY 2026 – NOW', line: 'Precision CO2 laser and pneumatic cutting of leather, shearling and liner materials.' },
+    { co: 'American Manufacturing & Embroidery', short: 'AM&E', title: 'CNC Operator', years: 'MAY 2026 – NOW', line: 'Precision CO2 laser and pneumatic cutting of leather, shearling and liner materials.' },
     { co: 'Persevere NOW', title: 'Senior Software Developer & Teaching Assistant', years: '2022 – 2025', line: 'Taught software engineering to cohorts of 20 students.' },
     { co: 'Express Scripts', title: 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team', years: '2012 – 2018', line: 'Led a team of about 20 licensed professionals.' },
     { co: 'Freescale Semiconductor', title: 'Process Engineer, Test Wafer Distribution', years: '2005 – 2011', line: 'Microprocessor fabrication: CVD, diffusion, EPI and photolithography.' }],
@@ -1429,7 +1429,7 @@ floorSign(L4.g, 'LEVEL 4', "The Builder's Office", 0, 4.15, L4.z1 - 0.06, Math.P
     g.fillStyle = last ? '#5ff0ff' : '#0b1220'; g.strokeStyle = '#5ff0ff'; g.lineWidth = 4; g.beginPath(); g.arc(x, ly, last ? 16 : 12, 0, Math.PI * 2); g.fill(); g.stroke();
     g.textAlign = i === 0 ? 'left' : last ? 'right' : 'center'; const tx = i === 0 ? x - 16 : last ? x + 16 : x;
     g.fillStyle = '#5ff0ff'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText(r.years, tx, ly - 40);
-    g.fillStyle = '#f1e6cf'; let px = 36; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.co).width > 420 && --px > 22); g.fillText(r.co, tx, ly + 66);
+    g.fillStyle = '#f1e6cf'; let px = 36; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.short || r.co).width > 420 && --px > 22); g.fillText(r.short || r.co, tx, ly + 66);   // the timeline uses the short name where there is one
     g.fillStyle = '#c9d2e3'; g.font = '24px "IBM Plex Sans", sans-serif';
     const words = r.title.split(' '); let line = '', y = ly + 110;
     for (const w of words) { const test = line ? line + ' ' + w : w; if (g.measureText(test).width > 400 && line) { g.fillText(line, tx, y); line = w; y += 32; } else line = test; }
