@@ -159,6 +159,17 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
   padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .4s ease; pointer-events: none !important;
 }
 #floorToast:empty { display: none; }
+/* touring: nothing on screen but the 3D view, Vee's words and a passing hint */
+body.touring #directory, body.touring #tourBar, body.touring #liftPanel, body.touring #prompt, body.touring #helpBtn,
+body.touring #top, body.touring #worldPanel, body.touring #stick { display: none !important; }
+#tourHint {
+  left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px); bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #c8fbff; text-align: center;
+  background: color-mix(in srgb, var(--night) 70%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 40%, transparent);
+  padding: 6px 12px; border-radius: 999px; opacity: 0; transition: opacity .5s ease; pointer-events: none !important;
+}
+#tourHint:empty { display: none; }
+#tourHint.show { opacity: .9; }
 #floorToast.show { opacity: 1; }
 #explored { margin-top: 6px; color: #5ff0ff; letter-spacing: .06em; }
 /* a small indicator floating above whatever you can interact with: a keycap and one word */
@@ -326,6 +337,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="prompt" hidden></div>
 <div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
 <div class="hud" id="floorToast" aria-live="polite"></div>
+<div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
@@ -2329,7 +2341,14 @@ canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let tourTapT = 0, tourTapTimer = null;
 function clickAt(x, y) {
+  if (tour) {
+    const now = performance.now();
+    if (now - tourTapT < 350) { clearTimeout(tourTapTimer); tourTapT = 0; endTour(); return; }
+    tourTapT = now; tourTapTimer = setTimeout(() => { if (tour) nextStop(); }, 360);
+    return;
+  }
   if (mode !== 'walk' && mode !== 'auto') return;
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
@@ -3600,7 +3619,22 @@ const tourBar = document.getElementById('tourBar'), tourText = document.getEleme
 document.getElementById('tourNext').addEventListener('click', () => nextStop());
 document.getElementById('tourEnd').addEventListener('click', () => endTour());
 function tourGuide() { return world ? world.vee : vee; }
+// While touring, every button and panel steps aside so nothing covers the view; only a short hint
+// says how to carry on or stop (tap / E for the next stop, double-tap / Esc to end)
+const tourHint = document.getElementById('tourHint');
+let tourHintTimer = null, lastPaused = false;
+function flashTourHint(text) {
+  tourHint.textContent = text; tourHint.classList.add('show');
+  clearTimeout(tourHintTimer); tourHintTimer = setTimeout(() => tourHint.classList.remove('show'), 4500);
+}
+function setTouring(on) {
+  document.body.classList.toggle('touring', on); resize();
+  if (on) { lastPaused = false; flashTourHint(touchUI ? 'Guided tour · tap for the next stop · double-tap to end' : 'Guided tour · E for the next stop · Esc to end'); }
+  else { clearTimeout(tourHintTimer); tourHint.classList.remove('show'); }
+}
 function renderTourBar() {
+  if (tour && !tour.auto && !lastPaused) flashTourHint(touchUI ? 'Tour paused · tap to carry on · double-tap to end' : 'Tour paused · E to carry on · Esc to end');
+  if (tour) lastPaused = !tour.auto;
   if (!tour) { tourBar.hidden = true; return; }
   tourBar.hidden = false;
   tourText.textContent = `Tour · ${tour.i + 1} of ${tour.stops.length}${tour.auto ? '' : ' · paused'}`;
@@ -3613,7 +3647,8 @@ function startTour() {
   const stops = world ? world.vee.tourStops : hallTourStops();
   if (!stops || !stops.length) return;
   tour = { stops, i: -1, t: 0, auto: true, arrived: false };
-  promptEl.hidden = true;
+  promptEl.hidden = true; liftPanel.hidden = true;
+  setTouring(true);
   nextStop();
 }
 function nextStop() {
@@ -3657,7 +3692,7 @@ function returnToStart() {
 }
 function endTour() {
   if (!tour) return;
-  tour = null;
+  tour = null; setTouring(false);
   const g = tourGuide();
   if (g) { g.bodyTarget = null; if (g.restore) g.restore(); }
   if (world) highlightStation(null);
@@ -3683,7 +3718,7 @@ function updateTour(dt) {
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight;
   // with the world panel docked on the right, shift the view so its centre sits in the visible part
-  const docked = world && !worldPanel.hidden && !worldPanel.classList.contains('collapsed') && !matchMedia('(max-width: 760px)').matches;
+  const docked = world && !worldPanel.hidden && !worldPanel.classList.contains('collapsed') && !document.body.classList.contains('touring') && !matchMedia('(max-width: 760px)').matches;
   if (docked) camera.setViewOffset(innerWidth, innerHeight, worldPanel.offsetWidth / 2, 0, innerWidth, innerHeight); else camera.clearViewOffset();
   if (world) {
     const visW = docked ? innerWidth - worldPanel.offsetWidth : innerWidth;
