@@ -529,7 +529,7 @@ const POOLS = [
   { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336.html' },
   { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432.html' }];
 // wing room layout: entered from the hall through an arch at z = -8 in the right wall
-const WING = { x0: -6, x1: 6, z0: 15, z1: 27, h: 6, archX: 0, archW: 2.4, archH: 3.4, cx: 0, cz: 21 };   // behind the hall's back wall
+const WING = { x0: -6, x1: 6, z0: 15, z1: 27, h: 6, archX: 0, archW: 6, archH: 5, cx: 0, cz: 21 };   // a grand opening, not a doorway   // behind the hall's back wall
 const WING_START = { pos: new THREE.Vector3(0, 1.7, WING.z0 + 0.9), yaw: Math.PI, pitch: 0.06 };   // just inside, facing into the wing
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
@@ -661,8 +661,6 @@ const key = new THREE.DirectionalLight(0xcfdcff, 0.25); key.position.set(3, 10, 
 
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }));
 floor.rotation.x = -Math.PI / 2; floor.position.z = midZ; scene.add(floor);
-const carpet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, len - 2), new THREE.MeshBasicMaterial({ map: carpetTex() }));
-carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, 0.01, midZ + 1); scene.add(carpet);
 
 const wt = wallTex(false), wg = wallTex(true);
 function wall(w, h, x, z, ry) {
@@ -806,8 +804,6 @@ const wingUpdates = [];
   const cc = new THREE.Mesh(new THREE.PlaneGeometry(archW, z0 - zc), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); cc.rotation.x = Math.PI / 2; cc.position.set(archX, archH, (zc + z0) / 2); scene.add(cc);
   wallAt(z0 - zc, archH, a0, archH / 2, (zc + z0) / 2, Math.PI / 2);
   wallAt(z0 - zc, archH, a1, archH / 2, (zc + z0) / 2, -Math.PI / 2);
-  const runner = new THREE.Mesh(new THREE.PlaneGeometry(0.5, z0 - zc + 6), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, map: dotTex(), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
-  runner.rotation.x = -Math.PI / 2; runner.position.set(archX, 0.02, (zc + z0) / 2 + 3); scene.add(runner);
   // the gallery
   const wf = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), floorM()); wf.rotation.x = -Math.PI / 2; wf.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); scene.add(wf);
   const wc = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); wc.rotation.x = Math.PI / 2; wc.position.set((x0 + x1) / 2, h, (z0 + z1) / 2); scene.add(wc);
@@ -820,17 +816,17 @@ const wingUpdates = [];
   for (const x of [x0 + 0.03, x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, z1 - z0), lineMat); b.position.set(x, 0.9, (z0 + z1) / 2); scene.add(b); }
   // gold arch frames at both ends of the corridor
   for (const z of [zc - 0.02, z0 + 0.02]) {
-    for (const x of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.24, archH, 0.3), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(archW + 0.24, 0.24, 0.3), gold); beam.position.set(archX, archH + 0.12, z); scene.add(beam);
+    for (const x of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.42, archH, 0.42), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(archW + 0.42, 0.36, 0.42), gold); beam.position.set(archX, archH + 0.18, z); scene.add(beam);
   }
   // the sign over the hall-side arch
   const sc = mk(1024, 200), sg = sc.getContext('2d');
   sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
   sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText('STEADYWATCH™ PLATFORM', 512, 76);
   sg.font = '70px "Young Serif", Georgia, serif'; sg.fillText('Platform Wing', 512, 158);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.51), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
-  sign.position.set(archX, archH + 0.75, zc - 0.06); sign.rotation.y = Math.PI; scene.add(sign);
-  const archGlow = new THREE.PointLight(0x7fe8ff, 0.9, 7, 2); archGlow.position.set(archX, 2.2, zc + 1.5); scene.add(archGlow);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.82), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
+  sign.position.set(archX, archH + 0.95, zc - 0.06); sign.rotation.y = Math.PI; scene.add(sign);
+  const archGlow = new THREE.PointLight(0x7fe8ff, 1.2, 10, 2); archGlow.position.set(archX, 2.6, zc + 1.5); scene.add(archGlow);
   // gallery lights
   for (const lz of [z0 + 3.5, z1 - 3.5]) { const L = new THREE.PointLight(0xdfe8ff, 0.9, 13, 2); L.position.set(cx, h - 1, lz); scene.add(L); }
   // the centrepiece: all three pools nested, each turning in 4D
@@ -902,31 +898,72 @@ function pulseStages(list, t) {   // a pulse of cold travels down the stages, to
 const hallCryo = makeCryostat(); hallCryo.group.position.set(0, ROOM.h, 1.5); scene.add(hallCryo.group);
 const pulses = hallCryo.pulses;
 
-/* ---------- Photons drifting down the runner ---------- */
-const PHOTONS = 240;
-const pPos = new Float32Array(PHOTONS * 3), pCol = new Float32Array(PHOTONS * 3), pSpd = new Float32Array(PHOTONS);
+/* ---------- Light paths ----------
+   A network of glowing walkways joining every place you can go: the main runner from the
+   Platform Wing down the hall to the STEADYWATCH™ PLATFORM display, branches to each app
+   display and the builder's office door, and in the wing a loop to each pool and OIDC.
+   Photons flow along the floor of every path toward where it leads. */
+const PATH_W = { main: 3.0, branch: 1.1 };
+const LIGHT_PATHS = (() => {
+  const Wx = WING, plat = PROJECTS.find(q => q.id === 'platform'), kz = PROJECTS.find(q => q.id === 'kaizendoku'), hh = PROJECTS.find(q => q.id === 'handheld');
+  const segs = [];
+  const add = (x0, z0, x1, z1, w) => segs.push({ a: new THREE.Vector2(x0, z0), b: new THREE.Vector2(x1, z1), w });
+  // main runner: out of the wing corridor, down the hall to the Platform display
+  add(0, Wx.z0, 0, plat.pos[2] + 2.2, PATH_W.main);
+  // branches to the app displays and the office door
+  add(-PATH_W.main / 2, kz.pos[2], kz.pos[0] + 1.1, kz.pos[2], PATH_W.branch);
+  add(PATH_W.main / 2, hh.pos[2], hh.pos[0] - 1.1, hh.pos[2], PATH_W.branch);
+  add(-PATH_W.main / 2, 8.6, -ROOM.x + 1.0, 8.6, PATH_W.branch);
+  // the wing: a spine to the centrepiece, cross paths to the four displays and a link between them
+  add(0, Wx.z0, 0, Wx.cz - 1.9, PATH_W.branch);
+  for (const z of [Wx.z0 + 3.5, Wx.z0 + 8.5]) { add(0, z, Wx.x0 + 1.0, z, PATH_W.branch); add(0, z, Wx.x1 - 1.0, z, PATH_W.branch); }
+  for (const x of [Wx.x0 + 2.6, Wx.x1 - 2.6]) add(x, Wx.z0 + 3.5, x, Wx.z0 + 8.5, PATH_W.branch);
+  return segs;
+})();
+{
+  const base = carpetTex();
+  for (const sg of LIGHT_PATHS) {
+    const L = sg.a.distanceTo(sg.b), t = base.clone(); t.needsUpdate = true; t.repeat.set(1, Math.max(1, L / 4));
+    // blended as light, so where paths meet or cross they merge instead of one covering the other
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, L), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.rotation.set(-Math.PI / 2, 0, Math.atan2(sg.b.x - sg.a.x, -(sg.b.y - sg.a.y)) + Math.PI);   // lie flat, pointing from a to b
+    m.position.set((sg.a.x + sg.b.x) / 2, 0.012 + (sg.w < 2 ? 0.002 : 0), (sg.a.y + sg.b.y) / 2); scene.add(m);
+  }
+}
+// photons: each flows along one path at floor level, from its start toward where it leads
+const PHOTONS = 340;
+const pPos = new Float32Array(PHOTONS * 3), pCol = new Float32Array(PHOTONS * 3), pData = [];
 const cyanC = new THREE.Color(0x7ff0f0), goldC = new THREE.Color(0xffd36b);
-for (let i = 0; i < PHOTONS; i++) {
-  pPos[i * 3] = (Math.random() - 0.5) * 2.4; pPos[i * 3 + 1] = 0.05 + Math.random() * 1.4; pPos[i * 3 + 2] = ROOM.zMin + 1 + Math.random() * (len - 2);
-  pSpd[i] = 0.8 + Math.random() * 1.6;
-  const c = Math.random() < 0.8 ? cyanC : goldC; pCol[i * 3] = c.r; pCol[i * 3 + 1] = c.g; pCol[i * 3 + 2] = c.b;
+{
+  const lens = LIGHT_PATHS.map(sg => sg.a.distanceTo(sg.b)), tot = lens.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < PHOTONS; i++) {
+    let r = Math.random() * tot, k = 0; while (r > lens[k] && k < lens.length - 1) { r -= lens[k]; k++; }
+    const sg = LIGHT_PATHS[k];
+    pData.push({ sg, u: Math.random(), sp: (0.8 + Math.random() * 1.6) / lens[k], off: (Math.random() - 0.5) * sg.w * 0.55, h: 0.03 + Math.random() * 0.12, ph: Math.random() * 6.28 });
+    const c = Math.random() < 0.8 ? cyanC : goldC; pCol[i * 3] = c.r; pCol[i * 3 + 1] = c.g; pCol[i * 3 + 2] = c.b;
+  }
 }
 const pGeo = new THREE.BufferGeometry();
 pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
 const photons = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.07, map: dotTex(), vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
-scene.add(photons);
+photons.frustumCulled = false; scene.add(photons);
+function placePhotons(t, dt, m) {
+  pData.forEach((d, i) => {
+    d.u += d.sp * dt * m; if (d.u > 1) d.u -= 1;
+    const { a, b } = d.sg, dx = b.x - a.x, dz = b.y - a.y, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
+    pPos[i * 3] = a.x + dx * d.u + nx * d.off; pPos[i * 3 + 2] = a.y + dz * d.u + nz * d.off;
+    pPos[i * 3 + 1] = d.h + 0.03 * Math.sin(t * 2 + d.ph) * m;   // skimming just above the path
+  });
+  pGeo.attributes.position.needsUpdate = true;
+}
+placePhotons(0, 0, 1);
 
 function updateQuantum(dt, t) {
   for (const u of wingUpdates) u(dt, t);
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
   pulseStages(pulses, t);
-  for (let i = 0; i < PHOTONS; i++) {
-    let z = pPos[i * 3 + 2] - pSpd[i] * dt * m;
-    if (z < ROOM.zMin + 1) z = ROOM.zMax - 1;
-    pPos[i * 3 + 2] = z;
-  }
-  pGeo.attributes.position.needsUpdate = true;
+  placePhotons(t, dt, m);
 }
 
 /* ---------- Paintings ---------- */
