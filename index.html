@@ -140,7 +140,8 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 @media (max-width: 560px) { .dir-row { gap: 6px; } .dir-btn.sub-btn { font-size: 10px; padding: 5px 7px; } .here-label { width: 100%; text-align: center; } }
 /* the show/hide switch for the buttons: phones and small screens only, just above the buttons (or at the bottom once they're hidden) */
 #navToggle {
-  display: none; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(var(--dir-h, 76px) + 8px);
+  display: none; pointer-events: auto;   /* .hud lets taps through; this one has to catch them */
+  right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(var(--dir-h, 76px) + 8px);
   width: 34px; height: 34px; border-radius: 50%; place-items: center; cursor: pointer;
   font-family: var(--mono); font-size: 15px; line-height: 1; color: #5ff0ff;
   background: color-mix(in srgb, var(--night) 72%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 55%, transparent);
