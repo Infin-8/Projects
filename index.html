@@ -1165,18 +1165,92 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
   const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, L1.h - 0.15, z); L1.g.add(cap);
   const base = cap.clone(); base.position.y = 0.15; L1.g.add(base);
 }
-// the entrance doors behind where you arrive: glass leaves in a steel frame, with the night outside
+// The entrance is Young's double slit: you arrive through a dark barrier cut by two tall lit slits.
+// On the floor in front of it, the two waves from the slits add up (the real two-source pattern),
+// and their fringes run into the light path. Beside it, a caption and a detector that collects single
+// photon hits, drawn at random from the two-slit intensity, so the bands build up dot by dot.
+const SLIT = { z: L1.z1, y: 1.85, h: 3.4, gap: 1.3, wave: 0.35, w: 0.16 };
+const slitUpdates = [];
 {
-  const g = new THREE.Group(); g.position.set(0, 0, L1.z1 - 0.04); g.rotation.y = Math.PI; L1.g.add(g);
-  const W = 4.2, Hd = 3.6;
-  const oc = mk(256, 256), og = oc.getContext('2d'), gr = og.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, '#0b1830'); gr.addColorStop(0.7, '#122a3a'); gr.addColorStop(1, '#1d3b44'); og.fillStyle = gr; og.fillRect(0, 0, 256, 256);
-  const night = new THREE.Mesh(new THREE.PlaneGeometry(W, Hd), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(oc) })); night.position.set(0, Hd / 2, -0.02); g.add(night);
-  for (const sx of [-1, 1]) { const leaf = new THREE.Mesh(new THREE.BoxGeometry(W / 2 - 0.06, Hd - 0.06, 0.03), glassMat); leaf.position.set(sx * W / 4, Hd / 2, 0.02); g.add(leaf); }
-  [[W + 0.16, 0.08, 0, Hd + 0.04], [0.08, Hd + 0.08, -W / 2 - 0.04, Hd / 2], [0.08, Hd + 0.08, W / 2 + 0.04, Hd / 2], [0.06, Hd, 0, Hd / 2]].forEach(([bw, bh, x, y]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.1), steel); f.position.set(x, y, 0.03); g.add(f);
+  const g = L1.g, bz = SLIT.z - 0.05, BW = 4.6, BH = 4.4;
+  const barrier = new THREE.Mesh(new THREE.BoxGeometry(BW, BH, 0.1), colMat); barrier.position.set(0, BH / 2, bz); g.add(barrier);
+  [[BW + 0.4, 0.2, 0, BH + 0.1], [0.2, BH + 0.2, -BW / 2 - 0.1, BH / 2], [0.2, BH + 0.2, BW / 2 + 0.1, BH / 2]].forEach(([w, h, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), gold); f.position.set(x, y, bz - 0.02); g.add(f);
   });
+  // the slits: bright light pouring through, with a soft halo either side
+  const hc = mk(128, 512), hg = hc.getContext('2d'), hgr = hg.createLinearGradient(0, 0, 128, 0);
+  hgr.addColorStop(0, 'rgba(95,240,255,0)'); hgr.addColorStop(0.5, 'rgba(160,250,255,0.9)'); hgr.addColorStop(1, 'rgba(95,240,255,0)');
+  hg.fillStyle = hgr; hg.fillRect(0, 0, 128, 512);
+  const haloM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 });
+  const slitM = new THREE.MeshBasicMaterial({ color: 0xe8ffff });
+  for (const sx of [-SLIT.gap / 2, SLIT.gap / 2]) {
+    const sl = new THREE.Mesh(new THREE.PlaneGeometry(SLIT.w, SLIT.h), slitM); sl.position.set(sx, SLIT.y, bz - 0.055); sl.rotation.y = Math.PI; g.add(sl);
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(0.9, SLIT.h + 0.5), haloM); halo.position.set(sx, SLIT.y, bz - 0.07); halo.rotation.y = Math.PI; g.add(halo);
+  }
+  const sLight = new THREE.PointLight(0x7fe8ff, 0.6, 9, 2); sLight.position.set(0, 0.8, SLIT.z - 2.2); g.add(sLight);
+  // the two-source pattern on the floor: Re of two cylindrical waves, squared
+  const L = 7.5, W = 11;
+  const fringeU = { uTime: { value: 0 } };
+  const fringe = new THREE.Mesh(new THREE.PlaneGeometry(W, L, 1, 1), new THREE.ShaderMaterial({
+    uniforms: fringeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `
+      uniform float uTime; varying vec2 vUv;
+      void main(){
+        vec2 p = vec2((vUv.x - 0.5) * ${W.toFixed(1)}, vUv.y * ${L.toFixed(1)});   // x across, y = distance from the slits
+        float r1 = length(p - vec2(-${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
+        float r2 = length(p - vec2( ${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
+        float k = 6.2831853 / ${SLIT.wave.toFixed(2)}, w = 3.2;
+        float a = cos(k * r1 - w * uTime) / sqrt(r1) + cos(k * r2 - w * uTime) / sqrt(r2);
+        float I = a * a * 0.2;
+        float fade = smoothstep(${L.toFixed(1)}, 1.8, p.y) * smoothstep(0.0, 0.3, p.y) * smoothstep(${(W / 2).toFixed(1)}, 3.0, abs(p.x));
+        gl_FragColor = vec4(vec3(0.25, 0.88, 0.9) * I * fade, 1.0);
+      }`
+  }));
+  fringe.rotation.x = -Math.PI / 2; fringe.position.set(0, 0.02, SLIT.z - L / 2); g.add(fringe);
+  // panels either side of the barrier, facing into the lobby
+  const panel = (tex, x) => {
+    const pw = 2.9, ph = 2.175, m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map: tex }));
+    m.position.set(x, 2.3, SLIT.z - 0.06); m.rotation.y = Math.PI; g.add(m);
+    const ft = 0.16;
+    [[pw + ft * 2, ft, 0, ph / 2 + ft / 2], [pw + ft * 2, ft, 0, -ph / 2 - ft / 2], [ft, ph, pw / 2 + ft / 2, 0], [ft, ph, -pw / 2 - ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(x + fx, 2.3 + fy, SLIT.z - 0.05); g.add(f);
+    });
+  };
+  // the caption, on your right as you face the entrance
+  const cc = mk(768, 576), c = cc.getContext('2d');
+  c.fillStyle = '#0d1018'; c.fillRect(0, 0, 768, 576);
+  c.fillStyle = '#3fe0e0'; c.font = '600 22px "IBM Plex Mono", monospace'; c.fillText('THE ENTRANCE · QUANTUM SCIENCE', 48, 72);
+  c.fillStyle = '#f1e6cf'; c.font = '52px "Young Serif", Georgia, serif'; c.fillText('The double slit', 48, 140);
+  c.fillStyle = '#c9d2e3'; c.font = '25px "IBM Plex Sans", sans-serif';
+  let y = wrapText(c, 'Light passing through two narrow slits spreads out and overlaps. Where the waves line up it is bright; where they cancel it is dark.', 48, 200, 672, 36);
+  y = wrapText(c, 'Send photons one at a time and each lands as a single dot at a random spot, yet together the dots still build the same bands.', 48, y + 14, 672, 36);
+  c.fillStyle = '#8e99b0'; c.font = '20px "IBM Plex Mono", monospace'; c.fillText('Thomas Young showed light interfering in the early 1800s.', 48, 530);
+  panel(new THREE.CanvasTexture(cc), -5.0);
+  // the detector, on your left: single hits sampled from the two-slit intensity, accumulating
+  const det = mk(768, 576), dg = det.getContext('2d'), detTex = new THREE.CanvasTexture(det);
+  let hits = 0, acc = 0, lastDraw = -1;
+  const reset = () => { dg.fillStyle = '#05070b'; dg.fillRect(0, 0, 768, 576); hits = 0; };
+  const intensity = u => { const beta = 5.2 * u, alpha = 1.25 * u, env = alpha === 0 ? 1 : Math.sin(alpha) / alpha; return Math.cos(beta) ** 2 * env * env; };   // fringes under the single-slit envelope
+  const hit = () => { let u; do { u = Math.random() * 2 - 1; } while (Math.random() > intensity(u)); dg.fillStyle = 'rgba(127,240,240,0.85)'; dg.fillRect(384 + u * 360 - 1.5, 24 + Math.random() * 456 - 1.5, 3, 3); hits++; };
+  const label = () => {
+    dg.fillStyle = '#05070b'; dg.fillRect(0, 496, 768, 80);
+    dg.fillStyle = '#3fe0e0'; dg.font = '600 22px "IBM Plex Mono", monospace'; dg.textAlign = 'left'; dg.fillText('DETECTOR · SINGLE PHOTONS', 36, 546);
+    dg.textAlign = 'right'; dg.fillStyle = '#c9d2e3'; dg.fillText('n = ' + hits.toLocaleString('en-US'), 732, 546); dg.textAlign = 'left';
+  };
+  reset(); label();
+  panel(detTex, 5.0);
+  slitUpdates.push((dt, t) => {
+    if (!L1.g.visible) return;
+    fringeU.uTime.value = reduceMotion ? 0 : t;
+    acc += dt * (reduceMotion ? 40 : 90);
+    while (acc >= 1) { acc -= 1; hit(); }
+    if (hits > 14000) reset();
+    if (t - lastDraw > 0.1) { lastDraw = t; label(); detTex.needsUpdate = true; }
+  });
+  buildingUpdates.push((dt, t) => { for (const u of slitUpdates) u(dt, t); });
 }
+const SLIT_STOP = { exhibit: true, floor: FI.l1, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: -0.05 };
 // the floor guide on the east wall, between the entrance and the lift
 {
   const c = mk(768, 1024), p = c.getContext('2d');
@@ -2171,6 +2245,7 @@ function hallTourStops() {
   const P = id => paintings.find(p => p.p.id === id), stops = [], plat = P('platform');
   stops.push({ floor: FI.l1, center: new THREE.Vector3(BANNER.pos.x, L1.y + BANNER.pos.y, BANNER.pos.z), normal: new THREE.Vector3(0, 0, 1), standOff: 7.2, pitch: 0.24,
     line: 'This is the Quantum Hall.', sub: 'Five floors around an atrium, with a column of light up the middle.' });
+  stops.push({ ...SLIT_STOP, standOff: 5.4, line: 'The entrance: a double slit.', sub: 'Each photon lands at a random spot. That randomness is where it all starts.' });
   if (plat) stops.push({ floor: plat.floor, center: plat.center, normal: plat.normal, standOff: 4.6, pitch: 0.18, line: plat.p.name, sub: `${plat.p.tagline}. Step inside to explore it.` });
   stops.push({ ...CRYO_STOP, line: 'B1 · The Cryostat Lab.', sub: 'Cooled to about 10 mK. The light rises from its chip.' });
   for (const id of ['kaizendoku', 'handheld']) {
@@ -2577,6 +2652,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 function floorStops(i) {
   const out = [];
   if (i === FI.b1) out.push(['Cryostat', CRYO_STOP]);
+  if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name.replace('STEADYWATCH™ ', 'SW '), pt]);
   return out;
@@ -3907,7 +3983,7 @@ Promise.all([
   for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   buildPaintings(); buildKiosk(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
-  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'platform-wing' ? wingStop : null);
+  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
