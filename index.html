@@ -431,6 +431,15 @@ function drawPlatform(c, img) {
   for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
   g.fillStyle = '#5b6bc9'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('X25519 + ML-KEM-768 → HKDF', 562, 660);
 }
+// Wrap text to a width on a canvas; returns the y after the last line
+function wrapText(g, text, x, y, maxW, lh) {
+  let line = '';
+  for (const word of text.split(' ')) {
+    const test = line ? line + ' ' + word : word;
+    if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); line = word; y += lh; } else line = test;
+  }
+  g.fillText(line, x, y); return y + lh;
+}
 const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, platform: drawPlatform };
 /* ---------- The Platform Wing: VAULT™, VIPER™, LOTUS™ (entropy pools) and OIDC ----------
    Each pool's nodes are exactly the Hurwitz quaternions of norm p (prime p = 5, 13, 17):
@@ -520,8 +529,8 @@ const POOLS = [
   { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336.html' },
   { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432.html' }];
 // wing room layout: entered from the hall through an arch at z = -8 in the right wall
-const WING = { x0: 11, x1: 23, z0: -14, z1: -2, h: 6, archZ: -8, archW: 2.4, archH: 3.4, cx: 17, cz: -8 };
-const WING_START = { pos: new THREE.Vector3(12.4, 1.7, WING.archZ), yaw: -Math.PI / 2, pitch: 0.06 };
+const WING = { x0: -6, x1: 6, z0: 15, z1: 27, h: 6, archX: 0, archW: 2.4, archH: 3.4, cx: 0, cz: 21 };   // behind the hall's back wall
+const WING_START = { pos: new THREE.Vector3(0, 1.7, WING.z0 + 0.9), yaw: Math.PI, pitch: 0.06 };   // just inside, facing into the wing
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
     id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
@@ -533,7 +542,7 @@ const WING_PROJECTS = [
     site: { url: `https://steady-watch.com/${P.page}`, label: 'steady-watch.com', addr: `https://steady-watch.com/${P.page}`, shot: `assets/site-${P.id}.jpg`,
       heading: 'Live pool', cardText: 'The screen on your right opens the live pool on steady-watch.com.' },
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
-    pos: i < 2 ? [WING.x0 + 3.5 + i * 5, 3.1, WING.z0 + 0.08] : [WING.x0 + 8.5, 3.1, WING.z1 - 0.08], rotY: i < 2 ? 0 : Math.PI, size: [3.3, 3.3]
+    pos: i < 2 ? [WING.x1 - 0.08, 3.1, WING.z0 + 3.5 + i * 5] : [WING.x0 + 0.08, 3.1, WING.z0 + 8.5], rotY: i < 2 ? -Math.PI / 2 : Math.PI / 2, size: [3.3, 3.3]
   })),
   { id: 'oidc', name: 'STEADYWATCH™ OIDC', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Biometric identity provider',
     desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved with Face ID in STEADYWATCH™ HANDHELD. Runs on a Raspberry Pi, with no per-seat fee.',
@@ -548,7 +557,7 @@ const WING_PROJECTS = [
     site: { url: 'https://steady-watch.com/oidc.html', label: 'steady-watch.com', addr: 'https://steady-watch.com/oidc.html', shot: 'assets/site-oidc.jpg',
       heading: 'Live demo', cardText: 'The screen on your right opens the live device-flow demo on steady-watch.com.' },
     theme: { bg: '#0a0f24', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: null,
-    pos: [WING.x0 + 3.5, 3.1, WING.z1 - 0.08], rotY: Math.PI, size: [3.3, 3.3] }];
+    pos: [WING.x0 + 0.08, 3.1, WING.z0 + 3.5], rotY: Math.PI / 2, size: [3.3, 3.3] }];
 for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
 DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
 
@@ -662,20 +671,20 @@ function wall(w, h, x, z, ry) {
   m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
 }
 wall(len, ROOM.h, -ROOM.x, midZ, Math.PI / 2);
-// the right wall has an arch into the Platform Wing
+// the back wall (behind where you arrive) has an arch into the Platform Wing
 function wallAt(w, h, x, y, z, ry) {
   const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
   m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
 }
-{
-  const a0 = WING.archZ - WING.archW / 2, a1 = WING.archZ + WING.archW / 2;
-  wallAt(a0 - ROOM.zMin, ROOM.h, ROOM.x, ROOM.h / 2, (ROOM.zMin + a0) / 2, -Math.PI / 2);
-  wallAt(ROOM.zMax - a1, ROOM.h, ROOM.x, ROOM.h / 2, (a1 + ROOM.zMax) / 2, -Math.PI / 2);
-  wallAt(WING.archW, ROOM.h - WING.archH, ROOM.x, WING.archH + (ROOM.h - WING.archH) / 2, WING.archZ, -Math.PI / 2);
-}
+wall(len, ROOM.h, ROOM.x, midZ, -Math.PI / 2);
 wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMin, 0);
-wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMax, Math.PI);
+{
+  const a0 = WING.archX - WING.archW / 2, a1 = WING.archX + WING.archW / 2;
+  wallAt(a0 + ROOM.x, ROOM.h, (-ROOM.x + a0) / 2, ROOM.h / 2, ROOM.zMax, Math.PI);
+  wallAt(ROOM.x - a1, ROOM.h, (a1 + ROOM.x) / 2, ROOM.h / 2, ROOM.zMax, Math.PI);
+  wallAt(WING.archW, ROOM.h - WING.archH, WING.archX, WING.archH + (ROOM.h - WING.archH) / 2, ROOM.zMax, Math.PI);
+}
 const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
 ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(ceil);
 
@@ -683,8 +692,7 @@ ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(cei
 const lineMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 });
 {
   const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); b.position.set(-ROOM.x + 0.03, 0.9, midZ); scene.add(b);
-  const a0 = WING.archZ - WING.archW / 2, a1 = WING.archZ + WING.archW / 2;   // the right-hand line breaks for the arch
-  for (const [z0, z1] of [[ROOM.zMin, a0], [a1, ROOM.zMax]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, z1 - z0), lineMat); r.position.set(ROOM.x - 0.03, 0.9, (z0 + z1) / 2); scene.add(r); }
+  const r = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); r.position.set(ROOM.x - 0.03, 0.9, midZ); scene.add(r);
 }
 const gold = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
 const colMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 });
@@ -788,32 +796,32 @@ function oidcSculpture() {
 
 for (const P of WING_PROJECTS) { P.sculpture = P.kind === 'pool' ? poolSculpture(P) : oidcSculpture(); P.coreTitle = P.kind === 'pool' ? `${P.name} shell` : 'Live sign-in'; }
 
-/* ---------- The Platform Wing: corridor and gallery off the hall ---------- */
+/* ---------- The Platform Wing: through the arch in the back wall, behind where you arrive ---------- */
 const wingUpdates = [];
 {
-  const { x0, x1, z0, z1, h, archZ, archW, archH, cx, cz } = WING, a0 = archZ - archW / 2, a1 = archZ + archW / 2;
+  const { x0, x1, z0, z1, h, archX, archW, archH, cx, cz } = WING, a0 = archX - archW / 2, a1 = archX + archW / 2, zc = ROOM.zMax;
   const floorM = () => new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 });
   // corridor
-  const cf = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x, archW), floorM()); cf.rotation.x = -Math.PI / 2; cf.position.set((ROOM.x + x0) / 2, 0, archZ); scene.add(cf);
-  const cc = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x, archW), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); cc.rotation.x = Math.PI / 2; cc.position.set((ROOM.x + x0) / 2, archH, archZ); scene.add(cc);
-  wallAt(x0 - ROOM.x, archH, (ROOM.x + x0) / 2, archH / 2, a0, 0);
-  wallAt(x0 - ROOM.x, archH, (ROOM.x + x0) / 2, archH / 2, a1, Math.PI);
-  const runner = new THREE.Mesh(new THREE.PlaneGeometry(x0 - ROOM.x + 6, 0.5), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, map: dotTex(), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
-  runner.rotation.x = -Math.PI / 2; runner.position.set((ROOM.x + x0) / 2 + 3, 0.02, archZ); scene.add(runner);
+  const cf = new THREE.Mesh(new THREE.PlaneGeometry(archW, z0 - zc), floorM()); cf.rotation.x = -Math.PI / 2; cf.position.set(archX, 0, (zc + z0) / 2); scene.add(cf);
+  const cc = new THREE.Mesh(new THREE.PlaneGeometry(archW, z0 - zc), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); cc.rotation.x = Math.PI / 2; cc.position.set(archX, archH, (zc + z0) / 2); scene.add(cc);
+  wallAt(z0 - zc, archH, a0, archH / 2, (zc + z0) / 2, Math.PI / 2);
+  wallAt(z0 - zc, archH, a1, archH / 2, (zc + z0) / 2, -Math.PI / 2);
+  const runner = new THREE.Mesh(new THREE.PlaneGeometry(0.5, z0 - zc + 6), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, map: dotTex(), transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+  runner.rotation.x = -Math.PI / 2; runner.position.set(archX, 0.02, (zc + z0) / 2 + 3); scene.add(runner);
   // the gallery
   const wf = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), floorM()); wf.rotation.x = -Math.PI / 2; wf.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); scene.add(wf);
   const wc = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); wc.rotation.x = Math.PI / 2; wc.position.set((x0 + x1) / 2, h, (z0 + z1) / 2); scene.add(wc);
-  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z0, 0);
-  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z1, Math.PI);
+  wallAt(z1 - z0, h, x0, h / 2, (z0 + z1) / 2, Math.PI / 2);
   wallAt(z1 - z0, h, x1, h / 2, (z0 + z1) / 2, -Math.PI / 2);
-  wallAt(a0 - z0, h, x0, h / 2, (z0 + a0) / 2, Math.PI / 2);
-  wallAt(z1 - a1, h, x0, h / 2, (a1 + z1) / 2, Math.PI / 2);
-  wallAt(archW, h - archH, x0, archH + (h - archH) / 2, archZ, Math.PI / 2);
-  for (const [z, ry] of [[z0 + 0.03, 0], [z1 - 0.03, Math.PI]]) { const b = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.03, 0.04), lineMat); b.position.set((x0 + x1) / 2, 0.9, z); scene.add(b); }
+  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z1, Math.PI);
+  wallAt(a0 - x0, h, (x0 + a0) / 2, h / 2, z0, 0);
+  wallAt(x1 - a1, h, (a1 + x1) / 2, h / 2, z0, 0);
+  wallAt(archW, h - archH, archX, archH + (h - archH) / 2, z0, 0);
+  for (const x of [x0 + 0.03, x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, z1 - z0), lineMat); b.position.set(x, 0.9, (z0 + z1) / 2); scene.add(b); }
   // gold arch frames at both ends of the corridor
-  for (const x of [ROOM.x - 0.02, x0 + 0.02]) {
-    for (const z of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.3, archH, 0.24), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, archW + 0.24), gold); beam.position.set(x, archH + 0.12, archZ); scene.add(beam);
+  for (const z of [zc - 0.02, z0 + 0.02]) {
+    for (const x of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.24, archH, 0.3), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(archW + 0.24, 0.24, 0.3), gold); beam.position.set(archX, archH + 0.12, z); scene.add(beam);
   }
   // the sign over the hall-side arch
   const sc = mk(1024, 200), sg = sc.getContext('2d');
@@ -821,11 +829,10 @@ const wingUpdates = [];
   sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText('STEADYWATCH™ PLATFORM', 512, 76);
   sg.font = '70px "Young Serif", Georgia, serif'; sg.fillText('Platform Wing', 512, 158);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.51), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
-  sign.position.set(ROOM.x - 0.06, archH + 0.75, archZ); sign.rotation.y = -Math.PI / 2; scene.add(sign);
-  // a glow through the arch, so it reads as a way through from down the hall
-  const archGlow = new THREE.PointLight(0x7fe8ff, 0.9, 7, 2); archGlow.position.set(ROOM.x + 1.5, 2.2, archZ); scene.add(archGlow);
+  sign.position.set(archX, archH + 0.75, zc - 0.06); sign.rotation.y = Math.PI; scene.add(sign);
+  const archGlow = new THREE.PointLight(0x7fe8ff, 0.9, 7, 2); archGlow.position.set(archX, 2.2, zc + 1.5); scene.add(archGlow);
   // gallery lights
-  for (const [lx, lz] of [[x0 + 3.5, (z0 + z1) / 2], [x1 - 3.5, (z0 + z1) / 2]]) { const L = new THREE.PointLight(0xdfe8ff, 0.9, 13, 2); L.position.set(lx, h - 1, lz); scene.add(L); }
+  for (const lz of [z0 + 3.5, z1 - 3.5]) { const L = new THREE.PointLight(0xdfe8ff, 0.9, 13, 2); L.position.set(cx, h - 1, lz); scene.add(L); }
   // the centrepiece: all three pools nested, each turning in 4D
   const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.6, 48), colMat); plinth.position.set(cx, 0.3, cz); scene.add(plinth);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.02, 8, 96), lineMat); ring.rotation.x = Math.PI / 2; ring.position.set(cx, 0.6, cz); scene.add(ring);
@@ -837,11 +844,11 @@ const wingUpdates = [];
 // Where you can walk in the hall, the corridor and the wing
 function walkable(x, z) {
   if (x >= -ROOM.x + 1 && x <= ROOM.x - 1 && z >= ROOM.zMin + 1 && z <= ROOM.zMax - 0.8) return true;
-  if (x >= ROOM.x - 1.2 && x <= WING.x0 + 0.8 && Math.abs(z - WING.archZ) <= WING.archW / 2 - 0.55) return true;
-  if (x >= WING.x0 + 0.6 && x <= WING.x1 - 0.8 && z >= WING.z0 + 0.8 && z <= WING.z1 - 0.8) return Math.hypot(x - WING.cx, z - WING.cz) > 1.6;
+  if (Math.abs(x - WING.archX) <= WING.archW / 2 - 0.55 && z >= ROOM.zMax - 1.2 && z <= WING.z0 + 0.8) return true;
+  if (x >= WING.x0 + 0.8 && x <= WING.x1 - 0.8 && z >= WING.z0 + 0.6 && z <= WING.z1 - 0.8) return Math.hypot(x - WING.cx, z - WING.cz) > 1.6;
   return false;
 }
-const inWing = (x) => x > ROOM.x - 0.5;
+const inWing = (z) => z > ROOM.zMax - 0.5;
 
 /* ---------- Cryostat chandelier ----------
    A dilution refrigerator hangs like a gold chandelier: plates step down in
@@ -909,111 +916,7 @@ pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttri
 const photons = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.07, map: dotTex(), vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
 scene.add(photons);
 
-/* ---------- Double-slit wall ----------
-   The back wall, where the photon runner begins, is the barrier of Young's
-   double-slit experiment. The floor shows the two waves from the slits adding
-   up: the dark fan-shaped lines are where they cancel. The detector screen
-   collects single hits drawn from the two-slit intensity pattern, so the
-   bands appear dot by dot. */
-const SLIT = { z: ROOM.zMax, y: 2.1, h: 2.4, gap: 0.8, wave: 0.35 };
-const barrier = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.6, 0.1), colMat);
-barrier.position.set(0, SLIT.y, SLIT.z - 0.05); scene.add(barrier);
-[[4.2 + 0.4, 0.2, 0, 1.9], [4.2 + 0.4, 0.2, 0, -1.9], [0.2, 3.6, 2.2, 0], [0.2, 3.6, -2.2, 0]].forEach(([w, h, x, y]) => {
-  const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), gold); f.position.set(x, SLIT.y + y, SLIT.z - 0.07); scene.add(f);
-});
-const slitMat = new THREE.MeshBasicMaterial({ color: 0xc8fbff });
-for (const sx of [-SLIT.gap / 2, SLIT.gap / 2]) {
-  const sl = new THREE.Mesh(new THREE.PlaneGeometry(0.09, SLIT.h), slitMat);
-  sl.position.set(sx, SLIT.y, SLIT.z - 0.111); sl.rotation.y = Math.PI; scene.add(sl);
-}
-const slitLight = new THREE.PointLight(0x7fe8ff, 0.5, 9, 2); slitLight.position.set(0, 0.6, SLIT.z - 2.5); scene.add(slitLight);
-
-// interference on the floor: Re of two cylindrical waves, squared
-const fringeU = { uTime: { value: 0 } };
-const fringe = new THREE.Mesh(new THREE.PlaneGeometry(12, 8, 1, 1), new THREE.ShaderMaterial({
-  uniforms: fringeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: `
-    uniform float uTime; varying vec2 vUv;
-    void main(){
-      vec2 p = vec2((vUv.x - 0.5) * 12.0, vUv.y * 8.0);          // x across, y = distance from the slits
-      float r1 = length(p - vec2(-${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
-      float r2 = length(p - vec2( ${(SLIT.gap / 2).toFixed(2)}, 0.0)) + 0.05;
-      float k = 6.2831853 / ${SLIT.wave.toFixed(2)}, w = 3.2;
-      float a = cos(k * r1 - w * uTime) / sqrt(r1) + cos(k * r2 - w * uTime) / sqrt(r2);
-      float I = a * a * 0.22;
-      float fade = smoothstep(8.0, 1.5, p.y) * smoothstep(0.0, 0.35, p.y) * smoothstep(6.0, 3.0, abs(p.x));
-      gl_FragColor = vec4(vec3(0.25, 0.88, 0.9) * I * fade, 1.0);
-    }`
-}));
-fringe.rotation.x = -Math.PI / 2; fringe.position.set(0, 0.025, SLIT.z - 4); scene.add(fringe);
-
-function wrapText(g, text, x, y, maxW, lh) {
-  let line = '';
-  for (const word of text.split(' ')) {
-    const test = line ? line + ' ' + word : word;
-    if (g.measureText(test).width > maxW && line) { g.fillText(line, x, y); line = word; y += lh; } else line = test;
-  }
-  g.fillText(line, x, y); return y + lh;
-}
-function framedPanel(w, h, x, tex) {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
-  m.position.set(x, 2.25, SLIT.z - 0.06); m.rotation.y = Math.PI; scene.add(m);
-  const ft = 0.16;
-  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, w / 2 + ft / 2, 0], [ft, h, -w / 2 - ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(x + fx, 2.25 + fy, SLIT.z - 0.05); scene.add(f);
-  });
-}
-
-// caption on the visitor's right when facing the wall (world -x), clear of the title in the corner
-function buildSlitExhibit() {
-  const cc = mk(768, 576), g = cc.getContext('2d');
-  g.fillStyle = '#0d1018'; g.fillRect(0, 0, 768, 576);
-  g.fillStyle = '#3fe0e0'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText('EXHIBIT · QUANTUM SCIENCE', 48, 72);
-  g.fillStyle = '#f1e6cf'; g.font = '52px "Young Serif", Georgia, serif'; g.fillText('Double-slit experiment', 48, 140);
-  g.fillStyle = '#c9d2e3'; g.font = '25px "IBM Plex Sans", sans-serif';
-  let y = wrapText(g, 'Light passing through two narrow slits spreads out and overlaps. Where the waves line up the screen is bright; where they cancel it is dark.', 48, 200, 672, 36);
-  y = wrapText(g, 'Send the photons one at a time and each lands as a single dot, yet the dots still build up the same bands.', 48, y + 14, 672, 36);
-  g.fillStyle = '#8e99b0'; g.font = '20px "IBM Plex Mono", monospace';
-  g.fillText('Thomas Young showed light interfering in the early 1800s.', 48, 520);
-  framedPanel(2.9, 2.175, -4.8, new THREE.CanvasTexture(cc));
-}
-
-// detector: single hits sampled from the two-slit intensity, accumulating
-const det = mk(768, 576), dg = det.getContext('2d');
-const detTex = new THREE.CanvasTexture(det);
-let hits = 0;
-function detReset() {
-  dg.fillStyle = '#05070b'; dg.fillRect(0, 0, 768, 576); hits = 0;
-}
-function detIntensity(u) {           // u in [-1, 1] across the screen
-  const beta = 5.2 * u, alpha = 1.25 * u;   // fringe term and single-slit envelope
-  const env = alpha === 0 ? 1 : Math.sin(alpha) / alpha;
-  return Math.cos(beta) ** 2 * env * env;
-}
-function detHit() {
-  let u; do { u = Math.random() * 2 - 1; } while (Math.random() > detIntensity(u));
-  const x = 384 + u * 360, y = 24 + Math.random() * 456;
-  dg.fillStyle = 'rgba(127,240,240,0.85)'; dg.fillRect(x - 1.5, y - 1.5, 3, 3); hits++;
-}
-function detLabel() {
-  dg.fillStyle = '#05070b'; dg.fillRect(0, 496, 768, 80);
-  dg.fillStyle = '#3fe0e0'; dg.font = '600 22px "IBM Plex Mono", monospace'; dg.textAlign = 'left'; dg.fillText('DETECTOR · SINGLE PHOTONS', 36, 546);
-  dg.textAlign = 'right'; dg.fillStyle = '#c9d2e3'; dg.fillText('n = ' + hits.toLocaleString('en-US'), 732, 546); dg.textAlign = 'left';
-}
-detReset(); detLabel();
-framedPanel(2.9, 2.175, 4.8, detTex);
-let detAcc = 0;
-function updateSlits(dt, t) {
-  fringeU.uTime.value = reduceMotion ? 0 : t;
-  detAcc += dt * (reduceMotion ? 40 : 90);
-  while (detAcc >= 1) { detAcc -= 1; detHit(); }
-  if (hits > 14000) detReset();
-  detLabel(); detTex.needsUpdate = true;
-}
-
 function updateQuantum(dt, t) {
-  updateSlits(dt, t);
   for (const u of wingUpdates) u(dt, t);
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
@@ -1512,8 +1415,7 @@ function buildMascot() {
     ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Each display on the wall is a product.', null],
     ['Walk up to a display and step inside.', 'Every product has its own world to explore.', kz ? kz.center : null],
     ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.', new THREE.Vector3(0, ROOM.h - 2.4, 1.5)],
-    ['Behind you is the double-slit experiment.', 'Light interfering, one photon at a time.', new THREE.Vector3(0, SLIT.y, SLIT.z - 0.2)],
-    ['Through the arch on the right: the Platform Wing.', 'VAULT™, VIPER™, LOTUS™ and OIDC.', new THREE.Vector3(ROOM.x, 2.2, WING.archZ)],
+    ['Behind you: the Platform Wing.', 'VAULT™, VIPER™, LOTUS™ and OIDC are through that arch.', new THREE.Vector3(WING.archX, 2.2, ROOM.zMax)],
     ['Want a guided tour?', "Press T. The builder's office is the door by the entrance.", kiosk ? kiosk.pt.center : null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
@@ -1550,7 +1452,7 @@ function updateMascot(dt, t) {
   vee.tourT += dt;   // the room tour plays through once, then rests on its last line
   if (vee.tourT > 5 && vee.reveal >= vee.total && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
 }
-// The hall's guided tour: the chandelier, each display, the double-slit wall, then back to Vee
+// The hall's guided tour: the chandelier, each display, the builder's office, the Platform Wing arch
 function hallTourStops() {
   const P = id => paintings.find(p => p.p.id === id), stops = [];
   stops.push({ center: new THREE.Vector3(0, ROOM.h - 2.4, 1.5), normal: new THREE.Vector3(0, 0, 1), standOff: 4.2, pitch: 0.55,
@@ -1559,8 +1461,7 @@ function hallTourStops() {
     const pt = P(id); if (!pt) continue;
     stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
-  stops.push({ center: new THREE.Vector3(ROOM.x, 2.2, WING.archZ), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.2, pitch: 0.1, line: 'The Platform Wing.', sub: 'VAULT™, VIPER™, LOTUS™ and OIDC are through this arch.' });
-  stops.push({ center: slitStop.center, normal: slitStop.normal, standOff: 7, pitch: -0.12, line: 'The double-slit experiment.', sub: 'Light interfering, one photon at a time.' });
+  stops.push({ center: new THREE.Vector3(WING.archX, 2.2, ROOM.zMax), normal: new THREE.Vector3(0, 0, -1), standOff: 4.6, pitch: 0.08, line: 'The Platform Wing.', sub: 'VAULT™, VIPER™, LOTUS™ and OIDC are through this arch.' });
   if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
   stops.push({ center: new THREE.Vector3(0, 3.2, ROOM.zMin), normal: new THREE.Vector3(0, 0, 1), standOff: ROOM.zMax - 2.4 - ROOM.zMin, pitch: 0.05, home: true,
     line: "That's the hall.", sub: 'Walk up to any display to step inside.' });
@@ -1765,9 +1666,9 @@ function walkTo(pt) {
   if (mode === 'inside' || mode === 'entering') return;
   const target = pt.center.clone().addScaledVector(pt.normal, pt.standOff || 3.6); target.y = 1.7;
   const via = [];
-  if (!world && inWing(player.pos.x) !== inWing(target.x)) {   // route through the arch and corridor
-    const hallSide = new THREE.Vector3(ROOM.x - 1.8, 1.7, WING.archZ), wingSide = new THREE.Vector3(WING.x0 + 1.2, 1.7, WING.archZ);
-    if (inWing(target.x)) via.push(hallSide, wingSide); else via.push(wingSide, hallSide);
+  if (!world && inWing(player.pos.z) !== inWing(target.z)) {   // route through the arch and corridor
+    const hallSide = new THREE.Vector3(WING.archX, 1.7, ROOM.zMax - 1.8), wingSide = new THREE.Vector3(WING.archX, 1.7, WING.z0 + 1.2);
+    if (inWing(target.z)) via.push(hallSide, wingSide); else via.push(wingSide, hallSide);
   }
   via.push(target);
   auto = { pt, target: via.shift(), via }; mode = 'auto';
@@ -1849,12 +1750,11 @@ PROJECTS.forEach((p, i) => {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
   b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
 }
-const wingStop = { exhibit: true, center: new THREE.Vector3(WING.cx, 2.6, WING.cz), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.2, pitch: 0.12 };
+const wingStop = { exhibit: true, center: new THREE.Vector3(WING.cx, 2.6, WING.cz), normal: new THREE.Vector3(0, 0, -1), standOff: 4.2, pitch: 0.12 };
 {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-wing';
   b.textContent = 'Platform Wing'; b.addEventListener('click', () => walkTo(wingStop)); dir.insertBefore(b, document.getElementById('go-about'));
 }
-const slitStop = { exhibit: true, standOff: 7, pitch: -0.12, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1) };
 const promptEl = document.getElementById('prompt');
 // Show the small indicator floating just above the thing you're near (projected to the screen)
 const touchUI = matchMedia('(pointer: coarse)').matches, _ip = new THREE.Vector3();
@@ -3115,9 +3015,9 @@ Promise.all([
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
   for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
-  buildPaintings(); buildSlitExhibit(); buildKiosk(); buildMascot();
+  buildPaintings(); buildKiosk(); buildMascot();
   document.getElementById('loading').remove();
-  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'double-slit' ? slitStop : null);
+  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'platform-wing' ? wingStop : null);
   if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
