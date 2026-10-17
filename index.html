@@ -1251,8 +1251,8 @@ const slitUpdates = [];
   buildingUpdates.push((dt, t) => { for (const u of slitUpdates) u(dt, t); });
 }
 const SLIT_STOP = { exhibit: true, floor: FI.l1, center: new THREE.Vector3(0, SLIT.y, SLIT.z), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: -0.05 };
-// the floor guide on the east wall, between the entrance and the lift
-{
+// a floor guide on every floor, on the east wall just past the lift door, marking where you are
+for (const HERE of FLOORS) {
   const c = mk(768, 1024), p = c.getContext('2d');
   p.fillStyle = '#0b1220'; p.fillRect(0, 0, 768, 1024);
   p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
@@ -1261,7 +1261,7 @@ const SLIT_STOP = { exhibit: true, floor: FI.l1, center: new THREE.Vector3(0, SL
   const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · STEADYWATCH™ OIDC'],
     ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'STEADYWATCH™ PLATFORM'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
   rows.forEach(([tag, name, sub], i) => {
-    const y = 270 + i * 150, here = tag === 'L1';
+    const y = 270 + i * 150, here = tag === HERE.tag;
     p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
     p.fillStyle = here ? '#05070b' : '#5ff0ff'; p.textAlign = 'center'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(tag, 108, y + 8);
     p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '40px "Young Serif", Georgia, serif'; p.fillText(name, 190, y - 6);
@@ -1270,8 +1270,9 @@ const SLIT_STOP = { exhibit: true, floor: FI.l1, center: new THREE.Vector3(0, SL
   });
   p.fillStyle = '#8e99b0'; p.font = '600 22px "IBM Plex Mono", monospace'; p.textAlign = 'left'; p.fillText('← GLASS LIFT', 56, 990);
   const W = 2.3, H = W * 1024 / 768, gd = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
-  gd.position.set(L1.x1 - 0.08, 2.4, 5.25); gd.rotation.y = -Math.PI / 2; L1.g.add(gd);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(L1.x1 - 0.04, 2.4, 5.25); L1.g.add(fr);
+  const gz = LIFT.z + LIFT.r + 2.0;
+  gd.position.set(HERE.x1 - 0.08, 2.4, gz); gd.rotation.y = -Math.PI / 2; HERE.g.add(gd);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(HERE.x1 - 0.04, 2.4, gz); HERE.g.add(fr);
 }
 // the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
 const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
