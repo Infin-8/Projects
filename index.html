@@ -1535,36 +1535,57 @@ function updateVee(v, dt, t) {
    (Internally it keeps the name "kiosk" so the tour, Vee and the About button stay wired to it.) */
 const DOOR = { x: -ROOM.x + 0.14, z: 8.6, w: 1.5, h: 2.75 };
 let kiosk = null;
+// A glass door: a tinted glass leaf with etched lettering in a slim steel frame, a long pull handle,
+// and the lit room beyond glowing through the glass. Hinged on its left edge; setOpen(0…1) swings it.
+function makeGlassDoor(group, w, h, opts) {
+  const { title, eyebrow, warm } = opts, steel = new THREE.MeshStandardMaterial({ color: 0xaeb6c2, metalness: 0.9, roughness: 0.25 });
+  // the room beyond: a soft glow with the operator desk's screens, seen through the glass
+  const bc = mk(256, 480), bg = bc.getContext('2d');
+  const grd = bg.createLinearGradient(0, 0, 0, 480); grd.addColorStop(0, warm ? '#3a2c18' : '#0e2a33'); grd.addColorStop(1, warm ? '#1a140c' : '#081418');
+  bg.fillStyle = grd; bg.fillRect(0, 0, 256, 480);
+  if (warm) {
+    bg.fillStyle = 'rgba(0,255,102,0.55)'; bg.fillRect(78, 210, 100, 62);   // the main screen
+    bg.fillStyle = 'rgba(63,224,224,0.4)'; [[26, 200], [26, 246], [192, 200], [192, 246]].forEach(([x, y]) => bg.fillRect(x, y, 38, 26));
+    bg.fillStyle = 'rgba(255,226,176,0.6)'; bg.beginPath(); bg.ellipse(128, 40, 46, 14, 0, 0, Math.PI * 2); bg.fill();   // the lamp
+    bg.fillStyle = 'rgba(10,8,6,0.85)'; bg.fillRect(20, 300, 216, 26);   // the desk
+  }
+  const beyondM = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bc), transparent: true, opacity: 0.55, depthWrite: false });
+  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w, h), beyondM); beyond.position.set(0, h / 2, -0.03); group.add(beyond);
+  // slim steel frame
+  const ft = 0.07;
+  [[w + ft * 2, ft, 0, h + ft / 2], [ft, h + ft, -w / 2 - ft / 2, (h + ft) / 2], [ft, h + ft, w / 2 + ft / 2, (h + ft) / 2]].forEach(([fw, fh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.12), steel); f.position.set(x, y, 0.03); group.add(f);
+  });
+  // the glass leaf
+  const hinge = new THREE.Group(); hinge.position.set(-w / 2, 0, 0.03); group.add(hinge);
+  const glassM = new THREE.MeshStandardMaterial({ color: 0x9fe7ee, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.16, depthWrite: false });
+  const leaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, h - 0.02, 0.025), glassM); leaf.position.set(w / 2, h / 2, 0); hinge.add(leaf);
+  const edgeM = new THREE.LineBasicMaterial({ color: 0xbff6ff, transparent: true, opacity: 0.55 });
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(leaf.geometry), edgeM); edge.position.copy(leaf.position); hinge.add(edge);
+  // etched lettering
+  const ec = mk(512, 256), eg = ec.getContext('2d');
+  eg.textAlign = 'center'; eg.fillStyle = 'rgba(230,250,255,0.9)';
+  eg.font = '600 30px "IBM Plex Mono", monospace'; eg.fillText(eyebrow, 256, 92);
+  let px = 64; do { eg.font = `${px}px "Young Serif", Georgia, serif`; } while (eg.measureText(title).width > 470 && --px > 24); eg.fillText(title, 256, 170);
+  eg.fillRect(176, 198, 160, 3);
+  const etch = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.86, w * 0.43), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(ec), transparent: true, opacity: 0.75, depthWrite: false }));
+  etch.position.set(w / 2, h * 0.66, 0.014); hinge.add(etch);
+  // a long vertical pull handle on the free edge
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, h * 0.42, 12), steel); bar.position.set(w - 0.14, h * 0.48, 0.09); hinge.add(bar);
+  for (const dy of [-0.17, 0.17]) { const sto = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.08, 8), steel); sto.rotation.x = Math.PI / 2; sto.position.set(w - 0.14, h * 0.48 + dy * h, 0.05); hinge.add(sto); }
+  return {
+    leaf, hinge,
+    setOpen(k) { hinge.rotation.y = -k * 1.75; beyondM.opacity = 0.55 + 0.45 * Math.min(1, k * 1.6); }
+  };
+}
 function buildKiosk() {
   const normal = new THREE.Vector3(1, 0, 0);
   const group = new THREE.Group(); group.position.set(DOOR.x, 0, DOOR.z); group.rotation.y = Math.PI / 2; scene.add(group);   // local +z faces into the hall
   const { w, h } = DOOR, ft = 0.16;
-  // light from the room beyond, seen when the door opens, and leaking under it
-  const glowM = new THREE.MeshBasicMaterial({ color: 0xffe2b0, transparent: true, opacity: 0, depthWrite: false });
-  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glowM); beyond.position.set(0, h / 2, -0.02); group.add(beyond);
+  // light from the office, glowing through the glass and leaking under the door
   const sillM = new THREE.MeshBasicMaterial({ color: 0xffe2b0, map: dotTex(), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
   const sill = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.3, 0.9), sillM); sill.rotation.x = -Math.PI / 2; sill.position.set(0, 0.02, 0.35); group.add(sill);
-  // gold frame
-  [[w + ft * 2, ft, 0, h + ft / 2], [ft, h + ft, -w / 2 - ft / 2, (h + ft) / 2], [ft, h + ft, w / 2 + ft / 2, (h + ft) / 2]].forEach(([fw, fh, x, y]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.22), gold); f.position.set(x, y, 0.05); group.add(f);
-  });
-  // the door leaf, hinged on its left edge
-  const hinge = new THREE.Group(); hinge.position.set(-w / 2, 0, 0.04); group.add(hinge);
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0x161b26, metalness: 0.55, roughness: 0.45 });
-  const leaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, h - 0.02, 0.07), leafMat); leaf.position.set(w / 2, h / 2, 0); hinge.add(leaf);
-  const inset = new THREE.MeshStandardMaterial({ color: 0x1f2533, metalness: 0.5, roughness: 0.5 });
-  for (const [y, ph] of [[h * 0.72, h * 0.34], [h * 0.27, h * 0.36]]) { const pnl = new THREE.Mesh(new THREE.BoxGeometry(w - 0.4, ph, 0.02), inset); pnl.position.set(w / 2, y, 0.045); hinge.add(pnl); }
-  const seamM = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 });
-  const seam = new THREE.Mesh(new THREE.BoxGeometry(w - 0.4, 0.02, 0.01), seamM); seam.position.set(w / 2, h * 0.5, 0.06); hinge.add(seam);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), gold); knob.position.set(w - 0.18, h * 0.47, 0.09); hinge.add(knob);
-  // nameplate above the door
-  const nc = mk(768, 192), ng = nc.getContext('2d');
-  ng.fillStyle = '#c8933a'; rr(ng, 6, 6, 756, 180, 18); ng.fill(); ng.strokeStyle = '#7a5520'; ng.lineWidth = 8; rr(ng, 6, 6, 756, 180, 18); ng.stroke();
-  ng.fillStyle = '#2a1b08'; ng.textAlign = 'center';
-  ng.font = '600 30px "IBM Plex Mono", monospace'; ng.fillText('THE BUILDER', 384, 70);
-  ng.font = '58px "Young Serif", Georgia, serif'; ng.fillText('About & Resume', 384, 140);
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.375), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(nc) }));
-  plate.position.set(0, h + ft + 0.38, 0.06); group.add(plate);
+  const gd = makeGlassDoor(group, w, h, { eyebrow: 'THE BUILDER', title: 'About & Resume', warm: true }), leaf = gd.leaf, hinge = gd.hinge;
   const lamp = new THREE.PointLight(0xffe2b0, 0.7, 5, 2); lamp.position.set(0, h + 0.6, 1.0); group.add(lamp);
   const spill = new THREE.PointLight(0xffe2b0, 0, 7, 2); spill.position.set(0, h * 0.5, 0.8); group.add(spill);
   // the record the hall uses for walking up, the tour and stepping through (no ripple: it's a door)
@@ -1573,8 +1594,9 @@ function buildKiosk() {
   const pt = { p: ABOUT, mesh: leaf, uniforms, normal, center, amp: 0, kiosk: true, door: true, standOff: 3.4, pitch: 0.1 };
   leaf.userData.project = ABOUT;
   paintings.push(pt);
-  kiosk = { pt, hinge, glowM, sillM, spill, open: 0,
-    setOpen(k) { this.open = k; hinge.rotation.y = -k * 1.75; glowM.opacity = Math.min(1, k * 1.6); spill.intensity = k * 2.2; } };
+  kiosk = { pt, hinge, sillM, spill, open: 0,
+    setOpen(k) { this.open = k; gd.setOpen(k); spill.intensity = 0.25 + k * 2.0; } };
+  kiosk.setOpen(0);
 }
 function updateKiosk(dt, t) {
   if (!kiosk) return;
@@ -2846,20 +2868,12 @@ function buildOfficeWorld(p) {
   // the door back to the hall, on the left wall
   const doorG = new THREE.Group(); doorG.position.set(-RX + 0.12, 0, 1.6); doorG.rotation.y = Math.PI / 2; ws.add(doorG);
   const DW = 1.4, DH = 2.6, ft = 0.15;
-  const doorGlowM = new THREE.MeshBasicMaterial({ color: 0x8fe8ff, transparent: true, opacity: 0, depthWrite: false });
-  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(DW, DH), doorGlowM); beyond.position.set(0, DH / 2, -0.02); doorG.add(beyond);
-  [[DW + ft * 2, ft, 0, DH + ft / 2], [ft, DH + ft, -DW / 2 - ft / 2, (DH + ft) / 2], [ft, DH + ft, DW / 2 + ft / 2, (DH + ft) / 2]].forEach(([fw, fh, x, y]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.2), gold); f.position.set(x, y, 0.05); doorG.add(f);
-  });
-  const hinge = new THREE.Group(); hinge.position.set(-DW / 2, 0, 0.04); doorG.add(hinge);
-  const leaf = new THREE.Mesh(new THREE.BoxGeometry(DW - 0.02, DH - 0.02, 0.07), deskMat); leaf.position.set(DW / 2, DH / 2, 0); hinge.add(leaf);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), gold); knob.position.set(DW - 0.16, DH * 0.47, 0.08); hinge.add(knob);
-  const exitLabel = stationLabel('BACK TO', 'Quantum Hall'); exitLabel.scale.multiplyScalar(0.5); exitLabel.position.set(0, DH + 0.55, 0.1); doorG.add(exitLabel);
+  const gd = makeGlassDoor(doorG, DW, DH, { eyebrow: 'BACK TO', title: 'Quantum Hall', warm: false }), leaf = gd.leaf;
   const portal = {
     id: 'portal', portal: true, exhibit: true, info: { title: 'Quantum Hall' }, standOff: 2.8, pitch: 0.08,
     center: new THREE.Vector3(-RX + 0.18, DH / 2, 1.6), normal: new THREE.Vector3(1, 0, 0),
     uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } }, amp: 0,
-    setOpen(k) { hinge.rotation.y = -k * 1.75; doorGlowM.opacity = Math.min(1, k * 1.6); }
+    setOpen(k) { gd.setOpen(k); }
   };
   leaf.userData.station = portal; hit.push(leaf); stations.push(portal);
 
