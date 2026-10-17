@@ -2107,7 +2107,7 @@ function buildMascot() {
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
     vee.tour = [
-      ['Welcome back to the Quantum Hall.', u.length ? `You haven't seen ${listNames(u)} yet.` : "You've explored every world. Thanks for coming back.", firstTarget ? firstTarget.center : null],
+      ['Welcome back to the Quantum Hall.', u.length > 2 ? `${u.length} worlds left to explore, starting with ${WORLD_NAMES[u[0]]}.` : u.length ? `You haven't seen ${listNames(u)} yet.` : "You've explored every world. Thanks for coming back.", firstTarget && firstTarget.floor === FI.l1 ? firstTarget.center : null],   // point only at what's on this floor
       vee.tour[vee.tour.length - 1]];
   }
   vee.tourK = 0; vee.tourT = 0; vee.greeted = new Set();
