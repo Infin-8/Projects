@@ -130,6 +130,28 @@ body { background: var(--night); color: var(--parchment); font-family: var(--bod
 body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 @media (max-width: 760px) { body.in-world #tourBar { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
 .dir-btn.tour-btn { border-color: #5ff0ff; color: #5ff0ff; }
+/* the glass lift's floor buttons, shown while you stand in it */
+#liftPanel {
+  left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center;
+  background: color-mix(in srgb, var(--night) 88%, transparent); border: 1px solid #5ff0ff; border-radius: 2px; padding: 8px 10px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #c8fbff;
+}
+#liftPanel .lp-title { width: 100%; text-align: center; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8e99b0; }
+#liftPanel button { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; background: transparent; color: #5ff0ff; border: 1px solid #5ff0ff; border-radius: 2px; padding: 7px 10px; cursor: pointer; }
+#liftPanel button b { font-weight: 600; margin-right: 4px; }
+#liftPanel button[aria-current="true"] { background: #5ff0ff; color: #05070b; cursor: default; }
+#liftPanel button:not([disabled]):hover, #liftPanel button:focus-visible { filter: brightness(1.2); outline: none; }
+@media (pointer: coarse) { #liftPanel .desk { display: none; } }
+#floorToast {
+  left: 0; right: 0; margin-inline: auto; width: fit-content; top: calc(64px + env(safe-area-inset-top, 0px));
+  font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #c8fbff;
+  background: color-mix(in srgb, var(--night) 80%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 55%, transparent);
+  padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .4s ease; pointer-events: none !important;
+}
+#floorToast:empty { display: none; }
+#floorToast.show { opacity: 1; }
 #explored { margin-top: 6px; color: #5ff0ff; letter-spacing: .06em; }
 /* a small indicator floating above whatever you can interact with: a keycap and one word */
 #prompt {
@@ -294,6 +316,8 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 </header>
 <nav class="hud" id="directory" aria-label="Displays"></nav>
 <div class="hud" id="prompt" hidden></div>
+<div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
+<div class="hud" id="floorToast" aria-live="polite"></div>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
@@ -322,7 +346,7 @@ const PROJECTS = [
         titleGradient: 'linear-gradient(135deg, #ffffff 20%, #00ff41 100%)', taglineSplit: ['Sudoku.', 'With Friends.'] } },
     logo: 'assets/kaizendoku-icon.png', site: { url: 'https://kaizendoku.com', label: 'kaizendoku.com', shot: 'assets/site-kaizendoku.jpg' },
     shots: [1, 2, 3, 4, 5, 6, 7].map(n => `assets/shots/kz-${n}.jpg`),
-    pos: [-7.92, 3.2, -3.5], rotY: Math.PI / 2, size: [3.7, 3.7]
+    floor: 'l2', pos: [3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
     id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Atomic Clock Multi-Tool', wing: 'Apps',
@@ -332,7 +356,7 @@ const PROJECTS = [
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
     theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
     shots: [1, 2, 3, 4, 5, 6, 7].map(n => `assets/shots/hh-${n}.jpg`),
-    pos: [7.92, 3.2, -3.5], rotY: -Math.PI / 2, size: [3.7, 3.7]
+    floor: 'l2', pos: [-3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
     id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
@@ -341,7 +365,7 @@ const PROJECTS = [
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
     links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
-    pos: [0, 3.4, -14.92], rotY: 0, size: [6.4, 4.4]
+    floor: 'l1', stand: true, pos: [0, 3.4, -0.2], rotY: 0, size: [6.4, 4.4]   // freestanding, front and centre in the lobby
   }
 ];
 
@@ -528,9 +552,7 @@ const POOLS = [
   { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game.html' },
   { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336.html' },
   { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432.html' }];
-// wing room layout: entered from the hall through an arch at z = -8 in the right wall
-const WING = { x0: -6, x1: 6, z0: 15, z1: 27, h: 6, archX: 0, archW: 6, archH: 5, cx: 0, cz: 21 };   // a grand opening, not a doorway   // behind the hall's back wall
-const WING_START = { pos: new THREE.Vector3(0, 1.7, WING.z0 + 0.9), yaw: Math.PI, pitch: 0.06 };   // just inside, facing into the wing
+// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, STEADYWATCH™ OIDC on the far wall
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
     id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
@@ -542,7 +564,7 @@ const WING_PROJECTS = [
     site: { url: `https://steady-watch.com/${P.page}`, label: 'steady-watch.com', addr: `https://steady-watch.com/${P.page}`, shot: `assets/site-${P.id}.jpg`,
       heading: 'Live pool', cardText: 'The screen on your right opens the live pool on steady-watch.com.' },
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
-    pos: i < 2 ? [WING.x1 - 0.08, 3.1, WING.z0 + 3.5 + i * 5] : [WING.x0 + 0.08, 3.1, WING.z0 + 8.5], rotY: i < 2 ? -Math.PI / 2 : Math.PI / 2, size: [3.3, 3.3]
+    floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
   { id: 'oidc', name: 'STEADYWATCH™ OIDC', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Biometric identity provider',
     desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved with Face ID in STEADYWATCH™ HANDHELD. Runs on a Raspberry Pi, with no per-seat fee.',
@@ -557,7 +579,7 @@ const WING_PROJECTS = [
     site: { url: 'https://steady-watch.com/oidc.html', label: 'steady-watch.com', addr: 'https://steady-watch.com/oidc.html', shot: 'assets/site-oidc.jpg',
       heading: 'Live demo', cardText: 'The screen on your right opens the live device-flow demo on steady-watch.com.' },
     theme: { bg: '#0a0f24', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: null,
-    pos: [WING.x0 + 0.08, 3.1, WING.z0 + 3.5], rotY: Math.PI / 2, size: [3.3, 3.3] }];
+    floor: 'l3', pos: [0, 3.1, -10.92], rotY: 0, size: [3.3, 3.3] }];
 for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
 DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
 
@@ -653,53 +675,27 @@ scene.background = new THREE.Color(0x080a12);
 scene.fog = new THREE.Fog(0x080a12, 14, 38);
 const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 
-const ROOM = { x: 8, zMin: -15, zMax: 12, h: 7.5 };
-const len = ROOM.zMax - ROOM.zMin, midZ = (ROOM.zMax + ROOM.zMin) / 2;
+/* ---------- The building, as data ----------
+   Five floors stacked around an open atrium, each one a section:
+   B1 Cryostat Lab · L1 Lobby · L2 Apps · L3 Platform Wing · L4 the Builder's Office.
+   A floor is a room x0..x1 by z0..z1, h tall, with its floor at height y; each floor's ceiling is the
+   next floor's y. "look" is where you face stepping out of the lift [x, z, pitch]. */
+const ATRIUM = { x: 0, z: -4, r: 2.4 };
+const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
+const FLOORS = [
+  { id: 'b1', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2] },
+  { id: 'l1', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
+  { id: 'l2', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06] },
+  { id: 'l3', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1] },
+  { id: 'l4', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05] }];
+const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 
 scene.add(new THREE.HemisphereLight(0xb8c8ff, 0x0a0c14, 0.7));
 const key = new THREE.DirectionalLight(0xcfdcff, 0.25); key.position.set(3, 10, 6); scene.add(key);
 
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }));
-floor.rotation.x = -Math.PI / 2; floor.position.z = midZ; scene.add(floor);
-
-const wt = wallTex(false), wg = wallTex(true);
-function wall(w, h, x, z, ry) {
-  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
-  m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
-}
-wall(len, ROOM.h, -ROOM.x, midZ, Math.PI / 2);
-// the back wall (behind where you arrive) has an arch into the Platform Wing
-function wallAt(w, h, x, y, z, ry) {
-  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
-  m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
-}
-wall(len, ROOM.h, ROOM.x, midZ, -Math.PI / 2);
-wall(ROOM.x * 2, ROOM.h, 0, ROOM.zMin, 0);
-{
-  const a0 = WING.archX - WING.archW / 2, a1 = WING.archX + WING.archW / 2;
-  wallAt(a0 + ROOM.x, ROOM.h, (-ROOM.x + a0) / 2, ROOM.h / 2, ROOM.zMax, Math.PI);
-  wallAt(ROOM.x - a1, ROOM.h, (a1 + ROOM.x) / 2, ROOM.h / 2, ROOM.zMax, Math.PI);
-  wallAt(WING.archW, ROOM.h - WING.archH, WING.archX, WING.archH + (ROOM.h - WING.archH) / 2, ROOM.zMax, Math.PI);
-}
-const ceil = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.x * 2, len), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
-ceil.rotation.x = Math.PI / 2; ceil.position.set(0, ROOM.h, midZ); scene.add(ceil);
-
-// baseboard light line + columns (castle shapes, lab materials)
 const lineMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 });
-{
-  const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); b.position.set(-ROOM.x + 0.03, 0.9, midZ); scene.add(b);
-  const r = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, len), lineMat); r.position.set(ROOM.x - 0.03, 0.9, midZ); scene.add(r);
-}
 const gold = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
 const colMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 });
-const COLS_Z = [-11, -0.2, 6];
-for (const z of COLS_Z) for (const x of [-ROOM.x + 0.5, ROOM.x - 0.5]) {
-  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, ROOM.h, 24), colMat); c.position.set(x, ROOM.h / 2, z); scene.add(c);
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, ROOM.h - 0.15, z); scene.add(cap);
-  const base = cap.clone(); base.position.y = 0.15; scene.add(base);
-}
 
 // A pool's shell as a 3D object: every node a glowing point, nearest neighbours joined, turning slowly in 4D
 /* UnifiedQubitStyling: Perlin noise + ECHO bilateral shadowing + Tesla 3-6-9 harmonics.
@@ -959,59 +955,7 @@ function oidcSculpture() {
 
 for (const P of WING_PROJECTS) { P.sculpture = P.kind === 'pool' ? poolSculpture(P) : oidcSculpture(); P.coreTitle = P.kind === 'pool' ? `${P.name} shell` : 'Live sign-in'; }
 
-/* ---------- The Platform Wing: through the arch in the back wall, behind where you arrive ---------- */
-const wingUpdates = [];
-{
-  const { x0, x1, z0, z1, h, archX, archW, archH, cx, cz } = WING, a0 = archX - archW / 2, a1 = archX + archW / 2, zc = ROOM.zMax;
-  const floorM = () => new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 });
-  // corridor
-  const cf = new THREE.Mesh(new THREE.PlaneGeometry(archW, z0 - zc), floorM()); cf.rotation.x = -Math.PI / 2; cf.position.set(archX, 0, (zc + z0) / 2); scene.add(cf);
-  const cc = new THREE.Mesh(new THREE.PlaneGeometry(archW, z0 - zc), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); cc.rotation.x = Math.PI / 2; cc.position.set(archX, archH, (zc + z0) / 2); scene.add(cc);
-  wallAt(z0 - zc, archH, a0, archH / 2, (zc + z0) / 2, Math.PI / 2);
-  wallAt(z0 - zc, archH, a1, archH / 2, (zc + z0) / 2, -Math.PI / 2);
-  // the gallery
-  const wf = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), floorM()); wf.rotation.x = -Math.PI / 2; wf.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); scene.add(wf);
-  const wc = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); wc.rotation.x = Math.PI / 2; wc.position.set((x0 + x1) / 2, h, (z0 + z1) / 2); scene.add(wc);
-  wallAt(z1 - z0, h, x0, h / 2, (z0 + z1) / 2, Math.PI / 2);
-  wallAt(z1 - z0, h, x1, h / 2, (z0 + z1) / 2, -Math.PI / 2);
-  wallAt(x1 - x0, h, (x0 + x1) / 2, h / 2, z1, Math.PI);
-  wallAt(a0 - x0, h, (x0 + a0) / 2, h / 2, z0, 0);
-  wallAt(x1 - a1, h, (a1 + x1) / 2, h / 2, z0, 0);
-  wallAt(archW, h - archH, archX, archH + (h - archH) / 2, z0, 0);
-  for (const x of [x0 + 0.03, x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, z1 - z0), lineMat); b.position.set(x, 0.9, (z0 + z1) / 2); scene.add(b); }
-  // gold arch frames at both ends of the corridor
-  for (const z of [zc - 0.02, z0 + 0.02]) {
-    for (const x of [a0, a1]) { const p2 = new THREE.Mesh(new THREE.BoxGeometry(0.42, archH, 0.42), gold); p2.position.set(x, archH / 2, z); scene.add(p2); }
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(archW + 0.42, 0.36, 0.42), gold); beam.position.set(archX, archH + 0.18, z); scene.add(beam);
-  }
-  // the sign over the hall-side arch
-  const sc = mk(1024, 200), sg = sc.getContext('2d');
-  sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
-  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText('STEADYWATCH™ PLATFORM', 512, 76);
-  sg.font = '70px "Young Serif", Georgia, serif'; sg.fillText('Platform Wing', 512, 158);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.82), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
-  sign.position.set(archX, archH + 0.95, zc - 0.06); sign.rotation.y = Math.PI; scene.add(sign);
-  const archGlow = new THREE.PointLight(0x7fe8ff, 1.2, 10, 2); archGlow.position.set(archX, 2.6, zc + 1.5); scene.add(archGlow);
-  // gallery lights
-  for (const lz of [z0 + 3.5, z1 - 3.5]) { const L = new THREE.PointLight(0xdfe8ff, 0.9, 13, 2); L.position.set(cx, h - 1, lz); scene.add(L); }
-  // the centrepiece: all three pools nested, each turning in 4D
-  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.6, 48), colMat); plinth.position.set(cx, 0.3, cz); scene.add(plinth);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.02, 8, 96), lineMat); ring.rotation.x = Math.PI / 2; ring.position.set(cx, 0.6, cz); scene.add(ring);
-  const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012, i === 0); o.group.position.set(cx, 2.9, cz); scene.add(o.group); return o; });
-  const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(cx, 5.15, cz); scene.add(nl);
-  const nLight = new THREE.PointLight(0xffe2b0, 0.6, 8, 2); nLight.position.set(cx, 3, cz); scene.add(nLight);
-  wingUpdates.push((dt, t) => { const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m)); });
-}
-// Where you can walk in the hall, the corridor and the wing
-function walkable(x, z) {
-  if (x >= -ROOM.x + 1 && x <= ROOM.x - 1 && z >= ROOM.zMin + 1 && z <= ROOM.zMax - 0.8) return true;
-  if (Math.abs(x - WING.archX) <= WING.archW / 2 - 0.55 && z >= ROOM.zMax - 1.2 && z <= WING.z0 + 0.8) return true;
-  if (x >= WING.x0 + 0.8 && x <= WING.x1 - 0.8 && z >= WING.z0 + 0.6 && z <= WING.z1 - 0.8) return Math.hypot(x - WING.cx, z - WING.cz) > 1.6;
-  return false;
-}
-const inWing = (z) => z > ROOM.zMax - 0.5;
-
-/* ---------- Cryostat chandelier ----------
+/* ---------- Cryostat ----------
    A dilution refrigerator hangs like a gold chandelier: plates step down in
    temperature from 50 K at the top to about 10 mK at the mixing chamber,
    where the quantum chip sits. Stage temperatures are typical, not exact. */
@@ -1060,29 +1004,273 @@ function makeCryostat() {
 function pulseStages(list, t) {   // a pulse of cold travels down the stages, top to bottom
   list.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
 }
-const hallCryo = makeCryostat(); hallCryo.group.position.set(0, ROOM.h, 1.5); scene.add(hallCryo.group);
-const pulses = hallCryo.pulses;
+/* ---------- The building: five floors stacked around an open atrium ----------
+   Each floor in FLOORS gets a group set at its height, and everything on that floor is built inside
+   the group in the floor's own coordinates (its floor at y = 0). A round atrium opens up through every
+   floor, and a glass lift beside it runs the full height of the building. */
+const buildingUpdates = [];
+const wt = wallTex(false), wg = wallTex(true);
+function wallAt(g, w, h, x, y, z, ry) {
+  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
+  m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m;
+}
+// a floor (s = -1) or ceiling (s = 1) slab, with round openings for the atrium and the lift shaft
+function slabGeo(F, holes, s) {
+  const sh = new THREE.Shape();
+  sh.moveTo(F.x0, s * F.z0); sh.lineTo(F.x1, s * F.z0); sh.lineTo(F.x1, s * F.z1); sh.lineTo(F.x0, s * F.z1); sh.closePath();
+  for (const c of holes) { const hp = new THREE.Path(); hp.absarc(c.x, s * c.z, c.r, 0, Math.PI * 2, true); sh.holes.push(hp); }
+  return new THREE.ShapeGeometry(sh, 64);
+}
+const steel = new THREE.MeshStandardMaterial({ color: 0xaeb6c2, metalness: 0.9, roughness: 0.25 });
+const glassMat = new THREE.MeshStandardMaterial({ color: 0x9fe7ee, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false });
+const edgeMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4, side: THREE.DoubleSide });
+const liftHole = { x: LIFT.x, z: LIFT.z, r: LIFT.r + 0.02 };
+const faceYaw = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
+// a gold sign like a museum's wing sign: an eyebrow line over a title
+function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2) {
+  const sc = mk(1024, 200), sg = sc.getContext('2d');
+  sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
+  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText(eyebrow, 512, 76);
+  let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > 940 && --px > 30); sg.fillText(title, 512, 158);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
+  sign.position.set(x, y, z); sign.rotation.y = ry; g.add(sign); return sign;
+}
+
+FLOORS.forEach((F, i) => {
+  const g = F.g = new THREE.Group(); g.position.y = F.y; scene.add(g);
+  F.blocks = F.blocks || [];
+  const bottom = i === 0, top = i === FLOORS.length - 1;
+  const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2;
+  const fm = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }); fm.map.repeat.set(0.25, 0.25);
+  const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : [ATRIUM, liftHole], -1), fm); fl.rotation.x = -Math.PI / 2; g.add(fl);
+  const ce = new THREE.Mesh(slabGeo(F, top ? [] : [ATRIUM, liftHole], 1), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.y = F.h; g.add(ce);
+  wallAt(g, d, F.h, F.x0, F.h / 2, cz, Math.PI / 2); wallAt(g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
+  wallAt(g, w, F.h, cx, F.h / 2, F.z0, 0); wallAt(g, w, F.h, cx, F.h / 2, F.z1, Math.PI);
+  for (const x of [F.x0 + 0.03, F.x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(x, 0.9, cz); g.add(b); }
+  // the atrium: a lit edge where the floor opens, and a glass railing around it (on B1, around the cryostat)
+  if (!bottom) {
+    const edge = new THREE.Mesh(new THREE.CylinderGeometry(ATRIUM.r, ATRIUM.r, 0.4, 64, 1, true), edgeMat); edge.position.set(ATRIUM.x, -0.2, ATRIUM.z); g.add(edge);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(ATRIUM.r, 0.025, 8, 96), lineMat); lip.rotation.x = Math.PI / 2; lip.position.set(ATRIUM.x, 0.02, ATRIUM.z); g.add(lip);
+    const under = lip.clone(); under.position.y = -0.4; g.add(under);
+  }
+  const rail = new THREE.Group(); rail.position.set(ATRIUM.x, 0, ATRIUM.z); g.add(rail);
+  const RR = ATRIUM.r + 0.14;
+  const tr = new THREE.Mesh(new THREE.TorusGeometry(RR, 0.035, 8, 96), steel); tr.rotation.x = Math.PI / 2; tr.position.y = 1.05; rail.add(tr);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(RR, RR, 0.95, 64, 1, true), glassMat); band.position.y = 0.52; rail.add(band);
+  for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, p = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.05, 8), steel); p.position.set(Math.cos(a) * RR, 0.525, Math.sin(a) * RR); rail.add(p); }
+  // ceiling light, kept short-ranged so it doesn't light the floors above or below
+  for (const lz of F.lightsZ) { const L = new THREE.PointLight(0xdfe8ff, 0.85, 12, 2); L.position.set(-3.5, F.h - 1, lz); g.add(L); }
+  // the lift's landing: a lit lintel over its door and a floor plate with the level
+  const lc = mk(512, 128), lg = lc.getContext('2d');
+  lg.fillStyle = 'rgba(8,10,18,0.92)'; rr(lg, 4, 4, 504, 120, 18); lg.fill(); lg.strokeStyle = '#5ff0ff'; lg.lineWidth = 3; rr(lg, 4, 4, 504, 120, 18); lg.stroke();
+  lg.fillStyle = '#c8fbff'; lg.textAlign = 'center'; lg.font = '600 46px "IBM Plex Mono", monospace'; lg.fillText(`LIFT · ${F.tag}`, 256, 80);
+  const lt = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.325), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lc), transparent: true }));
+  lt.position.set(LIFT.x, 3.3, LIFT.z + LIFT.r + 0.06); g.add(lt);
+  // where you step out of the lift (or come back from a world on this floor)
+  const sx = LIFT.x - 0.4, sz = LIFT.z + LIFT.r + 1.7;
+  F.start = { pos: new THREE.Vector3(sx, F.y + 1.7, sz), yaw: faceYaw(sx, sz, F.look[0], F.look[1]), pitch: F.look[2] };
+});
+// freestanding displays block the floor around them
+for (const p of PROJECTS) if (p.stand) {
+  const F = FLOORS[FI[p.floor]], hw = p.size[0] / 2 + 0.75;
+  F.blocks.push({ x0: p.pos[0] - hw, x1: p.pos[0] + hw, z0: p.pos[2] - 0.8, z1: p.pos[2] + 0.5 });
+}
+
+// Where you can walk on a floor: inside its walls, outside the atrium railing and the lift's glass (except through its door)
+function walkable(x, z, f = player.floor) {
+  const F = typeof f === 'number' ? FLOORS[f] : f;
+  if (x < F.x0 + 0.9 || x > F.x1 - 0.9 || z < F.z0 + 0.9 || z > F.z1 - 0.8) return false;
+  if (Math.hypot(x - ATRIUM.x, z - ATRIUM.z) < ATRIUM.r + 0.55) return false;
+  const lx = x - LIFT.x, lz = z - LIFT.z, lr = Math.hypot(lx, lz);
+  if (lr > LIFT.r - 0.45 && lr < LIFT.r + 0.45 && !(lz > 0 && Math.abs(lx) < 0.5)) return false;
+  for (const b of F.blocks) if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return false;
+  return true;
+}
+// waypoints for walk-to: the lift door and two rings around the atrium
+for (const F of FLOORS) {
+  F.nodes = [new THREE.Vector3(LIFT.x, 0, LIFT.z + LIFT.r + 0.8)];
+  for (const r of [ATRIUM.r + 1.3, ATRIUM.r + 3.3]) for (let k = 0; k < 12; k++) {
+    const a = k / 12 * Math.PI * 2, x = ATRIUM.x + Math.cos(a) * r, z = ATRIUM.z + Math.sin(a) * r;
+    if (walkable(x, z, F)) F.nodes.push(new THREE.Vector3(x, 0, z));
+  }
+}
+
+/* ---------- The glass lift ----------
+   One glass shaft from the bottom of the building to the top, with its door facing +z on every floor.
+   The cab is always on your floor (you're its only passenger) and carries you between them. */
+const liftCab = new THREE.Group(); liftCab.position.set(LIFT.x, 0, LIFT.z); scene.add(liftCab);
+{
+  const yB = FLOORS[0].y, yT = FLOORS[FLOORS.length - 1].y + FLOORS[FLOORS.length - 1].h, H = yT - yB, DOOR_A = 0.5;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(LIFT.r, LIFT.r, H, 48, 1, true, DOOR_A, Math.PI * 2 - DOOR_A * 2), glassMat);
+  shaft.position.set(LIFT.x, yB + H / 2, LIFT.z); scene.add(shaft);
+  liftCab.userData.shaft = shaft;
+  for (const a of [DOOR_A, -DOOR_A, 1.9, -1.9, Math.PI]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, H, 8), steel); p.position.set(LIFT.x + Math.sin(a) * LIFT.r, yB + H / 2, LIFT.z + Math.cos(a) * LIFT.r); scene.add(p);
+  }
+  const capT = new THREE.Mesh(new THREE.CircleGeometry(LIFT.r, 48), new THREE.MeshBasicMaterial({ color: 0x1a3a44 })); capT.rotation.x = Math.PI / 2; capT.position.set(LIFT.x, yT - 0.01, LIFT.z); scene.add(capT);
+  FLOORS.forEach((F, i) => {
+    const sill = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r, 0.018, 6, 64), steel); sill.rotation.x = Math.PI / 2; sill.position.set(LIFT.x, F.y + 0.02, LIFT.z); scene.add(sill);
+    const lintel = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r + 0.01, 0.012, 6, 64), lineMat); lintel.rotation.x = Math.PI / 2; lintel.position.set(LIFT.x, F.y + 2.9, LIFT.z); scene.add(lintel);
+    if (i > 0) { const e = new THREE.Mesh(new THREE.CylinderGeometry(LIFT.r + 0.02, LIFT.r + 0.02, 0.4, 48, 1, true), edgeMat); e.position.set(LIFT.x, F.y - 0.2, LIFT.z); scene.add(e); }
+  });
+  // the cab: a lit floor disc, a handrail open at the door, a ring overhead
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(LIFT.r - 0.04, LIFT.r - 0.04, 0.08, 48), colMat); disc.position.y = 0.04; liftCab.add(disc);
+  const glow = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r - 0.06, 0.02, 6, 64), lineMat); glow.rotation.x = Math.PI / 2; glow.position.y = 0.09; liftCab.add(glow);
+  const railG = new THREE.Group(); railG.rotation.y = -0.5 - Math.PI / 2; railG.position.y = 1.0; liftCab.add(railG);
+  const hr = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r - 0.14, 0.022, 8, 64, Math.PI * 2 - 1.0), steel); hr.rotation.x = Math.PI / 2; railG.add(hr);
+  const crown = new THREE.Mesh(new THREE.TorusGeometry(LIFT.r - 0.05, 0.04, 8, 64), steel); crown.rotation.x = Math.PI / 2; crown.position.y = 2.95; liftCab.add(crown);
+}
+
+/* ---------- L1 · Lobby ----------
+   You arrive through the glass entrance doors. Straight ahead stands the STEADYWATCH™ PLATFORM
+   display, with the "Quantum V^" banner hanging above it and the atrium opening up behind. */
+const L1 = FLOORS[FI.l1];
+const COLS_Z = [8, 2.5];
+for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, L1.h, 24), colMat); c.position.set(x, L1.h / 2, z); L1.g.add(c);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, L1.h - 0.15, z); L1.g.add(cap);
+  const base = cap.clone(); base.position.y = 0.15; L1.g.add(base);
+}
+// the entrance doors behind where you arrive: glass leaves in a steel frame, with the night outside
+{
+  const g = new THREE.Group(); g.position.set(0, 0, L1.z1 - 0.04); g.rotation.y = Math.PI; L1.g.add(g);
+  const W = 4.2, Hd = 3.6;
+  const oc = mk(256, 256), og = oc.getContext('2d'), gr = og.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#0b1830'); gr.addColorStop(0.7, '#122a3a'); gr.addColorStop(1, '#1d3b44'); og.fillStyle = gr; og.fillRect(0, 0, 256, 256);
+  const night = new THREE.Mesh(new THREE.PlaneGeometry(W, Hd), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(oc) })); night.position.set(0, Hd / 2, -0.02); g.add(night);
+  for (const sx of [-1, 1]) { const leaf = new THREE.Mesh(new THREE.BoxGeometry(W / 2 - 0.06, Hd - 0.06, 0.03), glassMat); leaf.position.set(sx * W / 4, Hd / 2, 0.02); g.add(leaf); }
+  [[W + 0.16, 0.08, 0, Hd + 0.04], [0.08, Hd + 0.08, -W / 2 - 0.04, Hd / 2], [0.08, Hd + 0.08, W / 2 + 0.04, Hd / 2], [0.06, Hd, 0, Hd / 2]].forEach(([bw, bh, x, y]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.1), steel); f.position.set(x, y, 0.03); g.add(f);
+  });
+}
+// the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
+const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
+const bannerVert = `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const bannerFrag = `
+uniform sampler2D map; uniform float uTime, uGlow; varying vec2 vUv;
+vec3 grad(float x) {   // parchment, #c8fbff, #3fe0e0, #1aa6b8, #c8fbff, parchment: the title's gradient stops
+  vec3 p = vec3(0.945, 0.902, 0.812), a = vec3(0.784, 0.984, 1.0), b = vec3(0.247, 0.878, 0.878), c = vec3(0.102, 0.651, 0.722);
+  if (x < 0.30) return mix(p, a, x / 0.30);
+  if (x < 0.55) return mix(a, b, (x - 0.30) / 0.25);
+  if (x < 0.75) return mix(b, c, (x - 0.55) / 0.20);
+  if (x < 0.90) return mix(c, a, (x - 0.75) / 0.15);
+  return mix(a, p, (x - 0.90) / 0.10);
+}
+void main() {
+  vec4 m = texture2D(map, vUv);   // red: the letters; green: their glow
+  float shift = 0.5 - 0.5 * cos(uTime * 0.35);
+  vec3 fill = grad(clamp(vUv.x * 0.45 + shift * 0.55, 0.0, 1.0)) * (0.92 + 0.22 * uGlow);
+  vec3 glow = vec3(0.247, 0.878, 0.878) * m.g * (0.6 + 0.5 * uGlow);
+  gl_FragColor = vec4(mix(glow, fill, m.r), m.a);
+}`;
+const bannerU = { map: { value: null }, uTime: { value: 0 }, uGlow: { value: 0 } };
+{
+  const c = mk(2048, 400), g = c.getContext('2d'), t1 = 'Quantum V', t2 = '^';
+  let px = 280;
+  const fontA = () => `${px}px "Young Serif", Georgia, serif`, fontB = () => `${Math.round(px * 0.62)}px "Young Serif", Georgia, serif`;
+  const widths = () => { g.font = fontA(); const a = g.measureText(t1).width; g.font = fontB(); return [a, g.measureText(t2).width]; };
+  while ((() => { const [a, b] = widths(); return a + b + px * 0.04; })() > 1780 && px > 120) px -= 4;
+  const [wa, wb] = widths(), x0 = 1024 - (wa + wb + px * 0.04) / 2, base = 268;
+  const draw = (fill, blur) => {
+    g.shadowColor = blur ? 'rgba(0,255,255,0.9)' : 'transparent'; g.shadowBlur = blur; g.fillStyle = fill; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.font = fontA(); g.fillText(t1, x0, base);
+    g.font = fontB(); g.fillText(t2, x0 + wa + px * 0.04, base - px * 0.26);   // the caret sits raised and smaller, as in the title
+  };
+  draw('rgb(0,255,255)', 60); draw('rgb(0,255,255)', 22); draw('#ffffff', 0);
+  bannerU.map.value = new THREE.CanvasTexture(c);
+  const bg = new THREE.Group(); bg.position.copy(BANNER.pos); L1.g.add(bg);
+  const H = BANNER.w * 400 / 2048, PW = BANNER.w + 0.5, PH = H + 0.42;
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x0a0f18 })); panel.position.z = -0.03; bg.add(panel);
+  const back = panel.clone(); back.rotation.y = Math.PI; back.position.z = -0.05; bg.add(back);
+  [[PW, 0.025, 0, PH / 2], [PW, 0.025, 0, -PH / 2], [0.025, PH, -PW / 2, 0], [0.025, PH, PW / 2, 0]].forEach(([bw, bh, x, y]) => {
+    const e = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.03), lineMat); e.position.set(x, y, -0.02); bg.add(e);
+  });
+  const text = new THREE.Mesh(new THREE.PlaneGeometry(BANNER.w, H), new THREE.ShaderMaterial({ uniforms: bannerU, vertexShader: bannerVert, fragmentShader: bannerFrag, transparent: true, depthWrite: false }));
+  bg.add(text);
+  for (const sx of [-1, 1]) {   // hung from the ceiling on two cables
+    const len = L1.h - BANNER.pos.y - PH / 2, cab = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len, 6), steel);
+    cab.position.set(sx * (PW / 2 - 0.4), PH / 2 + len / 2, -0.04); bg.add(cab);
+  }
+  const bl = new THREE.PointLight(0x7fe8ff, 0.5, 6, 2); bl.position.set(0, -0.2, 1.4); bg.add(bl);
+  const wp = new THREE.Vector3();
+  buildingUpdates.push((dt, t) => {
+    bannerU.uTime.value = reduceMotion ? 0 : t;
+    bg.getWorldPosition(wp); const dist = camera.position.distanceTo(wp);
+    bannerU.uGlow.value += (Math.max(0, Math.min(1, (16 - dist) / 9)) - bannerU.uGlow.value) * Math.min(1, dt * 2);
+  });
+}
+
+/* ---------- B1 · Cryostat Lab ----------
+   The dilution refrigerator hangs from a gantry right under the atrium, so it sits at the
+   foot of the building. Stage temperatures are typical, not exact. */
+const B1 = FLOORS[FI.b1];
+const labCryo = makeCryostat(); labCryo.group.position.set(ATRIUM.x, 8.1, ATRIUM.z); labCryo.group.scale.setScalar(1.45); B1.g.add(labCryo.group);
+const pulses = labCryo.pulses;
+{
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(ATRIUM.r * 2 + 1.2, 0.3, 0.4), colMat); beam.position.set(ATRIUM.x, B1.h - 0.15, ATRIUM.z); B1.g.add(beam);
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, B1.h - 0.3 - 8.1, 12), steel); rod.position.set(ATRIUM.x, (8.1 + B1.h - 0.3) / 2, ATRIUM.z); B1.g.add(rod);
+  floorSign(B1.g, 'LEVEL B1 · THE SOURCE', 'Cryostat Lab', B1.x0 + 0.06, 6.2, ATRIUM.z, Math.PI / 2);
+}
+const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 4.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.6, pitch: 0.3 };
+
+/* ---------- L2 · Apps ----------
+   The two apps face you as you step out of the lift; empty frames wait for the next ones. */
+const L2 = FLOORS[FI.l2];
+floorSign(L2.g, 'LEVEL 2', 'Apps', 0, 6.2, L2.z1 - 0.06, Math.PI);
+for (const z of [1.5, -6.5]) {
+  const g = new THREE.Group(); g.position.set(L2.x0 + 0.08, 3.2, z); g.rotation.y = Math.PI / 2; L2.g.add(g);
+  const S = 3.2, c = mk(512, 512), x = c.getContext('2d');
+  x.fillStyle = '#0b0f18'; x.fillRect(0, 0, 512, 512);
+  x.strokeStyle = 'rgba(63,224,224,0.45)'; x.lineWidth = 4; x.setLineDash([18, 14]); x.strokeRect(40, 40, 432, 432); x.setLineDash([]);
+  x.textAlign = 'center'; x.fillStyle = '#5ff0ff'; x.font = '600 30px "IBM Plex Mono", monospace'; x.fillText('NEXT APP', 256, 236);
+  x.fillStyle = '#8e99b0'; x.font = '40px "Young Serif", Georgia, serif'; x.fillText('Coming soon', 256, 296);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(S, S), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); face.position.z = 0.06; g.add(face);
+  const ft = 0.24;
+  [[S + ft * 2, ft, 0, S / 2 + ft / 2], [S + ft * 2, ft, 0, -S / 2 - ft / 2], [ft, S, -S / 2 - ft / 2, 0], [ft, S, S / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.16), gold); f.position.set(fx, fy, 0.08); g.add(f);
+  });
+}
+
+/* ---------- L3 · Platform Wing ----------
+   VAULT™, VIPER™, LOTUS™ and STEADYWATCH™ OIDC around the walls; all three pools nested in
+   the atrium, floating over the open floors below, each turning in 4D. */
+const L3 = FLOORS[FI.l3];
+floorSign(L3.g, 'STEADYWATCH™ PLATFORM', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Math.PI);
+{
+  const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012, i === 0); o.group.position.set(ATRIUM.x, 3.0, ATRIUM.z); L3.g.add(o.group); return o; });
+  const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(ATRIUM.x, 5.3, ATRIUM.z); L3.g.add(nl);
+  const nLight = new THREE.PointLight(0xffe2b0, 0.6, 8, 2); nLight.position.set(ATRIUM.x, 3, ATRIUM.z); L3.g.add(nLight);
+  buildingUpdates.push((dt, t) => { if (!L3.g.visible) return; const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m)); });
+}
+
+/* ---------- L4 · The builder's office ----------
+   The top floor: the office's glass door (see buildKiosk) and a skylight over the atrium. */
+const L4 = FLOORS[FI.l4];
+floorSign(L4.g, 'LEVEL 4', "The Builder's Office", 0, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
+{
+  const sky = new THREE.Mesh(new THREE.CircleGeometry(ATRIUM.r + 0.3, 64), new THREE.MeshBasicMaterial({ color: 0x173640 })); sky.rotation.x = Math.PI / 2; sky.position.set(ATRIUM.x, L4.h - 0.02, ATRIUM.z); L4.g.add(sky);
+  const skyRing = new THREE.Mesh(new THREE.TorusGeometry(ATRIUM.r + 0.3, 0.03, 6, 96), lineMat); skyRing.rotation.x = Math.PI / 2; skyRing.position.set(ATRIUM.x, L4.h - 0.04, ATRIUM.z); L4.g.add(skyRing);
+}
 
 /* ---------- Light paths ----------
-   A network of glowing walkways joining every place you can go: the main runner from the
-   Platform Wing down the hall to the STEADYWATCH™ PLATFORM display, branches to each app
-   display and the builder's office door, and in the wing a loop to each pool and OIDC.
+   Glowing walkways on every floor: on L1 the main runner from the entrance to the STEADYWATCH™
+   PLATFORM display and a branch to the lift; on every other floor, out of the lift to each display.
    Photons flow along the floor of every path toward where it leads. */
 const PATH_W = { main: 3.0, branch: 1.1 };
 const LIGHT_PATHS = (() => {
-  const Wx = WING, plat = PROJECTS.find(q => q.id === 'platform'), kz = PROJECTS.find(q => q.id === 'kaizendoku'), hh = PROJECTS.find(q => q.id === 'handheld');
-  const segs = [];
-  const add = (x0, z0, x1, z1, w) => segs.push({ a: new THREE.Vector2(x0, z0), b: new THREE.Vector2(x1, z1), w });
-  // main runner: out of the wing corridor, down the hall to the Platform display
-  add(0, Wx.z0, 0, plat.pos[2] + 2.2, PATH_W.main);
-  // branches to the app displays and the office door
-  add(-PATH_W.main / 2, kz.pos[2], kz.pos[0] + 1.1, kz.pos[2], PATH_W.branch);
-  add(PATH_W.main / 2, hh.pos[2], hh.pos[0] - 1.1, hh.pos[2], PATH_W.branch);
-  add(-PATH_W.main / 2, 8.6, -ROOM.x + 1.0, 8.6, PATH_W.branch);
-  // the wing: a spine to the centrepiece, cross paths to the four displays and a link between them
-  add(0, Wx.z0, 0, Wx.cz - 1.9, PATH_W.branch);
-  for (const z of [Wx.z0 + 3.5, Wx.z0 + 8.5]) { add(0, z, Wx.x0 + 1.0, z, PATH_W.branch); add(0, z, Wx.x1 - 1.0, z, PATH_W.branch); }
-  for (const x of [Wx.x0 + 2.6, Wx.x1 - 2.6]) add(x, Wx.z0 + 3.5, x, Wx.z0 + 8.5, PATH_W.branch);
+  const segs = [], B = PATH_W.branch, door = LIFT.z + LIFT.r, X = LIFT.x;
+  const add = (f, x0, z0, x1, z1, w = B) => segs.push({ f, a: new THREE.Vector2(x0, z0), b: new THREE.Vector2(x1, z1), w });
+  const plat = PROJECTS.find(q => q.id === 'platform'), front = ATRIUM.z + ATRIUM.r + 0.6;
+  add(FI.l1, 0, L1.z1 - 0.6, 0, plat.pos[2] + 3.4, PATH_W.main);
+  add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
+  add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, 0, 1.6); add(FI.b1, 0, 1.6, 0, front);
+  add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
+  add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
+  add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
+  add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, 0, 0.4);
   return segs;
 })();
 {
@@ -1092,11 +1280,11 @@ const LIGHT_PATHS = (() => {
     // blended as light, so where paths meet or cross they merge instead of one covering the other
     const m = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, L), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     m.rotation.set(-Math.PI / 2, 0, Math.atan2(sg.b.x - sg.a.x, -(sg.b.y - sg.a.y)) + Math.PI);   // lie flat, pointing from a to b
-    m.position.set((sg.a.x + sg.b.x) / 2, 0.012 + (sg.w < 2 ? 0.002 : 0), (sg.a.y + sg.b.y) / 2); scene.add(m);
+    m.position.set((sg.a.x + sg.b.x) / 2, 0.012 + (sg.w < 2 ? 0.002 : 0), (sg.a.y + sg.b.y) / 2); FLOORS[sg.f].g.add(m);
   }
 }
 // photons: each flows along one path at floor level, from its start toward where it leads
-const PHOTONS = 340;
+const PHOTONS = 420;
 const pPos = new Float32Array(PHOTONS * 3), pCol = new Float32Array(PHOTONS * 3), pData = [];
 const cyanC = new THREE.Color(0x7ff0f0), goldC = new THREE.Color(0xffd36b);
 {
@@ -1117,18 +1305,21 @@ function placePhotons(t, dt, m) {
     d.u += d.sp * dt * m; if (d.u > 1) d.u -= 1;
     const { a, b } = d.sg, dx = b.x - a.x, dz = b.y - a.y, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
     pPos[i * 3] = a.x + dx * d.u + nx * d.off; pPos[i * 3 + 2] = a.y + dz * d.u + nz * d.off;
-    pPos[i * 3 + 1] = d.h + 0.03 * Math.sin(t * 2 + d.ph) * m;   // skimming just above the path
+    pPos[i * 3 + 1] = FLOORS[d.sg.f].y + d.h + 0.03 * Math.sin(t * 2 + d.ph) * m;   // skimming just above the path
   });
   pGeo.attributes.position.needsUpdate = true;
 }
 placePhotons(0, 0, 1);
+// only your floor and the ones beside it are drawn (the lift shows the rest as you pass them)
+function setFloorVis(lo, hi) { FLOORS.forEach((F, i) => { F.g.visible = i >= lo && i <= hi; }); }
 
 function updateQuantum(dt, t) {
-  for (const u of wingUpdates) u(dt, t);
+  for (const u of buildingUpdates) u(dt, t);
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
-  pulseStages(pulses, t);
+  if (B1.g.visible) pulseStages(pulses, t);
   placePhotons(t, dt, m);
+  if (!ride) liftCab.position.y = FLOORS[player.floor].y;
 }
 
 /* ---------- Paintings ---------- */
@@ -1141,21 +1332,26 @@ function buildPaintings() {
     const uniforms = { map: { value: tex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: p.size[0] / p.size[1] } };
     const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag });
     const [w, h] = p.size;
-    const group = new THREE.Group();
-    group.position.set(...p.pos); group.rotation.y = p.rotY; scene.add(group);
+    const F = FLOORS[FI[p.floor]], group = new THREE.Group();
+    group.position.set(...p.pos); group.rotation.y = p.rotY; F.g.add(group);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h, 96, 72), mat);
     mesh.position.z = 0.06; mesh.userData.project = p; group.add(mesh);
     const ft = 0.28, fd = 0.18;
     [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
       const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, fd), frameMat); f.position.set(x, y, 0.09); group.add(f);
     });
+    if (p.stand) {   // freestanding: a dark back, and a plinth it stands on
+      const back = new THREE.Mesh(new THREE.BoxGeometry(w + ft * 2, h + ft * 2, 0.12), colMat); back.position.z = -0.02; group.add(back);
+      const ph = p.pos[1] - h / 2 - ft, plinth = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, ph, 0.7), colMat); plinth.position.set(0, -h / 2 - ft - ph / 2, -0.32); group.add(plinth);
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6 + 0.02, 0.03, 0.03), lineMat); edge.position.set(0, -h / 2 - ft - 0.02, 0.04); group.add(edge);
+    }
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: plaqueTex(p) }));
-    plaque.position.set(0, -h / 2 - 0.75, 0.03); group.add(plaque);
+    plaque.position.set(0, -h / 2 - 0.75, 0.05); group.add(plaque);
     const light = new THREE.PointLight(0xe6eeff, 1.1, 9, 2);
     light.position.set(0, h / 2 + 0.8, 1.6); group.add(light);
     const normal = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY);
-    const center = new THREE.Vector3(...p.pos);
-    paintings.push({ p, mesh, uniforms, tex, art, normal, center, amp: 0 });
+    const center = new THREE.Vector3(p.pos[0], p.pos[1] + F.y, p.pos[2]);
+    paintings.push({ p, mesh, uniforms, tex, art, normal, center, amp: 0, floor: FI[p.floor] });
   });
 }
 
@@ -1164,8 +1360,9 @@ function buildPaintings() {
    types out what she says while she gestures, points at whatever she mentions,
    and can lead a guided tour, floating beside you from stop to stop.
    In the hall she also leads into the About world. */
-const VEE_POS = new THREE.Vector3(-3.6, 0, 5.6);   // just beyond walk-up range of the start, so no prompt on arrival
+const VEE_POS = new THREE.Vector3(-3.6, 0, 6.5);   // just beyond walk-up range of the start, so no prompt on arrival
 let vee = null;
+const veeRoot = new THREE.Group(); scene.add(veeRoot);   // set to your floor's height; she's built in floor coordinates
 const holoVert = `
 varying vec3 vN; varying vec3 vV; varying float vY;
 void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vY = wp.y; vec4 mv = viewMatrix * wp;
@@ -1376,7 +1573,7 @@ function veePing(v, target) {
   const ringM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.52, 64), ringM); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
   const beamM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
-  const h = Math.max(1.2, target.y + 0.8);
+  const h = Math.max(1.2, target.y - v.parent.position.y + 0.8);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.22, h, 20, 1, true), beamM); beam.position.y = h / 2; g.add(beam);
   v.pings.push({ g, ring, ringM, beamM, t: 0 });
 }
@@ -1542,10 +1739,9 @@ function updateVee(v, dt, t) {
 }
 /* ---------- The Builder's office door ----------
    In Mario 64, paintings lead to worlds and doors lead to rooms: displays here are products, and this
-   door, set into the wall by the entrance (a spot too close to the door for a product display), leads
-   to the person behind them. It swings open with light spilling out as you step through.
+   door, on the top floor, leads to the person behind them. It swings open with light spilling out as you step through.
    (Internally it keeps the name "kiosk" so the tour, Vee and the About button stay wired to it.) */
-const DOOR = { x: -ROOM.x + 0.14, z: 8.6, w: 1.5, h: 2.75 };
+const DOOR = { x: 0, z: FLOORS[FI.l4].z1 - 0.14, w: 1.5, h: 2.75 };   // in the south wall of L4
 let kiosk = null;
 // A glass door: a tinted glass leaf with etched lettering in a slim steel frame, a long pull handle,
 // and the lit room beyond glowing through the glass. Hinged on its left edge; setOpen(0…1) swings it.
@@ -1591,8 +1787,8 @@ function makeGlassDoor(group, w, h, opts) {
   };
 }
 function buildKiosk() {
-  const normal = new THREE.Vector3(1, 0, 0);
-  const group = new THREE.Group(); group.position.set(DOOR.x, 0, DOOR.z); group.rotation.y = Math.PI / 2; scene.add(group);   // local +z faces into the hall
+  const F = FLOORS[FI.l4], normal = new THREE.Vector3(0, 0, -1);
+  const group = new THREE.Group(); group.position.set(DOOR.x, 0, DOOR.z); group.rotation.y = Math.PI; F.g.add(group);   // local +z faces into the room
   const { w, h } = DOOR, ft = 0.16;
   // light from the office, glowing through the glass and leaking under the door
   const sillM = new THREE.MeshBasicMaterial({ color: 0xffe2b0, map: dotTex(), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -1601,9 +1797,9 @@ function buildKiosk() {
   const lamp = new THREE.PointLight(0xffe2b0, 0.7, 5, 2); lamp.position.set(0, h + 0.6, 1.0); group.add(lamp);
   const spill = new THREE.PointLight(0xffe2b0, 0, 7, 2); spill.position.set(0, h * 0.5, 0.8); group.add(spill);
   // the record the hall uses for walking up, the tour and stepping through (no ripple: it's a door)
-  const center = new THREE.Vector3(DOOR.x + 0.06, h * 0.5, DOOR.z);
+  const center = new THREE.Vector3(DOOR.x, F.y + h * 0.5, DOOR.z - 0.06);
   const uniforms = { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } };
-  const pt = { p: ABOUT, mesh: leaf, uniforms, normal, center, amp: 0, kiosk: true, door: true, standOff: 3.4, pitch: 0.1 };
+  const pt = { p: ABOUT, mesh: leaf, uniforms, normal, center, amp: 0, kiosk: true, door: true, standOff: 3.4, pitch: 0.1, floor: FI.l4 };
   leaf.userData.project = ABOUT;
   paintings.push(pt);
   kiosk = { pt, hinge, sillM, spill, open: 0,
@@ -1643,16 +1839,15 @@ const hallBounds = p => { if (walkable(p.x, p.z)) return; const c = camera.posit
 // In the hall: Vee follows you, gives a short tour of the room, and leads into the About world
 function buildMascot() {
   const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
-  vee = makeVee(scene, VEE_POS, normal); vee.bounds = hallBounds;
-  const kz = paintings.find(p => p.p.id === 'kaizendoku');
+  vee = makeVee(veeRoot, VEE_POS, normal); vee.bounds = p => { if (mode !== 'lift') hallBounds(p); };
+  const plat = paintings.find(p => p.p.id === 'platform'), liftAt = new THREE.Vector3(LIFT.x, 2.2, LIFT.z);
   const firstUnseen = unseenWorlds()[0], firstTarget = firstUnseen && firstUnseen !== 'about' ? paintings.find(p => p.p.id === firstUnseen) : null;
   // the lines play on their own while you stand near her; pressing E (or tapping her) always leads to About
   vee.tour = [
-    ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Each display on the wall is a product.', null],
-    ['Walk up to a display and step inside.', 'Every product has its own world to explore.', kz ? kz.center : null],
-    ['That chandelier is a dilution refrigerator.', 'It cools quantum chips to about 10 mK.', new THREE.Vector3(0, ROOM.h - 2.4, 1.5)],
-    ['Behind you: the Platform Wing.', 'VAULT™, VIPER™, LOTUS™ and OIDC are through that arch.', new THREE.Vector3(WING.archX, 2.2, ROOM.zMax)],
-    ['Want a guided tour?', "Press T. The builder's office is the door by the entrance.", kiosk ? kiosk.pt.center : null]];
+    ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Every display is a product, and every floor is a section.', null],
+    ['Straight ahead: STEADYWATCH™ PLATFORM.', 'Walk up to a display and step inside.', plat ? plat.center : null],
+    ['The glass lift goes everywhere.', 'Apps on L2, the Platform Wing on L3, the Cryostat Lab below.', liftAt],
+    ['Want a guided tour?', "Press T. The builder's office is on L4.", null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
     vee.tour = [
@@ -1672,7 +1867,8 @@ function buildMascot() {
     vee.tourK = vee.tour.length - 1; vee.tourT = 0;
     if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); return; }
     const next = u[0], tgt = paintings.find(q => q.p.id === next);
-    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, the door by the entrance." : `Next up: ${WORLD_NAMES[next]}.`, null, tgt ? tgt.center : null);
+    const onFloor = tgt && tgt.floor === player.floor, where = tgt && !onFloor ? ` Take the lift to ${FLOORS[tgt.floor].tag}.` : '';
+    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L4." : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
   };
   vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
   renderExplored();
@@ -1680,27 +1876,30 @@ function buildMascot() {
 function updateMascot(dt, t) {
   updateKiosk(dt, t);
   if (!vee) return;
+  veeRoot.position.y = ride ? player.pos.y - 1.7 : FLOORS[player.floor].y;
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
-  // she's the way into the About world, so her record follows her around
-  vee.pt.center.set(vee.body.position.x, 1.75, vee.body.position.z);
+  // her record follows her around
+  vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
   vee.pt.normal.set(camera.position.x - vee.body.position.x, 0, camera.position.z - vee.body.position.z).normalize();
   if (tour || mode !== 'walk' && mode !== 'auto') return;   // the guided tour is speaking for her
   vee.tourT += dt;   // the room tour plays through once, then rests on its last line
   if (vee.tourT > 5 && vee.reveal >= vee.total && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
 }
-// The hall's guided tour: the chandelier, each display, the builder's office, the Platform Wing arch
+// The hall's guided tour, floor by floor: the lobby, the Cryostat Lab, the apps, the Platform Wing, the builder's office
 function hallTourStops() {
-  const P = id => paintings.find(p => p.p.id === id), stops = [];
-  stops.push({ center: new THREE.Vector3(0, ROOM.h - 2.4, 1.5), normal: new THREE.Vector3(0, 0, 1), standOff: 4.2, pitch: 0.55,
-    line: 'This is the Quantum Hall.', sub: 'Above us: a dilution refrigerator, cooled to about 10 mK.' });
-  for (const id of ['kaizendoku', 'handheld', 'platform']) {
+  const P = id => paintings.find(p => p.p.id === id), stops = [], plat = P('platform');
+  stops.push({ floor: FI.l1, center: new THREE.Vector3(BANNER.pos.x, L1.y + BANNER.pos.y, BANNER.pos.z), normal: new THREE.Vector3(0, 0, 1), standOff: 7.2, pitch: 0.24,
+    line: 'This is the Quantum Hall.', sub: 'Five floors, joined by the glass lift beside the atrium.' });
+  if (plat) stops.push({ floor: plat.floor, center: plat.center, normal: plat.normal, standOff: 4.6, pitch: 0.18, line: plat.p.name, sub: `${plat.p.tagline}. Step inside to explore it.` });
+  stops.push({ ...CRYO_STOP, line: 'B1 · The Cryostat Lab.', sub: 'A dilution refrigerator, cooled to about 10 mK.' });
+  for (const id of ['kaizendoku', 'handheld']) {
     const pt = P(id); if (!pt) continue;
-    stops.push({ center: pt.center, normal: pt.normal, standOff: id === 'platform' ? 4.6 : 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
+    stops.push({ floor: pt.floor, center: pt.center, normal: pt.normal, standOff: 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
-  stops.push({ center: new THREE.Vector3(WING.archX, 2.2, ROOM.zMax), normal: new THREE.Vector3(0, 0, -1), standOff: 4.6, pitch: 0.08, line: 'The Platform Wing.', sub: 'VAULT™, VIPER™, LOTUS™ and OIDC are through this arch.' });
-  if (kiosk) stops.push({ center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
-  stops.push({ center: new THREE.Vector3(0, 3.2, ROOM.zMin), normal: new THREE.Vector3(0, 0, 1), standOff: ROOM.zMax - 2.4 - ROOM.zMin, pitch: 0.05, home: true,
-    line: "That's the hall.", sub: 'Walk up to any display to step inside.' });
+  stops.push({ ...wingStop, line: 'L3 · The Platform Wing.', sub: 'VAULT™, VIPER™, LOTUS™ and STEADYWATCH™ OIDC.' });
+  if (kiosk) stops.push({ floor: FI.l4, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "L4 · The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
+  if (plat) stops.push({ floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z - 1.3, pitch: 0.05, home: true,
+    line: "That's the Quantum Hall.", sub: 'Take the lift to any floor, or step into a display.' });
   return stops;
 }
 
@@ -1801,12 +2000,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
 }
 
 /* ---------- Player ---------- */
-const START = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };   // by the door, facing the Platform painting
-const player = { pos: START.pos.clone(), yaw: START.yaw, pitch: START.pitch };
+const START = { pos: new THREE.Vector3(0, 1.7, 10), yaw: 0, pitch: 0.05 };   // just inside the lobby doors, facing the Platform display
+FLOORS[FI.l1].start = START;
+const player = { pos: START.pos.clone(), yaw: START.yaw, pitch: START.pitch, floor: FI.l1 };
 const keys = {};
 let joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 };
 let mode = 'walk'; // walk | auto | entering | inside | exiting
-let auto = null, anim = null, near = null;
+let auto = null, anim = null, near = null, ride = null;
 
 addEventListener('keydown', e => {
   if (mode === 'inside') { if (e.key === 'Escape') exitRoom(); return; }
@@ -1817,6 +2017,7 @@ addEventListener('keydown', e => {
   } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
   if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
+  if (!liftPanel.hidden) { const k = { KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 // for Vee's idle nudges: when did the visitor last do anything?
@@ -1825,7 +2026,7 @@ for (const ev of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'
 const HALL_HINTS = [
   ['Psst, want a guided tour?', 'Press T, or tap ▶ Tour.'],
   ['Each display opens a world.', 'Walk up to one and press E to step inside.'],
-  ['Curious who built all this?', "The door by the entrance is the builder's office."]];
+  ['Curious who built all this?', "The builder's office is on L4. Take the glass lift."]];
 const WORLD_HINTS = [
   ['Want me to show you around?', 'Press T, or tap Tour.'],
   ['Tap any screen.', "I'll walk you over to it."],
@@ -1876,9 +2077,11 @@ function clickAt(x, y) {
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
   if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.site ? 9 : st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
-  const hit = ray.intersectObjects(paintings.map(p => p.mesh))[0];
+  const here = paintings.filter(p => p.floor === player.floor || p.mascot);
+  const hit = ray.intersectObjects([...here.map(p => p.mesh), liftCab.userData.shaft])[0];
   if (!hit) return;
-  const pt = paintings.find(p => p.mesh === hit.object);
+  if (hit.object === liftCab.userData.shaft) { walkTo(liftStop()); return; }   // tap the lift to step into it
+  const pt = here.find(p => p.mesh === hit.object);
   if (hit.distance < 6.5) enter(pt, hit.uv); else walkTo(pt);
 }
 
@@ -1899,15 +2102,101 @@ function showStation(st) {
 }
 function walkTo(pt) {
   if (tour && !pt.tourStop) endTour();
-  if (mode === 'inside' || mode === 'entering') return;
+  if (mode === 'inside' || mode === 'entering' || mode === 'lift') return;
   const target = pt.center.clone().addScaledVector(pt.normal, pt.standOff || 3.6); target.y = 1.7;
-  const via = [];
-  if (!world && inWing(player.pos.z) !== inWing(target.z)) {   // route through the arch and corridor
-    const hallSide = new THREE.Vector3(WING.archX, 1.7, ROOM.zMax - 1.8), wingSide = new THREE.Vector3(WING.archX, 1.7, WING.z0 + 1.2);
-    if (inWing(target.z)) via.push(hallSide, wingSide); else via.push(wingSide, hallSide);
+  const via = world ? [target] : routeTo(target, pt.floor ?? player.floor);
+  auto = { pt, target: via.shift(), via, stuck: 0 }; mode = 'auto';
+}
+// is the straight line from a to b clear to walk on floor F?
+function segClear(F, a, b) {
+  const L = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(L / 0.2));
+  for (let i = 1; i <= n; i++) { const k = i / n; if (k * L < 0.25) continue; if (!walkable(a.x + (b.x - a.x) * k, a.z + (b.z - a.z) * k, F)) return false; }
+  return true;
+}
+function nearestWalkable(F, p) {
+  if (walkable(p.x, p.z, F)) return p;
+  for (let r = 0.25; r < 4; r += 0.25) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r; if (walkable(x, z, F)) return new THREE.Vector3(x, p.y, z); }
+  return p;
+}
+// the shortest way from a to b on one floor, around the atrium and the lift, over the floor's waypoints
+function routeOnFloor(F, a, b) {
+  b = nearestWalkable(F, b);
+  if (segClear(F, a, b)) return [b];
+  const pts = [a, b, ...F.nodes], n = pts.length, dist = new Array(n).fill(Infinity), prev = new Array(n).fill(-1), done = new Array(n).fill(false);
+  dist[0] = 0;
+  for (;;) {
+    let u = -1; for (let i = 0; i < n; i++) if (!done[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+    if (u < 0 || u === 1) break;
+    done[u] = true;
+    for (let v = 0; v < n; v++) if (!done[v]) {
+      const L = Math.hypot(pts[v].x - pts[u].x, pts[v].z - pts[u].z);
+      if (dist[u] + L < dist[v] && segClear(F, pts[u], pts[v])) { dist[v] = dist[u] + L; prev[v] = u; }
+    }
   }
-  via.push(target);
-  auto = { pt, target: via.shift(), via }; mode = 'auto';
+  if (prev[1] < 0) return [b];
+  const out = []; for (let i = 1; i > 0; i = prev[i]) out.unshift(pts[i].clone());
+  return out;
+}
+// to another floor: walk to the lift, ride it, and walk on from its door ({ ride } marks the ride)
+function routeTo(target, tf) {
+  const cf = player.floor, here = player.pos.clone();
+  if (tf === cf) return routeOnFloor(FLOORS[cf], here, target);
+  const door = new THREE.Vector3(LIFT.x, 1.7, LIFT.z + LIFT.r + 0.8), cab = new THREE.Vector3(LIFT.x, 1.7, LIFT.z);
+  const inCab = Math.hypot(here.x - LIFT.x, here.z - LIFT.z) < 0.7;
+  return [...(inCab ? [] : routeOnFloor(FLOORS[cf], here, door)), cab, { ride: tf }, door.clone(), ...routeOnFloor(FLOORS[tf], door, target)];
+}
+// standing in the lift, on your floor
+function liftStop() { return { exhibit: true, floor: player.floor, center: new THREE.Vector3(LIFT.x, FLOORS[player.floor].y + 1.7, LIFT.z), normal: new THREE.Vector3(0, 0, 1), standOff: 0.001, pitch: 0.05 }; }
+
+/* ---------- Riding the lift ----------
+   The cab glides between floors with you in it, turning you to face out of its door. Vee zips
+   ahead and gathers again on the new floor. */
+const liftPanel = document.getElementById('liftPanel'), floorToast = document.getElementById('floorToast');
+[...FLOORS].reverse().forEach(F => {
+  const b = document.createElement('button'); b.type = 'button'; b.dataset.floor = FI[F.id];
+  b.innerHTML = `<b>${F.tag}</b> ${esc(F.name)}`; b.addEventListener('click', () => { if (FI[F.id] !== player.floor) startRide(FI[F.id]); });
+  liftPanel.appendChild(b);
+});
+function renderLiftPanel() { liftPanel.querySelectorAll('button').forEach(b => { const cur = +b.dataset.floor === player.floor; b.disabled = cur; b.setAttribute('aria-current', cur ? 'true' : 'false'); }); }
+let toastTimer = null;
+function toastFloor(i) {
+  const F = FLOORS[i]; floorToast.textContent = `${F.tag} · ${F.name}`; floorToast.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => floorToast.classList.remove('show'), 2400);
+}
+function startRide(to, then) {
+  const from = player.floor;
+  if (to === from) { if (then) then(); return; }
+  mode = 'lift'; near = null; promptEl.hidden = true; liftPanel.hidden = true;
+  setFloorVis(Math.min(from, to) - 1, Math.max(from, to) + 1);   // every floor you pass
+  ride = { from, to, t: 0, dur: reduceMotion ? 0.01 : 1.3 + 0.55 * Math.abs(to - from), yaw0: player.yaw, then };
+  if (vee) vee.vanishT = 0;
+}
+function updateRide(dt) {
+  ride.t += dt / ride.dur;
+  const k = Math.min(1, ride.t), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  const y = FLOORS[ride.from].y + (FLOORS[ride.to].y - FLOORS[ride.from].y) * e;
+  player.pos.set(LIFT.x, y + 1.7, LIFT.z);
+  player.yaw = ride.yaw0 + angleTo(ride.yaw0, Math.PI) * Math.min(1, k * 2.5);   // turn to face out of the door
+  player.pitch += (0.05 - player.pitch) * Math.min(1, dt * 3);
+  liftCab.position.y = y;
+  camera.position.copy(player.pos); camera.rotation.order = 'YXZ'; camera.rotation.set(player.pitch, player.yaw, 0);
+  if (k < 1) return;
+  const r = ride; ride = null;
+  player.floor = r.to; setFloorVis(r.to - 1, r.to + 1); mode = 'walk'; renderLiftPanel(); toastFloor(r.to);
+  if (vee) {   // she gathers again beside you, or where the tour wants her
+    veeRoot.position.y = FLOORS[r.to].y;
+    if (tour && tour.pendingBody) { vee.bodyTarget = tour.pendingBody; tour.pendingBody = null; }
+    vee.vanishT = -1; vee.appearT = 0.8; vee.heading = player.yaw; vee.lastP = null;
+    vee.body.position.copy(vee.bodyTarget || veeFollowSpot(vee)); vee.body.position.y = 0;
+    if (tour && tour.pendingSay) { vee.say(...tour.pendingSay); tour.pendingSay = null; }
+  }
+  if (r.then) r.then();
+}
+// put you on a floor at its lift landing (or the lobby entrance)
+function placeOnFloor(i) {
+  const S = FLOORS[i].start;
+  player.floor = i; player.pos.copy(S.pos); player.yaw = S.yaw; player.pitch = S.pitch;
+  setFloorVis(i - 1, i + 1); renderLiftPanel();
 }
 
 function enter(pt, uv) {
@@ -1962,12 +2251,12 @@ function exitRoom() {
 
 // Back in the hall for any reason: start over from the entrance with a clean view
 function resetView() {
-  player.pos.copy(START.pos); player.yaw = START.yaw; player.pitch = START.pitch;
-  mode = 'walk'; auto = null; anim = null; near = null;
+  placeOnFloor(FI.l1);
+  mode = 'walk'; auto = null; anim = null; near = null; ride = null; liftPanel.hidden = true;
   for (const k in keys) keys[k] = false;
   joy = { x: 0, y: 0, id: null }; stick.hidden = true;
   document.getElementById('prompt').hidden = true;
-  camera.fov = 65; camera.updateProjectionMatrix();
+  camera.fov = baseFov; camera.updateProjectionMatrix();
   for (const pt of paintings) { pt.amp = 0; pt.uniforms.uAmp.value = 0; pt.uniforms.uGlow.value = 0; pt.uniforms.uHit.value.set(.5, .5); }
   if (kiosk) kiosk.setOpen(0);
 }
@@ -1986,10 +2275,10 @@ PROJECTS.forEach((p, i) => {
   const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-about';
   b.textContent = ABOUT.dir; b.addEventListener('click', () => { if (kiosk) walkTo(kiosk.pt); }); dir.appendChild(b);
 }
-const wingStop = { exhibit: true, center: new THREE.Vector3(WING.cx, 2.6, WING.cz), normal: new THREE.Vector3(0, 0, -1), standOff: 4.2, pitch: 0.12 };
-{
-  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = 'go-wing';
-  b.textContent = 'Platform Wing'; b.addEventListener('click', () => walkTo(wingStop)); dir.insertBefore(b, document.getElementById('go-about'));
+const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM.x, FLOORS[FI.l3].y + 2.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
+for (const [id, label, stop] of [['go-wing', 'Platform Wing', wingStop], ['go-lab', 'Cryostat Lab', CRYO_STOP]]) {
+  const b = document.createElement('button'); b.className = 'dir-btn'; b.type = 'button'; b.id = id;
+  b.textContent = label; b.addEventListener('click', () => walkTo(stop)); dir.insertBefore(b, document.getElementById('go-about'));
 }
 const promptEl = document.getElementById('prompt');
 // Show the small indicator floating just above the thing you're near (projected to the screen)
@@ -2055,7 +2344,9 @@ function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
     const shotCam = new THREE.PerspectiveCamera(62, 640 / 840, 0.05, 100);
     shotCam.position.copy(START.pos); shotCam.rotation.order = 'YXZ'; shotCam.rotation.set(START.pitch + 0.08, START.yaw, 0);
     shotCam.updateMatrixWorld(true);
+    const vis = FLOORS.map(F => F.g.visible); setFloorVis(FI.l1 - 1, FI.l1 + 1);
     renderer.setRenderTarget(hallShot); renderer.render(scene, shotCam); renderer.setRenderTarget(null);
+    FLOORS.forEach((F, i) => { F.g.visible = vis[i]; });
   }
   const PW = 2.4, PH = 3.15;
   const portalU = { map: { value: hallShot.texture }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: PW / PH } };
@@ -2991,7 +3282,7 @@ function openWorld(pt) {
   for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
   world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
   markSeen(pt.p.id);
-  renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize();
+  renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize(); liftPanel.hidden = true;
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
   mode = 'walk'; auto = null; near = null;
   camera.fov = baseFov; camera.updateProjectionMatrix();
@@ -3003,11 +3294,11 @@ function exitWorld() {
   if (!world) return;
   showHeader();
   if (tour) endTour();
-  const fromWing = !!world.pt.p.inWing;
+  const fromFloor = world.pt.floor;
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
   resetView(); canvas.focus();
-  if (fromWing) { player.pos.copy(WING_START.pos); player.yaw = WING_START.yaw; player.pitch = WING_START.pitch; }
+  if (fromFloor !== undefined && fromFloor !== FI.l1) placeOnFloor(fromFloor);   // back on the floor you left from, at its lift landing
   if (vee) { vee.arrive(); vee.sayExplored(); }   // she appears beside you again, with a word on what's left
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
@@ -3045,16 +3336,22 @@ function nextStop() {
   // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
   const standOff = s.standOff + (world && (s.pitch ?? 0) > 0.3 ? 0 : 1.3);
   const stand = s.center.clone().addScaledVector(s.normal, standOff); stand.y = 0;
-  if (s.home) g.bodyTarget = null;
-  else {   // she floats beside you: a little to your left and a step toward what you're looking at
+  let body = null;
+  if (!s.home) {   // she floats beside you: a little to your left and a step toward what you're looking at
     const toT = s.center.clone().sub(stand).setY(0).normalize(), left = new THREE.Vector3(toT.z, 0, -toT.x);
     const ahead = Math.min(3.4, standOff * 0.55);   // far enough ahead to sit comfortably in view, never past what you're looking at
-    g.bodyTarget = stand.clone().addScaledVector(left, Math.max(1, ahead * 0.45)).addScaledVector(toT, ahead);   // about 25° to your left
+    body = stand.clone().addScaledVector(left, Math.max(1, ahead * 0.45)).addScaledVector(toT, ahead);   // about 25° to your left
   }
-  g.say(s.line, s.sub, `Tour ${tour.i + 1} / ${tour.stops.length}`, s.home ? null : (s.point || s.center));
+  const step = `Tour ${tour.i + 1} / ${tour.stops.length}`, line = [s.line, s.sub, step, s.home ? null : (s.point || s.center)];
+  tour.pendingBody = tour.pendingSay = null;
+  if (!world && s.floor !== undefined && s.floor !== player.floor) {   // another floor: off to the lift first
+    const F = FLOORS[s.floor];
+    g.bodyTarget = null; tour.pendingBody = body; tour.pendingSay = line;
+    g.say(`Next: ${F.tag} · ${F.name}.`, 'This way, to the glass lift.', step, new THREE.Vector3(LIFT.x, FLOORS[player.floor].y + 2.2, LIFT.z));
+  } else { g.bodyTarget = body; g.say(...line); }
   if (world) highlightStation(s.panelId || null);
   // a moderate tilt keeps both Vee and what she's showing in frame, even for high things like the chandelier
-  walkTo({ exhibit: true, tourStop: true, center: s.center, normal: s.normal, standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
+  walkTo({ exhibit: true, tourStop: true, floor: s.floor, center: s.center, normal: s.normal, standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
   renderTourBar();
 }
 // a finished tour brings you back to where this room starts: the hall entrance, or the world's arrival spot
@@ -3103,7 +3400,10 @@ function resize() {
     const visW = docked ? innerWidth - worldPanel.offsetWidth : innerWidth;
     const want = 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(39)) * innerWidth / Math.max(1, visW) / camera.aspect));
     baseFov = Math.min(85, Math.max(65, want));
-  } else baseFov = 65;
+  } else {   // the hall: wider on a narrow screen, so the Platform display and its banner fit across
+    const want = 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(23)) / camera.aspect));
+    baseFov = Math.min(85, Math.max(65, want));
+  }
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -3113,6 +3413,7 @@ const fwd = new THREE.Vector3(), right = new THREE.Vector3(), mv = new THREE.Vec
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
 
+  if (mode === 'lift' && ride) updateRide(dt);
   if (mode === 'walk' || mode === 'auto') {
     fwd.set(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); right.set(-fwd.z, 0, fwd.x);
     mv.set(0, 0, 0);
@@ -3127,7 +3428,11 @@ function tick() {
       const want = Math.atan2(-(look.x - player.pos.x), -(look.z - player.pos.z));
       let dy = want - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       player.yaw += dy * Math.min(1, dt * 5); player.pitch += ((auto.pt.pitch ?? 0.2) - player.pitch) * Math.min(1, dt * 4);
-      if (d.length() < 0.15 && auto.via.length) { auto.target = auto.via.shift(); }
+      if (d.length() < 0.15 && auto.via.length) {
+        const nx = auto.via.shift();
+        if (nx.ride !== undefined) { const a = auto; startRide(nx.ride, () => { if (a.via.length) { a.target = a.via.shift(); a.stuck = 0; auto = a; mode = 'auto'; } }); }
+        else { auto.target = nx; auto.stuck = 0; }
+      }
       else if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
@@ -3145,9 +3450,15 @@ function tick() {
         else if (walkable(prevX, player.pos.z)) player.pos.x = prevX;
         else { player.pos.x = prevX; player.pos.z = prevZ; }
       }
+      player.pos.y = FLOORS[player.floor].y + 1.7;
+      // walking somewhere but not getting there (a corner, a railing): skip ahead to the waypoint
+      if (mode === 'auto' && auto && auto.target) {
+        auto.stuck = Math.hypot(player.pos.x - prevX, player.pos.z - prevZ) < speed * dt * 0.25 ? auto.stuck + dt : 0;
+        if (auto.stuck > 0.6) { player.pos.x = auto.target.x; player.pos.z = auto.target.z; auto.stuck = 0; }
+      }
     }
     const bob = mv.lengthSq() > 0.01 && !reduceMotion ? Math.sin(t * 10) * 0.04 : 0;
-    camera.position.set(player.pos.x, 1.7 + bob, player.pos.z);
+    camera.position.set(player.pos.x, player.pos.y + bob, player.pos.z);
     camera.rotation.set(0, 0, 0, 'YXZ'); camera.rotation.order = 'YXZ';
     camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
     camera.fov += (baseFov + (tour ? 14 : 0) - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix();   // zoomed out while touring
@@ -3171,7 +3482,7 @@ function tick() {
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
-        if (pt.mascot) continue;
+        if (pt.mascot || pt.floor !== player.floor) continue;
         const d = pt.center.clone().sub(camera.position); d.y = 0;
         const dist = d.length(), facing = -d.normalize().dot(pt.normal);
         if (dist < best && facing > 0.3) { best = dist; near = pt; }
@@ -3188,6 +3499,9 @@ function tick() {
       if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
         showIndicator(near, 'Enter', near.p.promptName || near.p.name, near.kiosk ? 0.6 : 0.5);
       } else promptEl.hidden = true;
+      // standing in the lift: pick a floor
+      const inCab = Math.hypot(player.pos.x - LIFT.x, player.pos.z - LIFT.z) < 0.6;
+      liftPanel.hidden = !(inCab && mode === 'walk' && !tour);
     }
   }
 
@@ -3243,10 +3557,10 @@ Promise.all([
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
   for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
-  buildPaintings(); buildKiosk(); buildMascot();
+  buildPaintings(); buildKiosk(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || (hash === 'platform-wing' ? wingStop : null);
-  if (deep) { const pos = deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4); player.pos.set(pos.x, 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
+  if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
   tick();
