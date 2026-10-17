@@ -138,6 +138,17 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 .dir-btn.sub-btn { font-size: 11px; padding: 5px 9px; border-color: color-mix(in srgb, var(--gilt-dim) 70%, transparent); color: var(--muted); }
 .here-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5ff0ff; margin-right: 2px; }
 @media (max-width: 560px) { .dir-row { gap: 6px; } .dir-btn.sub-btn { font-size: 10px; padding: 5px 7px; } .here-label { width: 100%; text-align: center; } }
+/* the show/hide switch for the buttons: phones and small screens only, just above the buttons (or at the bottom once they're hidden) */
+#navToggle {
+  display: none; right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(var(--dir-h, 76px) + 8px);
+  width: 34px; height: 34px; border-radius: 50%; place-items: center; cursor: pointer;
+  font-family: var(--mono); font-size: 15px; line-height: 1; color: #5ff0ff;
+  background: color-mix(in srgb, var(--night) 72%, transparent); border: 1px solid color-mix(in srgb, #5ff0ff 55%, transparent);
+}
+@media (pointer: coarse), (max-width: 760px) { #navToggle { display: grid; } }
+body.nav-hidden #directory { display: none; }
+body.nav-hidden #navToggle { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); opacity: .8; }
+body.in-world #navToggle, body.touring #navToggle { display: none !important; }
 /* the glass lift's floor buttons, shown while you stand in it */
 #liftPanel {
   left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
@@ -334,6 +345,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 </div>
 </header>
 <nav class="hud" id="directory" aria-label="Floors and displays"></nav>
+<button type="button" class="hud" id="navToggle" aria-controls="directory" aria-pressed="false" aria-label="Hide the buttons">▾</button>
 <div class="hud" id="prompt" hidden></div>
 <div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
 <div class="hud" id="floorToast" aria-live="polite"></div>
@@ -2579,6 +2591,17 @@ function renderNav() {
   measureNav();
 }
 function measureNav() { document.documentElement.style.setProperty('--dir-h', dir.offsetHeight + 'px'); }
+// On a phone the buttons can be tucked away, leaving the screen to your thumbs; the choice is remembered on this device
+const navToggle = document.getElementById('navToggle'), NAV_KEY = 'quantum-hall-nav-hidden';
+function setNavHidden(on) {
+  document.body.classList.toggle('nav-hidden', on);
+  navToggle.textContent = on ? '▴' : '▾'; navToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+  navToggle.setAttribute('aria-label', on ? 'Show the buttons' : 'Hide the buttons');
+  try { localStorage.setItem(NAV_KEY, on ? '1' : '0'); } catch (e) {}
+  measureNav();
+}
+navToggle.addEventListener('click', () => setNavHidden(!document.body.classList.contains('nav-hidden')));
+try { if (localStorage.getItem(NAV_KEY) === '1') setNavHidden(true); } catch (e) {}
 addEventListener('resize', measureNav);
 // jump straight to a floor: a quick blink, and you're at its lift door
 function jumpToFloor(i) {
