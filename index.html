@@ -834,49 +834,53 @@ class UnifiedQubitStyling {
         };
     }
 }
-// Style one node the way the pool pages do: phase from its index, saturation and lightness from the
-// glow and lighting factors, an ECHO shadow offset by the bilateral offset, Tesla-scaled pulse
-const _hsl = {};
-function styleQubit(styling, base, i, n, time, basePos, out, sh) {
-  const rotationAngle = time + (i / n) * Math.PI * 2;
-  const st = styling.calculateUnifiedStyle(i, time, rotationAngle, basePos);
-  base.getHSL(_hsl);
-  const sat = Math.min(1, _hsl.s * (0.8 + st.glowIntensity * 0.4));
-  const pulse = 0.85 + 0.15 * Math.sin(time * 3 * (st.teslaMultiplier || 1) + i);
-  const light = Math.min(0.85, _hsl.l * (0.9 + st.lightingFactor * 0.2) * (0.8 + st.glowIntensity * 2) * pulse);
-  out.setHSL(_hsl.h, sat, light);
-  if (sh) sh.set(st.bilateralShadowXOffset, st.shadowIntensity);
-  return st;
-}
-function makeShellObject(p, color, color2, R, pointSize) {
+// A pool's shell rendered the way the pool pages render it (432-nodes-visualization.js): every node a lit
+// core sphere with a glow halo, coloured by height, driven by UnifiedQubitStyling each frame —
+// core brightness (1.2 + pulse·0.8 + lighting·0.4)·noise, halo opacity glow·2·pulse,
+// pulse 0.75 + 0.25·sin(1.6t + teslaPhase) — around a glowing seed with corona rings.
+function makeShellObject(p, color, color2, R, pointSize, seed = true) {
   const nodes = hurwitzShell(p), edges = shellEdges(nodes), s = Math.sqrt(p), n = nodes.length;
-  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), c1 = new THREE.Color(color), c2 = new THREE.Color(color2);
-  nodes.forEach((nd, i) => { const c = nd.half ? c2 : c1; col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; });
-  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const points = new THREE.Points(pg, new THREE.PointsMaterial({ size: pointSize, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const pos = new Float32Array(n * 3), lo = new THREE.Color(color).multiplyScalar(0.55), hi = new THREE.Color(color2);
+  const coreR = R * 0.0183, group = new THREE.Group();   // the pool pages' proportions: core 0.055 and halo 0.12 on a radius-3 shell
+  const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(coreR, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.88 }), n);
+  const halos = new THREE.InstancedMesh(new THREE.SphereGeometry(coreR * 2.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), n);
+  cores.frustumCulled = halos.frustumCulled = false;
   const lpos = new Float32Array(edges.length * 3), lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lpos, 3));
-  const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending }));
-  // ECHO: each node's bilateral shadow, a dim copy offset sideways by the styling's shadow offset
-  const epos = new Float32Array(n * 3), ecol = new Float32Array(n * 3), eg = new THREE.BufferGeometry();
-  eg.setAttribute('position', new THREE.BufferAttribute(epos, 3)); eg.setAttribute('color', new THREE.BufferAttribute(ecol, 3));
-  const echo = new THREE.Points(eg, new THREE.PointsMaterial({ size: pointSize * 0.85, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-  points.frustumCulled = lines.frustumCulled = echo.frustumCulled = false;
-  const group = new THREE.Group(); group.add(echo, points, lines);
-  const styling = new UnifiedQubitStyling(), bases = nodes.map(nd => (nd.half ? c2 : c1).clone()), tmp = new THREE.Color(), shv = new THREE.Vector2(), bp = new THREE.Vector3();
+  const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }));
+  lines.frustumCulled = false;
+  group.add(lines, halos, cores);
+  // the central seed and its corona
+  let seedMat = null; const coronas = [];
+  if (seed) {
+    seedMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color2).lerp(new THREE.Color(0xffffff), 0.6) });
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(R * 0.05, 24, 16), seedMat));
+    [[0.09, 0.18, 0], [0.16, 0.1, 1.2], [0.26, 0.05, 2.5]].forEach(([r, op, ph]) => {
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: op, depthWrite: false, side: THREE.BackSide });
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(R * r, 24, 16), m)); coronas.push({ m, op, ph });
+    });
+  }
+  // each node's colour from its height, as nodeColor() does on the pool pages
+  nodes.forEach((nd, i) => projectNode(nd.q, s, 0.55, 0.35, R, pos, i * 3));
+  const base = nodes.map((nd, i) => lo.clone().lerp(hi, Math.max(0, Math.min(1, (pos[i * 3 + 1] / R + 1) / 2))));
+  const styling = new UnifiedQubitStyling(), M = new THREE.Matrix4(), C = new THREE.Color(), bp = new THREE.Vector3();
   function update(t1, t2) {
     nodes.forEach((nd, i) => projectNode(nd.q, s, t1, t2, R, pos, i * 3));
-    const time = performance.now() / 1000;
-    for (let i = 0; i < n; i++) {
-      bp.set(pos[i * 3], pos[i * 3 + 1] / R, pos[i * 3 + 2]);   // height in shell radii, as on the pool pages' unit scale
-      styleQubit(styling, bases[i], i, n, time, bp, tmp, shv);
-      col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b;
-      const off = shv.x * R * 0.06, k = (1 - shv.y) * 0.9;   // ECHO: offset and strength from the shadow values
-      epos[i * 3] = pos[i * 3] + off; epos[i * 3 + 1] = pos[i * 3 + 1] - off * 0.4; epos[i * 3 + 2] = pos[i * 3 + 2];
-      ecol[i * 3] = tmp.r * k; ecol[i * 3 + 1] = tmp.g * k; ecol[i * 3 + 2] = tmp.b * k;
-    }
-    pg.attributes.color.needsUpdate = true; eg.attributes.position.needsUpdate = true; eg.attributes.color.needsUpdate = true;
     for (let k = 0; k < edges.length; k++) { const i = edges[k]; lpos[k * 3] = pos[i * 3]; lpos[k * 3 + 1] = pos[i * 3 + 1]; lpos[k * 3 + 2] = pos[i * 3 + 2]; }
-    pg.attributes.position.needsUpdate = true; lg.attributes.position.needsUpdate = true;
+    lg.attributes.position.needsUpdate = true;
+    const t = performance.now() / 1000;
+    for (let i = 0; i < n; i++) {
+      bp.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+      const st = styling.calculateUnifiedStyle(i, t, (i / n) * Math.PI * 2, bp);
+      const pulse = 0.75 + 0.25 * Math.sin(t * 1.6 + st.teslaPhase);
+      M.makeTranslation(bp.x, bp.y, bp.z); cores.setMatrixAt(i, M); halos.setMatrixAt(i, M);
+      const emissive = (1.2 + pulse * 0.8 + st.lightingFactor * 0.4) * st.noiseFactor;   // 1.8 … 2.4
+      cores.setColorAt(i, C.copy(base[i]).multiplyScalar(0.55 + emissive * 0.25));
+      halos.setColorAt(i, C.copy(base[i]).multiplyScalar(st.glowIntensity * 2.0 * pulse * 0.6));   // additive, so a little lower than the page's opacity
+    }
+    cores.instanceMatrix.needsUpdate = halos.instanceMatrix.needsUpdate = true;
+    if (cores.instanceColor) cores.instanceColor.needsUpdate = true;
+    if (halos.instanceColor) halos.instanceColor.needsUpdate = true;
+    if (seedMat) coronas.forEach(c => { c.m.opacity = c.op * (0.75 + 0.25 * Math.sin(t * 1.4 + c.ph)); });
   }
   update(0.55, 0.35);
   return { group, update, count: n };
@@ -993,7 +997,7 @@ const wingUpdates = [];
   // the centrepiece: all three pools nested, each turning in 4D
   const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.6, 48), colMat); plinth.position.set(cx, 0.3, cz); scene.add(plinth);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.02, 8, 96), lineMat); ring.rotation.x = Math.PI / 2; ring.position.set(cx, 0.6, cz); scene.add(ring);
-  const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012); o.group.position.set(cx, 2.9, cz); scene.add(o.group); return o; });
+  const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012, i === 0); o.group.position.set(cx, 2.9, cz); scene.add(o.group); return o; });
   const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(cx, 5.15, cz); scene.add(nl);
   const nLight = new THREE.PointLight(0xffe2b0, 0.6, 8, 2); nLight.position.set(cx, 3, cz); scene.add(nLight);
   wingUpdates.push((dt, t) => { const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m)); });
