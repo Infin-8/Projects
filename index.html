@@ -7,9 +7,9 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="description" content="Infin-8's projects: KaizenDoku, STEADYWATCH™ß Handheld and the STEADYWATCH™ Platform.">
+<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, STEADYWATCH™ HANDHELD, the STEADYWATCH™ PLATFORM and its VAULT™, VIPER™ and LOTUS™ entropy pools and STEADYWATCH™ OIDC.">
 <meta property="og:title" content="Quantum Hall">
-<meta property="og:description" content="Walk up to a display and step inside to see the project.">
+<meta property="og:description" content="Five floors around an atrium, from a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://infin-8.github.io/Projects/assets/gallery-preview.png">
 <meta property="og:url" content="https://infin-8.github.io/Projects/">
 <meta name="twitter:card" content="summary_large_image">
@@ -699,7 +699,7 @@ function plaqueTex(p) {
   g.fillStyle = '#c8933a'; g.fillRect(0, 0, 512, 128);
   g.strokeStyle = '#7a5520'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
   g.fillStyle = '#2a1b08'; g.textAlign = 'center';
-  g.font = '34px "Young Serif", Georgia, serif'; g.fillText(p.name.replace('STEADYWATCH™ ', 'SW™ '), 256, 58);
+  let px = 34; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(p.name).width > 476 && --px > 18); g.fillText(p.name, 256, 58);   // full names, shrunk to fit
   g.font = '20px "IBM Plex Mono", monospace'; g.fillText(p.tagline, 256, 96);
   return new THREE.CanvasTexture(c);
 }
@@ -2905,7 +2905,7 @@ function floorStops(i) {
   if (i === FI.b1) out.push(['Cryostat', CRYO_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]);
-  for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name.replace('STEADYWATCH™ ', 'SW '), pt]);
+  for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
   return out;
 }
 function renderNav() {

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://infin-8.github.io/Projects/"><strong>Walk the gallery →</strong></a><br>
-  <sub>Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
+  <sub>Five floors around an atrium, from the cryostat lab to the builder's office. Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
 </p>
 
 ## Apps
