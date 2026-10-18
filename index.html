@@ -194,6 +194,15 @@ body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 .ask-form { display: flex; gap: 6px; }
 .ask-form input { flex: 1; min-width: 0; font: 15px var(--body); color: var(--parchment); background: rgba(8, 10, 18, .8); border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; padding: 9px 10px; }
 .ask-form input:focus { outline: none; border-color: #5ff0ff; }
+.ask-chips { display: none; flex-wrap: nowrap; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 6px; scrollbar-width: none; }
+.ask-chips::-webkit-scrollbar { display: none; }
+.ask-chips button { flex: 0 0 auto; font-family: var(--mono); font-size: 12px; letter-spacing: .03em; color: #c8fbff; background: rgba(95, 240, 255, .06); border: 1px solid rgba(95, 240, 255, .45); border-radius: 999px; padding: 8px 12px; cursor: pointer; }
+.ask-chips button:disabled { opacity: .45; }
+@media (pointer: coarse), (max-width: 760px) {   /* phones: tap a question, no keyboard needed */
+  .ask-chips { display: flex; }
+  .ask-form input { font-size: 16px; }   /* 16px stops iOS zooming the page when the field is tapped */
+  #askVee.kb { bottom: calc(var(--kb, 0px) + 6px); }   /* typing: the field rides on top of the keyboard */
+}
 .ask-form #askClose { color: #5ff0ff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); padding: 0 11px; }
 .ask-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }   /* her answers, for screen readers */
 .ask-form button { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #05070b; background: #5ff0ff; border: 0; border-radius: 3px; padding: 0 14px; cursor: pointer; }
@@ -406,6 +415,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="floorToast" aria-live="polite"></div>
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
+  <div class="ask-chips" role="group" aria-label="Suggested questions"></div>
   <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
   <p class="ask-live" aria-live="polite"></p>
 </section>
@@ -4139,6 +4149,20 @@ function exitWorld() {
 const VEE_API = 'https://vee-worker.nathaniel-a-vazquez.workers.dev/ask';   // the vee-worker's /ask (see ~/Projects/vee-worker)
 const askEl = document.getElementById('askVee'), askLive = askEl.querySelector('.ask-live'), askInput = document.getElementById('askInput'), askForm = askEl.querySelector('.ask-form');
 const askState = { history: [], busy: false };
+const askChips = askEl.querySelector('.ask-chips');
+['What is VIPER™?', 'Who built this?', 'What is the double slit?', 'What does STEADYWATCH™ PLATFORM do?', 'What is KaizenDoku?', 'How do I get in touch?'].forEach(q => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => askSend(q)); askChips.appendChild(b);
+});
+// with the on-screen keyboard up, keep the field just above it (the visual viewport shrinks to what's left)
+function askKeyboard() {
+  const vv = window.visualViewport; if (!vv) return;
+  const kb = Math.max(0, innerHeight - vv.height - vv.offsetTop);
+  askEl.classList.toggle('kb', document.activeElement === askInput && kb > 80);
+  askEl.style.setProperty('--kb', kb + 'px');
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', askKeyboard); visualViewport.addEventListener('scroll', askKeyboard); }
+askInput.addEventListener('focus', () => setTimeout(askKeyboard, 50));
+askInput.addEventListener('blur', () => { askEl.classList.remove('kb'); });
 function askGuide() { return world ? world.vee : vee; }
 function askWhere() { return world ? `${world.pt.p.name} world` : `${FLOORS[player.floor].tag} · ${FLOORS[player.floor].name}`; }
 function openAsk() {
@@ -4147,7 +4171,7 @@ function openAsk() {
   askEl.hidden = false; promptEl.hidden = true;
   if (g.tourK !== undefined && g.tour) g.tourK = g.tour.length - 1;   // her intro is done: you're talking now
   askHint(g); g.waveT = 1.4;
-  setTimeout(() => askInput.focus(), 0);
+  if (!touchUI) setTimeout(() => askInput.focus(), 0);   // on a phone the keyboard waits until you tap the field
   return true;
 }
 function askHint(g) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.sticky = true; }   // stays up while the prompt is open
@@ -4156,7 +4180,9 @@ function closeAsk() { askEl.hidden = true; askInput.blur(); canvas.focus(); cons
 function askFollow() {
   if (askEl.hidden) return;
   const g = askGuide(); if (!g || tour) return;
-  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), side = camera.aspect < 0.85 ? 0.25 : 0.75, ahead = 2.7;
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), side = camera.aspect < 0.85 ? 0.15 : 0.75;
+  // close enough to read, but far enough that her whole bubble (1.9 m wide) fits across the screen
+  const tanH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect, ahead = Math.max(2.7, (0.95 + side) / tanH * 1.1);
   const p = new THREE.Vector3(camera.position.x + fx * ahead + fz * side, 0, camera.position.z + fz * ahead - fx * side);
   if (g.bounds) g.bounds(p);
   g.bodyTarget = p; g.asking = true;
@@ -4166,6 +4192,8 @@ async function askSend(q) {
   q = String(q || '').trim().slice(0, 400);
   if (!q || askState.busy) return;
   askState.busy = true; askForm.querySelector('button').disabled = true; askInput.value = '';
+  askChips.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  if (touchUI) askInput.blur();   // drop the keyboard so the whole view is clear for her answer
   const g = askGuide();
   if (g) g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null);
   let answer;
@@ -4177,7 +4205,9 @@ async function askSend(q) {
   } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
   askLive.textContent = 'Vee: ' + answer;
   if (g) { g.say(answer, '', null, null); g.waveT = 0.8; }   // the whole answer, wrapped in her bubble
-  askState.busy = false; askForm.querySelector('button').disabled = false; askInput.focus();
+  askState.busy = false; askForm.querySelector('button').disabled = false;
+  askChips.querySelectorAll('button').forEach(b => { b.disabled = false; });
+  if (!touchUI) askInput.focus();
 }
 askForm.addEventListener('submit', e => { e.preventDefault(); askSend(askInput.value); });
 document.getElementById('askClose').addEventListener('click', closeAsk);
