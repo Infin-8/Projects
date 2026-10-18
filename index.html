@@ -171,6 +171,25 @@ body.in-world #navToggle, body.touring #navToggle { display: none !important; }
   padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .4s ease; pointer-events: none !important;
 }
 #floorToast:empty { display: none; }
+/* the office's operator terminal: green on black, like its screen */
+#terminal { position: fixed; inset: 0; z-index: 7; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(0, 6, 3, .78); }
+#terminal .term-frame { position: relative; width: min(1100px, 100%); height: min(780px, 100%); display: flex; flex-direction: column; background: #000a04; border: 1px solid #00ff66; border-radius: 6px; box-shadow: 0 0 40px rgba(0, 255, 102, .25), inset 0 0 60px rgba(0, 255, 102, .06); overflow: hidden; }
+#terminal .term-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 255, 102, .035) 0 1px, transparent 1px 3px); }
+#terminal .term-bar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(0, 255, 102, .4); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: #00ff66; }
+#terminal .term-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#terminal .term-bar button { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #00ff66; background: transparent; border: 1px solid #00ff66; border-radius: 2px; padding: 6px 10px; cursor: pointer; }
+#terminal .term-bar button:hover, #terminal .term-bar button:focus-visible { background: #00ff66; color: #000a04; outline: none; }
+#terminal .term-menu { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 24px clamp(16px, 6vw, 72px); font-family: var(--mono); color: #c8ffe0; overflow: auto; }
+#terminal .term-prompt { margin: 0 0 8px; font-size: clamp(18px, 3vw, 26px); letter-spacing: .08em; color: #d8ffe6; }
+#terminal .term-caret { animation: termBlink 1s steps(1) infinite; }
+@keyframes termBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #terminal .term-caret { animation: none; } }
+#terminal .term-opt { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; font-family: var(--mono); color: #00ff66; background: rgba(0, 255, 102, .04); border: 1px solid rgba(0, 255, 102, .45); border-radius: 4px; cursor: pointer; }
+#terminal .term-opt b { font-size: clamp(16px, 2.4vw, 22px); letter-spacing: .08em; }
+#terminal .term-opt span { font-size: 13px; color: #9fdcb8; line-height: 1.5; }
+#terminal .term-opt:hover, #terminal .term-opt:focus-visible { background: rgba(0, 255, 102, .14); border-color: #00ff66; outline: none; }
+#terminal .term-foot { margin: 8px 0 0; font-size: 11px; letter-spacing: .12em; color: #4f9c6e; }
+#terminal .term-game { flex: 1; width: 100%; border: 0; background: #fff; }
 /* touring: nothing on screen but the 3D view, Vee's words and a passing hint */
 body.touring #directory, body.touring #tourBar, body.touring #liftPanel, body.touring #prompt, body.touring #helpBtn,
 body.touring #top, body.touring #worldPanel, body.touring #stick { display: none !important; }
@@ -355,6 +374,18 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
 <section id="room" hidden aria-modal="true" role="dialog"></section>
+<section id="terminal" hidden role="dialog" aria-modal="true" aria-label="Operator terminal">
+  <div class="term-frame">
+    <div class="term-bar"><span class="term-title">QUANTUM V^ · OPERATOR TERMINAL</span><button type="button" id="termBack" hidden>◂ Menu</button><button type="button" id="termClose">✕ Close</button></div>
+    <div class="term-menu">
+      <p class="term-prompt">&gt; SELECT PROGRAM<span class="term-caret">_</span></p>
+      <button type="button" class="term-opt" data-opt="resume"><b>[1] RESUME</b><span>Nathaniel Vazquez · opens the PDF</span></button>
+      <button type="button" class="term-opt" data-opt="kz"><b>[2] KAIZENDOKU v1</b><span>The first version: a React web Sudoku. Play it here; your progress stays in this browser.</span></button>
+      <p class="term-foot">1 / 2 TO CHOOSE · ESC TO CLOSE</p>
+    </div>
+    <iframe class="term-game" hidden title="KaizenDoku v1"></iframe>
+  </div>
+</section>
 <aside id="worldPanel" hidden aria-label="About this world"></aside>
 <div id="loading">Entering Quantum Hall…</div>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">Quantum Hall needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
@@ -434,8 +465,8 @@ const ABOUT = {
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
-  site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
-    heading: 'Resume', cardText: 'The main screen of the operator desk. Walk up and press E, or tap it, to open the PDF.' },
+  site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
+    heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it to read the Resume, or to play KaizenDoku v1, the first version of the game.' },
   theme: { bg: '#141826', fg: '#f1e6cf', accent: '#3fe0e0' },
   logo: null   // a monogram drawn at load, see makeMonogram()
 };
@@ -2419,7 +2450,14 @@ let mode = 'walk'; // walk | auto | entering | inside | exiting
 let auto = null, anim = null, near = null, ride = null;
 
 addEventListener('keydown', e => {
-  if (mode === 'inside') { if (e.key === 'Escape') exitRoom(); return; }
+  if (mode === 'inside') {
+    if (!terminal.hidden) {
+      if (e.key === 'Escape') { if (!termGame.hidden) showTermMenu(); else closeTerminal(); }
+      else if (!termMenu.hidden && (e.key === '1' || e.key === '2')) termChoose(e.key === '1' ? 'resume' : 'kz');
+      return;
+    }
+    if (e.key === 'Escape') exitRoom(); return;
+  }
   keys[e.code] = true;
   if (tour) {
     if (e.key === 'Escape') { endTour(); return; }
@@ -2514,6 +2552,28 @@ function worldAct(st, uv) {
   else if (st.site) { if (st.uniforms) { st.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5)); st.burst = 1; } openSite(st.site.url); }
   else showStation(st);
 }
+/* The office's operator terminal: a menu of programs on the main screen. Resume opens the PDF;
+   KaizenDoku v1 (kaizendoku-v1/, a static build of the first version) plays inside the terminal. */
+const terminal = document.getElementById('terminal'), termMenu = terminal.querySelector('.term-menu'), termGame = terminal.querySelector('.term-game');
+const termBack = document.getElementById('termBack');
+function openTerminal() {
+  mode = 'inside'; near = null; promptEl.hidden = true;
+  showTermMenu(); terminal.hidden = false;
+  terminal.querySelector('.term-opt').focus();
+}
+function showTermMenu() { termMenu.hidden = false; termGame.hidden = true; termBack.hidden = true; termGame.src = 'about:blank'; }
+function termChoose(opt) {
+  if (opt === 'resume') { openSite(ABOUT.site.url); closeTerminal(); return; }
+  termMenu.hidden = true; termBack.hidden = false; termGame.hidden = false; termGame.src = 'kaizendoku-v1/'; termGame.focus();
+}
+function closeTerminal() {
+  if (terminal.hidden) return;
+  terminal.hidden = true; showTermMenu(); mode = 'walk'; canvas.focus();
+}
+terminal.querySelectorAll('.term-opt').forEach(b => b.addEventListener('click', () => termChoose(b.dataset.opt)));
+document.getElementById('termClose').addEventListener('click', closeTerminal);
+termBack.addEventListener('click', () => { showTermMenu(); terminal.querySelector('.term-opt').focus(); });
+terminal.addEventListener('click', e => { if (e.target === terminal) closeTerminal(); });   // a click outside the frame closes it
 function openSite(url) {   // runs inside the click or key press, so the browser allows the new tab
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.click();
 }
@@ -3468,7 +3528,7 @@ function buildOfficeWorld(p) {
   const newKey = () => { const b = new Uint8Array(32); crypto.getRandomValues(b); return [...b].map(x => x.toString(16).padStart(2, '0')).join(''); };
   const cols = Array.from({ length: COLS }, () => ({ key: newKey(), k: Math.floor(Math.random() * 64), y: -Math.random() * ROWS, speed: 0.35 + Math.random() * 0.6 }));
   const HEX = '0123456789abcdef';
-  const decodeLines = [['RESUME', '700 112px "IBM Plex Mono", monospace', 240], ['NATHANIEL VAZQUEZ · SOFTWARE ENGINEER', '600 30px "IBM Plex Mono", monospace', 318], ['PRESS E TO OPEN  ▸  RESUME.PDF', '600 26px "IBM Plex Mono", monospace', 390]];
+  const decodeLines = [['OPERATOR TERMINAL', '700 64px "IBM Plex Mono", monospace', 214], ['[1] RESUME        NATHANIEL VAZQUEZ · PDF', '600 28px "IBM Plex Mono", monospace', 284], ['[2] KAIZENDOKU v1  THE FIRST VERSION · PLAY', '600 28px "IBM Plex Mono", monospace', 334], [touchUI ? 'TAP TO OPEN THE TERMINAL' : 'PRESS E TO OPEN THE TERMINAL', '600 24px "IBM Plex Mono", monospace', 398]];
   let rainAcc = 0, decodeT = 0;
   function drawMain(dt) {
     rainAcc += dt;
@@ -3499,7 +3559,7 @@ function buildOfficeWorld(p) {
       for (const [text, font, y] of decodeLines) {
         mg.font = font; let out = '';
         for (const ch of text) { const lock = 1.6 + idx * 0.035; out += (ch === ' ' || reduceMotion || decodeT > lock) ? ch : HEX[Math.floor(Math.random() * 16)].toUpperCase(); idx++; }
-        mg.fillStyle = y === 240 ? '#d8ffe6' : '#00ff66'; mg.fillText(out, MW / 2, y);
+        mg.fillStyle = y === 214 ? '#d8ffe6' : '#00ff66'; mg.fillText(out, MW / 2, y);
       }
       mg.globalAlpha = 1;
     }
@@ -3507,7 +3567,8 @@ function buildOfficeWorld(p) {
   }
   drawMain(0);
   const main = monitor(mainC, 0, 1.78, deskZ - 0.42, 2.4, 1.5, 0);
-  addStation(main, { id: 'site', site: p.site, info: { title: 'Resume' }, exhibit: true, standOff: 2.6, pitch: 0.06 });
+  addStation(main, { id: 'site', site: p.site, info: { title: 'Operator terminal' }, exhibit: true, standOff: 2.6, pitch: 0.06,
+    act: () => openTerminal(), actVerb: () => 'Open', actLift: 0.3 });
   updates.push(dt => { drawMain(dt); main.tex.needsUpdate = true; });
 
   // ticker across the top
@@ -3958,7 +4019,7 @@ function tick() {
         if (st && !st.vee.away) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? -2.3 : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
+      if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? (near.actLift ?? -2.3) : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
