@@ -1970,6 +1970,7 @@ function veeFollowSpot(v) {
   return p;
 }
 const VEE_MIN_DIST = 2.2;
+const VEE_TALK_REACH = 5.6;   // she floats about 4–5 m ahead of you, so E reaches her wherever she drifts
 // Vee can be docked at her Nesting Station in the builder's office. Docked, she rests on its pad and stays
 // out of sight everywhere else, until she's woken at the dock or a tour starts. Remembered on this device.
 const VEE_DOCK_KEY = 'quantum-hall-vee-docked';
@@ -2240,6 +2241,28 @@ function buildMascot() {
   vee.tourK = 0; vee.tourT = 0; vee.greeted = new Set();
   vee.sayTour = () => { const [a, b2, tg] = vee.tour[vee.tourK]; vee.say(a, b2, `${vee.tourK + 1} / ${vee.tour.length}`, tg); };
   vee.restore = () => { vee.tourK = vee.tour.length - 1; vee.tourT = 0; vee.sayTour(); };
+  // talking to her: each tap (or E) gives the next thing worth knowing on the floor you're on
+  let talkK = 0, talkFloor = -1;
+  const floorTalk = i => {
+    const F = FLOORS[i], at = (x, y, z) => new THREE.Vector3(x, F.y + y, z), lines = [];
+    if (i === FI.l1) lines.push(['Welcome to the Quantum Hall.', 'Every display is a product, and every floor is a section.', null],
+      ['Behind you: the double slit.', "Each photon lands at a random spot. That's where it all starts.", at(0, SLIT.y, SLIT.z)],
+      ['Straight ahead: STEADYWATCH™ PLATFORM.', 'Walk up to a display and step inside.', plat ? plat.center : null]);
+    else if (F.hello) lines.push([...F.hello, i === FI.b1 ? CRYO_STOP.center : null]);
+    if (i === FI.l3) lines.push(['That column of light comes from B1.', 'It ends here, in the three entropy pools.', at(ATRIUM.x, 3, ATRIUM.z)]);
+    if (i === FI.l2) lines.push(['Tap a phone to open the App Store.', 'Each one shows its app\'s real screenshots.', null]);
+    lines.push(['Want a guided tour?', touchUI ? 'Tap ▶ Tour at the bottom.' : 'Press T, or click ▶ Tour.', null],
+      ['Jump between floors.', 'The floor buttons at the bottom take you straight there.', null],
+      ['Need me out of the way?', 'Dock me at my Nesting Station, in the office on L4.', null]);
+    return lines;
+  };
+  vee.talk = { vee: true, info: { title: 'Vee' }, mesh: vee.hitM, center: new THREE.Vector3(), normal: new THREE.Vector3(0, 0, 1),
+    next() {
+      if (talkFloor !== player.floor) { talkFloor = player.floor; talkK = 0; }
+      const lines = floorTalk(player.floor), [a, b, tg] = lines[talkK % lines.length];
+      vee.say(a, b, `${talkK % lines.length + 1} / ${lines.length}`, tg); talkK++;
+      vee.tourK = vee.tour.length - 1; vee.waveT = 1.2; lastInput = performance.now();
+    } };
   vee.sayTour();
   const pt = { p: ABOUT, mesh: vee.hitM, uniforms: { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } },
     art: makeMonogram(), normal, center: new THREE.Vector3(VEE_POS.x, 1.75, VEE_POS.z), amp: 0, mascot: true };
@@ -2264,6 +2287,7 @@ function updateMascot(dt, t) {
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
   // her record follows her around
   vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
+  vee.talk.center.copy(vee.pt.center);
   vee.pt.normal.set(camera.position.x - vee.body.position.x, 0, camera.position.z - vee.body.position.z).normalize();
   if (tour || mode !== 'walk' && mode !== 'auto') return;   // the guided tour is speaking for her
   vee.tourT += dt;   // the room tour plays through once, then rests on its last line
@@ -2402,7 +2426,7 @@ addEventListener('keydown', e => {
     if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'KeyN') && (e.target === document.body || e.target === canvas)) { nextStop(); return; }
   } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
-  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
+  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world || near.vee) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
   if (!liftPanel.hidden) { const k = { KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -2471,8 +2495,10 @@ function clickAt(x, y) {
   ray.setFromCamera(ndc, camera);
   if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.site ? 9 : st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const here = paintings.filter(p => p.floor === player.floor || p.mascot), links = hallLinks.filter(l => l.floor === player.floor);
-  const hit = ray.intersectObjects([...here.map(p => p.mesh), ...links.map(l => l.mesh), liftCab.userData.shaft])[0];
+  const veeHit = vee && !vee.away && vee.scale > 0.5 ? [vee.hitM] : [];
+  const hit = ray.intersectObjects([...veeHit, ...here.map(p => p.mesh), ...links.map(l => l.mesh), liftCab.userData.shaft])[0];
   if (!hit) return;
+  if (vee && hit.object === vee.hitM) { vee.talk.next(); return; }   // tap Vee to talk, on any floor
   if (hit.object === liftCab.userData.shaft) { walkTo(liftStop()); return; }
   const lk = links.find(l => l.mesh === hit.object);
   if (lk) { if (hit.distance < 6) openSite(lk.url); else walkTo(lk.stop); return; }   // the App Store phones   // tap the lift to step into it
@@ -2736,7 +2762,7 @@ function showIndicator(target, verb, name, lift) {
   promptEl.style.left = x + 'px'; promptEl.style.top = y + 'px';
   promptEl.hidden = false;
 }
-promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world) worldAct(near); else enter(near); } });
+promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee) worldAct(near); else enter(near); } });
 
 /* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
@@ -3928,7 +3954,7 @@ function tick() {
       }
       if (!near) {   // nothing else nearby: E talks to Vee
         const st = world.stations.find(x => x.vee);
-        if (st && !st.vee.away) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
+        if (st && !st.vee.away) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
       }
       highlightStation(near ? near.id : null);
       if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? -2.3 : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
@@ -3949,7 +3975,13 @@ function tick() {
           else vee.say(`That's ${near.p.name}.`, `${near.p.tagline}. Press E to step inside.`.replace('..', '.'), null, near.center);
         }
       } else if (vee && !near) vee.lastReact = null;
-      if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
+      // nothing else close by, but Vee is in front of you: E (or a tap) talks to her
+      if (!near && vee && !vee.away && vee.scale > 0.5) {
+        const dx = vee.talk.center.x - camera.position.x, dz = vee.talk.center.z - camera.position.z, d = Math.hypot(dx, dz);
+        if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = vee.talk;
+      }
+      if (near && near.vee && mode === 'walk' && !tour) showIndicator(near, 'Talk', 'Vee', -0.9);
+      else if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
         showIndicator(near, 'Enter', near.p.promptName || near.p.name, near.kiosk ? 0.6 : 0.5);
       } else promptEl.hidden = true;
       // standing in the lift: pick a floor
