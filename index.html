@@ -2756,7 +2756,8 @@ function showIndicator(target, verb, name, lift) {
     promptEl.setAttribute('aria-label', `${touchUI ? 'Tap' : 'Press E'} to ${verb.toLowerCase()}: ${name}`);
   }
   const c = target.center, halfH = target.mesh && target.mesh.geometry && target.mesh.geometry.parameters ? (target.mesh.geometry.parameters.height || 0) / 2 : 0;
-  _ip.set(c.x, c.y + halfH + lift, c.z).project(camera);
+  if (target.vee) _ip.set(c.x, c.y - 1.72, c.z).project(camera);   // Vee's Talk sits low, at her feet, never over her head or her words
+  else _ip.set(c.x, c.y + halfH + lift, c.z).project(camera);
   if (_ip.z > 1) { promptEl.hidden = true; return; }
   const x = Math.max(40, Math.min(innerWidth - 40, (_ip.x + 1) / 2 * innerWidth)), y = Math.max(60, Math.min(innerHeight - 90, (1 - _ip.y) / 2 * innerHeight));
   promptEl.style.left = x + 'px'; promptEl.style.top = y + 'px';
