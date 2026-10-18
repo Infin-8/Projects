@@ -203,6 +203,9 @@ body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
   .ask-form input { font-size: 16px; }   /* 16px stops iOS zooming the page when the field is tapped */
   #askVee.kb { bottom: calc(var(--kb, 0px) + 6px); }   /* typing: the field rides on top of the keyboard */
 }
+.ask-form .ask-icon { font-size: 16px; line-height: 1; color: #5ff0ff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; padding: 0 10px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ask-form #askVoice[aria-pressed="true"] { background: rgba(95, 240, 255, .18); border-color: #5ff0ff; }
+.ask-form #askMic.rec { background: #ff5a4e; border-color: #ff5a4e; box-shadow: 0 0 16px rgba(255, 90, 78, .6); }
 .ask-form #askClose { color: #5ff0ff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); padding: 0 11px; }
 .ask-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }   /* her answers, for screen readers */
 .ask-form button { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #05070b; background: #5ff0ff; border: 0; border-radius: 3px; padding: 0 14px; cursor: pointer; }
@@ -416,7 +419,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
   <div class="ask-chips" role="group" aria-label="Suggested questions"></div>
-  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
+  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
   <p class="ask-live" aria-live="polite"></p>
 </section>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
@@ -2390,7 +2393,7 @@ function updateVee(v, dt, t) {
   v.fig.rotation.z = Math.sin(t * 0.8) * 0.02 * m + v.lean;              // a slight weight shift, plus leaning into her drift
   v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
   // typing out the current line
-  const talking = v.text && v.reveal < v.total;
+  const talking = (v.text && v.reveal < v.total) || v.speaking;
   if (talking) { v.reveal = Math.min(v.total, v.reveal + dt * 42); const n = Math.floor(v.reveal); if (n !== v.drawn) { v.draw(n); v.drawn = n; } }
   // right arm: point, else wave, else rest
   if (pointing) {
@@ -4164,6 +4167,104 @@ if (window.visualViewport) { visualViewport.addEventListener('resize', askKeyboa
 askInput.addEventListener('focus', () => setTimeout(askKeyboard, 50));
 askInput.addEventListener('blur', () => { askEl.classList.remove('kb'); });
 function askGuide() { return world ? world.vee : vee; }
+// what the visitor is looking at: the station you're near in a world, or the display most in front of you on this floor
+function askLooking() {
+  if (world) return near && near.info ? `${near.info.title} (in the ${world.pt.p.name} world)` : '';
+  if (near && near.p) return near.kiosk ? "the builder's office door" : `${near.p.name} display`;
+  const f = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)); let best = null, bs = 0.55;
+  for (const pt of paintings) {
+    if (pt.mascot || pt.floor !== player.floor) continue;
+    const d = pt.center.clone().sub(camera.position); d.y = 0; const dist = d.length(); if (dist > 14) continue;
+    const k = d.normalize().dot(f) - dist * 0.015; if (k > bs) { bs = k; best = pt; }
+  }
+  return best ? (best.kiosk ? "the builder's office door" : `${best.p.name} display`) : '';
+}
+// where "take me to …" goes: an id from the vee-worker's DESTINATIONS, to a spot to stand in the building
+function veeDestination(id) {
+  const P = pid => paintings.find(p => p.p.id === pid), stand = (pt, standOff = 4) => pt && { exhibit: true, floor: pt.floor, center: pt.center, normal: pt.normal, standOff, pitch: 0.15 };
+  const plat = P('platform');
+  switch (id) {
+    case 'kaizendoku': case 'handheld': case 'platform': case 'vault': case 'viper': case 'lotus': case 'oidc': return stand(P(id), id === 'platform' ? 4.6 : 4);
+    case 'office': return kiosk && stand(kiosk.pt, 3.2);
+    case 'lobby': return plat && { exhibit: true, floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z, pitch: 0.05 };
+    case 'double-slit': return SLIT_STOP;
+    case 'cryostat': return CRYO_STOP;
+    case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
+    case 'pools': return wingStop;
+    case 'timeline': return { exhibit: true, floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
+  }
+  return null;
+}
+function veeTakeTo(id) {
+  const dest = veeDestination(id); if (!dest) return;
+  closeAsk(true);   // she keeps talking as she leads you
+  const go = () => walkTo(dest);
+  if (world) { exitWorld(); setTimeout(go, 400); } else setTimeout(go, 900);   // a beat to read her answer, then off you go
+}
+
+/* Her voice: off by default, toggled with the speaker button and remembered on this device. Answers are
+   spoken by the vee-worker's /speak (Workers AI text-to-speech). One audio element is reused and unlocked
+   inside your tap, so phones let it play when the answer arrives. */
+const VEE_VOICE_KEY = 'quantum-hall-vee-voice', askVoiceBtn = document.getElementById('askVoice'), askMic = document.getElementById('askMic');
+const veeAudio = new Audio(); veeAudio.preload = 'auto';
+let veeVoiceOn = (() => { try { return localStorage.getItem(VEE_VOICE_KEY) === '1'; } catch (e) { return false; } })(), veeAudioURL = null;
+const SILENT_WAV = (() => { const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+  let s2 = ''; b.forEach(c => { s2 += String.fromCharCode(c); }); return 'data:audio/wav;base64,' + btoa(s2); })();
+function renderVoiceBtn() { askVoiceBtn.textContent = veeVoiceOn ? '🔊' : '🔇'; askVoiceBtn.setAttribute('aria-pressed', veeVoiceOn ? 'true' : 'false'); const l = `Vee's voice: ${veeVoiceOn ? 'on' : 'off'}`; askVoiceBtn.setAttribute('aria-label', l); askVoiceBtn.title = l; }
+function unlockAudio() { if (!veeVoiceOn) return; try { veeAudio.src = SILENT_WAV; veeAudio.play().catch(() => {}); } catch (e) {} }   // inside a tap
+function stopVoice() { try { veeAudio.pause(); } catch (e) {} for (const g of [vee, world && world.vee]) if (g) g.speaking = false; }
+askVoiceBtn.addEventListener('click', () => {
+  veeVoiceOn = !veeVoiceOn; try { localStorage.setItem(VEE_VOICE_KEY, veeVoiceOn ? '1' : '0'); } catch (e) {}
+  renderVoiceBtn(); if (veeVoiceOn) unlockAudio(); else stopVoice();
+});
+renderVoiceBtn();
+async function veeSpeak(text, g) {
+  if (!veeVoiceOn || !text) return;
+  try {
+    const r = await fetch(VEE_API.replace(/\/ask$/, '/speak'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    if (!r.ok || !veeVoiceOn) return;
+    const blob = await r.blob(); if (veeAudioURL) URL.revokeObjectURL(veeAudioURL); veeAudioURL = URL.createObjectURL(blob);
+    veeAudio.src = veeAudioURL;
+    if (g) { g.speaking = true; veeAudio.onended = veeAudio.onpause = () => { g.speaking = false; }; }
+    await veeAudio.play();
+  } catch (e) { if (g) g.speaking = false; }
+}
+
+/* Hold to talk: hold the mic button, speak, let go. The recording goes to the vee-worker's /listen
+   (Workers AI speech-to-text) and the words are asked like typed ones. Up to 12 s; the mic is released
+   after every recording. Shown only where the browser can record. */
+const askRec = { rec: null, stream: null, chunks: [], held: false, timer: null };
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) askMic.hidden = false;
+async function micDown(e) {
+  e.preventDefault(); if (askState.busy || askRec.rec) return;
+  askRec.held = true; unlockAudio();
+  try { askRec.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (err) { askRec.held = false; const g = askGuide(); if (g) g.say("I can't hear you.", 'Your browser blocked the microphone.', null, null); return; }
+  if (!askRec.held) { askRec.stream.getTracks().forEach(t => t.stop()); return; }   // let go before the mic was ready
+  askRec.chunks = []; const rec = askRec.rec = new MediaRecorder(askRec.stream);
+  rec.ondataavailable = ev => { if (ev.data && ev.data.size) askRec.chunks.push(ev.data); };
+  rec.onstop = micSend; rec.start();
+  askMic.classList.add('rec'); const g = askGuide(); if (g) { g.say('Listening…', 'Let go when you\'re done.', null, null); g.sticky = true; }
+  askRec.timer = setTimeout(micUp, 12000);
+}
+function micUp() { askRec.held = false; clearTimeout(askRec.timer); if (askRec.rec && askRec.rec.state === 'recording') askRec.rec.stop(); }
+async function micSend() {
+  const rec = askRec.rec, type = (rec && rec.mimeType) || 'audio/webm'; askRec.rec = null; askMic.classList.remove('rec');
+  if (askRec.stream) askRec.stream.getTracks().forEach(t => t.stop()); askRec.stream = null;
+  const blob = new Blob(askRec.chunks, { type }), g = askGuide();
+  if (blob.size < 2000) { if (g) askHint(g); return; }   // a tap, not a question
+  if (g) { g.say('One moment…', 'Turning your words into text.', null, null); }
+  try {
+    const r = await fetch(VEE_API.replace(/\/ask$/, '/listen'), { method: 'POST', headers: { 'Content-Type': type.split(';')[0] }, body: blob });
+    const j = await r.json().catch(() => ({}));
+    if (j.text) { askInput.value = j.text; askSend(j.text); }
+    else if (g) { g.say("I didn't catch that.", 'Hold the mic and try again?', null, null); }
+  } catch (err) { if (g) g.say("I can't reach my voice right now.", 'Try typing instead?', null, null); }
+}
+askMic.addEventListener('pointerdown', micDown);
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) askMic.addEventListener(ev, () => { if (askRec.held || askRec.rec) micUp(); });
+askMic.addEventListener('contextmenu', e => e.preventDefault());
 function askWhere() { return world ? `${world.pt.p.name} world` : `${FLOORS[player.floor].tag} · ${FLOORS[player.floor].name}`; }
 function openAsk() {
   const g = askGuide();
@@ -4175,7 +4276,7 @@ function openAsk() {
   return true;
 }
 function askHint(g) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.sticky = true; }   // stays up while the prompt is open
-function closeAsk() { askEl.hidden = true; askInput.blur(); canvas.focus(); const g = askGuide(); if (g) { g.asking = false; if (!tour) g.bodyTarget = null; } }
+function closeAsk(keepVoice) { if (keepVoice !== true) stopVoice(); micUp(); askEl.hidden = true; askInput.blur(); canvas.focus(); const g = askGuide(); if (g) { g.asking = false; if (!tour) g.bodyTarget = null; } }
 // while you're asking, she stands close and a little to your left, so her answers are easy to read
 function askFollow() {
   if (askEl.hidden) return;
@@ -4194,23 +4295,28 @@ async function askSend(q) {
   askState.busy = true; askForm.querySelector('button').disabled = true; askInput.value = '';
   askChips.querySelectorAll('button').forEach(b => { b.disabled = true; });
   if (touchUI) askInput.blur();   // drop the keyboard so the whole view is clear for her answer
+  stopVoice(); unlockAudio();
   const g = askGuide();
   if (g) g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null);
-  let answer;
+  let answer, go = null;
+  const seenIds = visit.d.seen.filter(id => WORLD_NAMES[id]);
   try {
-    const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, history: askState.history.slice(-6), floor: askWhere() }) });
+    const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      question: q, history: askState.history.slice(-6), floor: askWhere(), looking: askLooking(),
+      seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]) }) });
     const j = await r.json().catch(() => ({}));
-    answer = j.answer || "I can't reach my voice right now. Try again in a moment?";
+    answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null;
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
   } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
   askLive.textContent = 'Vee: ' + answer;
-  if (g) { g.say(answer, '', null, null); g.waveT = 0.8; }   // the whole answer, wrapped in her bubble
+  if (g) { g.say(answer, '', null, null); g.waveT = 0.8; veeSpeak(answer, g); }   // the whole answer, wrapped in her bubble (and spoken, if her voice is on)
   askState.busy = false; askForm.querySelector('button').disabled = false;
   askChips.querySelectorAll('button').forEach(b => { b.disabled = false; });
+  if (go) { veeTakeTo(go); return; }   // she's taking you there
   if (!touchUI) askInput.focus();
 }
 askForm.addEventListener('submit', e => { e.preventDefault(); askSend(askInput.value); });
-document.getElementById('askClose').addEventListener('click', closeAsk);
+document.getElementById('askClose').addEventListener('click', () => closeAsk());
 
 /* ---------- Guided tour with Vee ----------
    Walks you from stop to stop with the existing walk-to, while Vee floats beside you
