@@ -356,8 +356,8 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div id="flash"></div>
 <section id="room" hidden aria-modal="true" role="dialog"></section>
 <aside id="worldPanel" hidden aria-label="About this world"></aside>
-<div id="loading">Opening the gallery…</div>
-<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">The gallery needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
+<div id="loading">Entering Quantum Hall…</div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">Quantum Hall needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -432,7 +432,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Resume', cardText: 'The main screen of the operator desk. Walk up and press E, or tap it, to open the PDF.' },
@@ -699,7 +699,7 @@ const canvas = document.getElementById('scene');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
 catch (e) {
-  document.getElementById('loading').innerHTML = 'This browser can\'t draw the 3D gallery. <a style="color:var(--gilt)" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a>';
+  document.getElementById('loading').innerHTML = 'This browser can\'t draw Quantum Hall in 3D. <a style="color:var(--gilt)" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a>';
   return;
 }
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -1296,8 +1296,10 @@ void main() {
   vec3 glow = vec3(0.247, 0.878, 0.878) * m.g * (0.6 + 0.5 * uGlow);
   gl_FragColor = vec4(mix(glow, fill, m.r), m.a);
 }`;
-const bannerU = { map: { value: null }, uTime: { value: 0 }, uGlow: { value: 0 } };
-{
+// the "Quantum V^" lettering, drawn once and shared by every banner (red: letters, green: their glow)
+let bannerTex = null;
+function bannerTexture() {
+  if (bannerTex) return bannerTex;
   const c = mk(2048, 400), g = c.getContext('2d'), t1 = 'Quantum V', t2 = '^';
   let px = 280;
   const fontA = () => `${px}px "Young Serif", Georgia, serif`, fontB = () => `${Math.round(px * 0.62)}px "Young Serif", Georgia, serif`;
@@ -1310,27 +1312,41 @@ const bannerU = { map: { value: null }, uTime: { value: 0 }, uGlow: { value: 0 }
     g.font = fontB(); g.fillText(t2, x0 + wa + px * 0.04, base - px * 0.26);   // the caret sits raised and smaller, as in the title
   };
   draw('rgb(0,255,255)', 60); draw('rgb(0,255,255)', 22); draw('#ffffff', 0);
-  bannerU.map.value = new THREE.CanvasTexture(c);
-  const bg = new THREE.Group(); bg.position.copy(BANNER.pos); L1.g.add(bg);
-  const H = BANNER.w * 400 / 2048, PW = BANNER.w + 0.5, PH = H + 0.42;
+  return (bannerTex = new THREE.CanvasTexture(c));
+}
+// A "Quantum V^" banner w metres wide, hung on two cables rising hangUp metres. update() shimmers it
+// and brightens it as you come closer (within near metres).
+function makeVBanner(w, hangUp, near = 16) {
+  const u = { map: { value: bannerTexture() }, uTime: { value: 0 }, uGlow: { value: 0 } };
+  const bg = new THREE.Group(), H = w * 400 / 2048, PW = w + w * 0.07, PH = H + w * 0.06;
+  const edgeM = new THREE.MeshBasicMaterial({ color: 0x3fe0e0 }), cableM = new THREE.MeshStandardMaterial({ color: 0xaeb6c2, metalness: 0.9, roughness: 0.25 });
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x0a0f18 })); panel.position.z = -0.03; bg.add(panel);
-  const back = panel.clone(); back.rotation.y = Math.PI; back.position.z = -0.05; bg.add(back);
-  [[PW, 0.025, 0, PH / 2], [PW, 0.025, 0, -PH / 2], [0.025, PH, -PW / 2, 0], [0.025, PH, PW / 2, 0]].forEach(([bw, bh, x, y]) => {
-    const e = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.03), lineMat); e.position.set(x, y, -0.02); bg.add(e);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x0a0f18 })); back.rotation.y = Math.PI; back.position.z = -0.05; bg.add(back);
+  const et = Math.max(0.015, w * 0.0036);
+  [[PW, et, 0, PH / 2], [PW, et, 0, -PH / 2], [et, PH, -PW / 2, 0], [et, PH, PW / 2, 0]].forEach(([bw, bh, x, y]) => {
+    const e = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.03), edgeM); e.position.set(x, y, -0.02); bg.add(e);
   });
-  const text = new THREE.Mesh(new THREE.PlaneGeometry(BANNER.w, H), new THREE.ShaderMaterial({ uniforms: bannerU, vertexShader: bannerVert, fragmentShader: bannerFrag, transparent: true, depthWrite: false }));
-  bg.add(text);
-  for (const sx of [-1, 1]) {   // hung from the ceiling on two cables
-    const len = L1.h - BANNER.pos.y - PH / 2, cab = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len, 6), steel);
-    cab.position.set(sx * (PW / 2 - 0.4), PH / 2 + len / 2, -0.04); bg.add(cab);
+  bg.add(new THREE.Mesh(new THREE.PlaneGeometry(w, H), new THREE.ShaderMaterial({ uniforms: u, vertexShader: bannerVert, fragmentShader: bannerFrag, transparent: true, depthWrite: false })));
+  if (hangUp > 0) for (const sx of [-1, 1]) {
+    const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, hangUp, 6), cableM);
+    cab.position.set(sx * (PW / 2 - PW * 0.06), PH / 2 + hangUp / 2, -0.04); bg.add(cab);
   }
-  const bl = new THREE.PointLight(0x7fe8ff, 0.5, 6, 2); bl.position.set(0, -0.2, 1.4); bg.add(bl);
+  const bl = new THREE.PointLight(0x7fe8ff, 0.5, w * 0.85, 2); bl.position.set(0, -0.2, w * 0.2); bg.add(bl);
   const wp = new THREE.Vector3();
-  buildingUpdates.push((dt, t) => {
-    bannerU.uTime.value = reduceMotion ? 0 : t;
-    bg.getWorldPosition(wp); const dist = camera.position.distanceTo(wp);
-    bannerU.uGlow.value += (Math.max(0, Math.min(1, (16 - dist) / 9)) - bannerU.uGlow.value) * Math.min(1, dt * 2);
-  });
+  return {
+    group: bg, height: PH,
+    update(dt, t) {
+      u.uTime.value = reduceMotion ? 0 : t;
+      bg.getWorldPosition(wp); const dist = camera.position.distanceTo(wp);
+      u.uGlow.value += (Math.max(0, Math.min(1, (near - dist) / (near * 0.56))) - u.uGlow.value) * Math.min(1, dt * 2);
+    }
+  };
+}
+{
+  const H = BANNER.w * 400 / 2048 + BANNER.w * 0.06;
+  const b = makeVBanner(BANNER.w, L1.h - BANNER.pos.y - H / 2);
+  b.group.position.copy(BANNER.pos); L1.g.add(b.group);
+  buildingUpdates.push((dt, t) => b.update(dt, t));
 }
 
 /* ---------- B1 · Cryostat Lab ----------
@@ -1925,6 +1941,7 @@ function makeVee(parent, pos, facing) {
 }
 // A pulse of light where Vee points: a ring spreading on the floor and a fading beam
 function veePing(v, target) {
+  if (v.away) return;
   const g = new THREE.Group(); g.position.set(target.x, 0, target.z); v.parent.add(g);
   const ringM = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.52, 64), ringM); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
@@ -1950,9 +1967,16 @@ function veeFollowSpot(v) {
   if (v.bounds) v.bounds(p);
   return p;
 }
-const VEE_MIN_DIST = 2.2;   // how close Vee may come to the camera, in metres (she's about 1.8 m tall)
+const VEE_MIN_DIST = 2.2;
+// Vee can be docked at her Nesting Station in the builder's office. Docked, she rests on its pad and stays
+// out of sight everywhere else, until she's woken at the dock or a tour starts. Remembered on this device.
+const VEE_DOCK_KEY = 'quantum-hall-vee-docked';
+let veeDocked = (() => { try { return localStorage.getItem(VEE_DOCK_KEY) === '1'; } catch (e) { return false; } })();
+function setVeeDocked(on) { veeDocked = on; try { localStorage.setItem(VEE_DOCK_KEY, on ? '1' : '0'); } catch (e) {} }   // how close Vee may come to the camera, in metres (she's about 1.8 m tall)
 function updateVee(v, dt, t) {
   const m = reduceMotion ? 0.2 : 1, cam = camera.position, b = v.body.position, L = Math.min(1, dt * 8);
+  if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken: she gathers beside you
+  v.wasAway = v.away;
   // track whether you're walking; only then does her follow heading catch up with where you face
   const pp = camera.position;
   if (v.lastP) {
@@ -1967,7 +1991,7 @@ function updateVee(v, dt, t) {
   // never closer to the viewer than VEE_MIN_DIST: if she drifts (or you walk) inside it, she's eased back out
   {
     const cdx = b.x - cam.x, cdz = b.z - cam.z, cd = Math.hypot(cdx, cdz);
-    if (cd < VEE_MIN_DIST) {
+    if (cd < VEE_MIN_DIST && !v.resting) {   // resting on her pad, she stays put
       const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
       const ux = cd > 1e-3 ? cdx / cd : fx, uz = cd > 1e-3 ? cdz / cd : fz;   // straight away from you
       const k = Math.min(1, dt * 10);
@@ -1984,7 +2008,8 @@ function updateVee(v, dt, t) {
   v.pos.copy(b);
   // shimmer in when she arrives somewhere, shrink away when she zips into a display
   let scatter = 0;
-  if (v.vanishT >= 0) { v.vanishT += dt; v.scale = Math.max(0, 1 - v.vanishT / 0.45); scatter = Math.min(1, v.vanishT / 0.45) * 1.4; }
+  if (v.away) { v.scale = Math.max(0, v.scale - dt * 2.5); scatter = (1 - v.scale) * 1.4; }   // docked elsewhere: she's not here
+  else if (v.vanishT >= 0) { v.vanishT += dt; v.scale = Math.max(0, 1 - v.vanishT / 0.45); scatter = Math.min(1, v.vanishT / 0.45) * 1.4; }
   else if (v.appearT > 0) { v.appearT = Math.max(0, v.appearT - dt); const k = 1 - v.appearT / 0.8; v.scale = Math.min(1, 0.35 + k); scatter = (1 - k) * (1 - k) * 1.6; v.glow = Math.max(v.glow, 1 - k); }   // the swarm gathers into her
   else v.scale = 1;
   v.droneU.uScatter.value += ((reduceMotion ? 0 : scatter + (v.glitchD > 0 ? 0.12 : 0)) - v.droneU.uScatter.value) * Math.min(1, dt * 14);
@@ -2059,7 +2084,7 @@ function updateVee(v, dt, t) {
   const blinkAt = start => { const d = ph - start; if (d >= 0 && d < 150) open = Math.min(open, Math.abs(d - 75) / 75); };
   blinkAt(0); if (Math.floor(now / P) % 3 === 0) blinkAt(240);
   for (const e of v.eyes) e.scale.y = Math.max(0.08, open);
-  v.holoU.uDim.value = 1;
+  v.holoU.uDim.value = v.resting ? 0.55 : 1;   // dimmer while she rests on her dock
   // now and then the hologram glitches: a brief sideways jolt and flicker
   if (!reduceMotion) {
     v.glitchT -= dt;
@@ -2233,6 +2258,7 @@ function updateMascot(dt, t) {
   updateKiosk(dt, t);
   if (!vee) return;
   veeRoot.position.y = ride ? player.pos.y - 1.7 : FLOORS[player.floor].y;
+  vee.away = veeDocked;
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
   // her record follows her around
   vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
@@ -2353,7 +2379,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
     center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
   v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
-  updates.push((dt, t) => { updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
+  updates.push((dt, t) => { v.away = veeDocked && kind !== 'office'; updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
   return v;
 }
 
@@ -2455,6 +2481,7 @@ function clickAt(x, y) {
 // in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
 function worldAct(st, uv) {
   if (st.vee) { st.next(); return; }
+  if (st.act) { st.act(); return; }
   if (st.portal) enter(st, uv);
   else if (st.site) { if (st.uniforms) { st.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5)); st.burst = 1; } openSite(st.site.url); }
   else showStation(st);
@@ -3485,21 +3512,10 @@ function buildOfficeWorld(p) {
   const sg = new THREE.PointLight(0x3fe0e0, 0.6, 5, 2); sg.position.set(0, 1.6, deskZ + 0.6); ws.add(sg);
   const rgL = new THREE.PointLight(0x00ff66, 0.35, 4, 2); rgL.position.set(0, 1.8, deskZ - 0.1); ws.add(rgL);
 
-  // the monogram on the right wall
-  // the framed picture: the Quantum V^ mark on its own
-  const qc = mk(512, 512), qg = qc.getContext('2d');
-  const qbg = qg.createLinearGradient(0, 0, 512, 512); qbg.addColorStop(0, '#1b2236'); qbg.addColorStop(1, '#070910');
-  qg.fillStyle = qbg; qg.fillRect(0, 0, 512, 512);
-  qg.strokeStyle = 'rgba(63,224,224,.55)'; qg.lineWidth = 6; qg.beginPath(); qg.arc(256, 256, 200, 0, Math.PI * 2); qg.stroke();
-  qg.textAlign = 'center'; qg.textBaseline = 'middle';
-  let qpx = 92; do { qg.font = `${qpx}px "Young Serif", Georgia, serif`; } while (qg.measureText('QUANTUM').width > 360 && --qpx > 30);   // fits inside the ring
-  qg.fillStyle = '#f1e6cf'; qg.fillText('QUANTUM', 256, 226);
-  qg.fillStyle = '#3fe0e0'; qg.font = '600 120px "IBM Plex Mono", monospace'; qg.fillText('V^', 256, 318);
-  const mono = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(qc) }));
-  mono.position.set(RX - 0.02, 2.0, 1.2); mono.rotation.y = -Math.PI / 2; ws.add(mono);
-  [[1.56, 0.08, 0, 0.74], [1.56, 0.08, 0, -0.74], [0.08, 1.4, 0.74, 0], [0.08, 1.4, -0.74, 0]].forEach(([fw, fh, a, b]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(0.06, fh, fw), gold); f.position.set(RX - 0.04, 2.0 + b, 1.2 + a); ws.add(f);
-  });
+  // the Quantum V^ banner from the lobby, on the right wall, glowing over the room
+  const ob = makeVBanner(4.6, RH - 2.25 - (4.6 * 400 / 2048 + 4.6 * 0.06) / 2, 7);
+  ob.group.position.set(RX - 0.12, 2.25, 0.9); ob.group.rotation.y = -Math.PI / 2; ws.add(ob.group);
+  updates.push((dt, t) => ob.update(dt, t));
 
   // Vee's nest: a wall dock behind the operator's chair where her micro-drones rest and recharge,
   // with a landing pad she glides back to
@@ -3549,13 +3565,22 @@ function buildOfficeWorld(p) {
   const dockSt = { id: 'dock', info: { title: "Vee's nest" }, exhibit: true, standOff: 3.5, pitch: 0.06 };
   dockSt.center = new THREE.Vector3(0, NY, RZ1 - 0.1); dockSt.normal = new THREE.Vector3(0, 0, -1); dockSt.mesh = hexPanel;
   hexPanel.userData.station = dockSt; hit.push(hexPanel); stations.push(dockSt);
-  let nested = false;
+  // the dock is a switch: dock her (she glides onto her pad and rests, here and everywhere else) or wake her
+  dockSt.actVerb = () => veeDocked ? 'Wake Vee' : 'Dock Vee';
+  dockSt.act = () => {
+    const v = worldVee; setVeeDocked(!veeDocked);
+    if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
+    else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); v.waveT = 2.4; }
+  };
+  let nested = false, explained = false;
   updates.push((dt, t) => {
     const v = worldVee; if (!v) return;
-    // walk up to the dock and she glides home onto her pad; walk away and she follows you again
-    const atDock = near === dockSt && !tour && mode === 'walk';
-    if (atDock && !nested) { nested = true; v.bodyTarget = padPos.clone(); v.say('Welcome to my Nesting Station.', 'The thousands of nanobots that compile my image rest and recharge here.', null, null); }
-    else if (!atDock && nested && !tour) { nested = false; v.bodyTarget = null; }
+    const docked = veeDocked && !tour;
+    v.resting = docked;
+    if (docked && !nested) { nested = true; v.bodyTarget = padPos.clone(); }
+    else if (!docked && nested) { nested = false; if (!tour) v.bodyTarget = null; }
+    // the first time you walk up to it, she explains the dock
+    if (near === dockSt && !explained && !tour && mode === 'walk' && !veeDocked) { explained = true; v.say('Welcome to my Nesting Station.', touchUI ? 'Tap it to dock me here. I rest until you wake me.' : 'Press E to dock me here. I rest until you wake me.', null, null); }
     const home = Math.hypot(v.body.position.x - padPos.x, v.body.position.z - padPos.z) < 0.5;
     charge += ((nested && home ? 1 : 0) - charge) * Math.min(1, dt * 1.5);
     hexAcc += dt; if (hexAcc > (reduceMotion ? 0.5 : 0.12)) { hexAcc = 0; drawHex(t); }
@@ -3744,6 +3769,7 @@ function renderTourBar() {
 }
 function startTour() {
   if (tour || !(mode === 'walk' || mode === 'auto')) return;
+  if (veeDocked) setVeeDocked(false);   // a tour needs its guide: she wakes
   const g = tourGuide(); if (!g) return;
   const stops = world ? world.vee.tourStops : hallTourStops();
   if (!stops || !stops.length) return;
@@ -3858,7 +3884,7 @@ function tick() {
         if (nx.ride !== undefined) { const a = auto; startRide(nx.ride, () => { if (a.via.length) { a.target = a.via.shift(); a.stuck = 0; auto = a; mode = 'auto'; } }); }
         else { auto.target = nx; auto.stuck = 0; }
       }
-      else if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
+      else if (d.length() < 0.15) { mode = 'walk'; const pt = auto.pt; auto = null; if (pt.tourStop) { if (tour) { tour.arrived = true; tour.t = 0; renderTourBar(); } } else if (world && pt.vee) {} else if (world && pt.portal) enter(pt); else if (world && pt.act) pt.act(); else if (world && pt.info) showStation(pt); else if (!pt.exhibit) enter(pt); }
       else mv.copy(d.normalize());
     }
     if (mv.lengthSq() > 1) mv.normalize();
@@ -3900,10 +3926,10 @@ function tick() {
       }
       if (!near) {   // nothing else nearby: E talks to Vee
         const st = world.stations.find(x => x.vee);
-        if (st) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
+        if (st && !st.vee.away) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < 4.2 && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk' && !tour) showIndicator(near, near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
+      if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? -2.3 : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
@@ -3934,7 +3960,7 @@ function tick() {
   // stand still a while and she offers a hint
   if (!tour && mode === 'walk' && performance.now() - lastInput > 16000) {
     const g = world ? world.vee : vee;
-    if (g && g.scale > 0.9 && g.reveal >= g.total && g.doneT > 6) {
+    if (g && !g.away && !g.resting && g.scale > 0.9 && g.reveal >= g.total && g.doneT > 6) {
       lastInput = performance.now();
       const hints = world ? WORLD_HINTS : HALL_HINTS, h = hints[hintK++ % hints.length];
       g.say(h[0], h[1], null, null); g.waveT = 1.4;
