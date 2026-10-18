@@ -174,7 +174,7 @@ body.in-world #navToggle, body.touring #navToggle { display: none !important; }
 /* Ask Vee: a chat panel above the bottom buttons */
 #askVee {
   left: 0; right: 0; margin-inline: auto; width: min(560px, calc(100vw - 24px)); bottom: calc(var(--dir-h, 76px) + 8px);
-  display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
+  display: flex; flex-direction: column; padding: 8px;
   background: color-mix(in srgb, var(--night) 90%, transparent); border: 1px solid #5ff0ff; border-radius: 4px;
   font-family: var(--body); color: var(--parchment); box-shadow: 0 0 30px rgba(95, 240, 255, .15);
 }
@@ -194,6 +194,8 @@ body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 .ask-form { display: flex; gap: 6px; }
 .ask-form input { flex: 1; min-width: 0; font: 15px var(--body); color: var(--parchment); background: rgba(8, 10, 18, .8); border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; padding: 9px 10px; }
 .ask-form input:focus { outline: none; border-color: #5ff0ff; }
+.ask-form #askClose { color: #5ff0ff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); padding: 0 11px; }
+.ask-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); margin: 0; }   /* her answers, for screen readers */
 .ask-form button { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #05070b; background: #5ff0ff; border: 0; border-radius: 3px; padding: 0 14px; cursor: pointer; }
 .ask-form button:disabled { opacity: .5; cursor: default; }
 .ask-note { margin: 0; font-size: 10.5px; color: var(--muted); }
@@ -404,11 +406,8 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="floorToast" aria-live="polite"></div>
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
-  <div class="ask-head"><span>ASK VEE</span><button type="button" id="askClose" aria-label="Close">✕</button></div>
-  <div class="ask-log" aria-live="polite"></div>
-  <div class="ask-chips"></div>
-  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask about the products, the builder or the hall…" aria-label="Your question for Vee"><button type="submit">Ask</button></form>
-  <p class="ask-note">Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong.</p>
+  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
+  <p class="ask-live" aria-live="polite"></p>
 </section>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
 <div id="stick" hidden><i></i></div>
@@ -2203,19 +2202,31 @@ function makeVee(parent, pos, facing) {
 
   // name and speech bubble; the words type out one character at a time
   const name = stationLabel('YOUR GUIDE', 'Vee'); name.scale.multiplyScalar(0.55); name.position.y = 3.0; body.add(name);   // shown with her speech bubble
-  const bc = mk(1024, 300), bg = bc.getContext('2d'), bubbleTex = new THREE.CanvasTexture(bc);
+  // the bubble grows upward from its tail as lines are added, so long answers wrap instead of being cut off
+  const BW = 1024, BH = 768, TIP = 12, TAIL = 52, BS = 1.9;
+  const bc = mk(BW, BH), bg = bc.getContext('2d'), bubbleTex = new THREE.CanvasTexture(bc);
   const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, opacity: 0 }));
-  bubble.scale.set(1.9, 0.56, 1); bubble.position.set(0, 2.32, 0); body.add(bubble);
+  bubble.scale.set(BS, BS * BH / BW, 1); bubble.center.set(0.5, TIP / BH); bubble.position.set(0, 2.04, 0); body.add(bubble);
+  function wrapLines(text, font, maxW) {
+    bg.font = font; const out = []; let line = '';
+    for (const word of text.split(/\s+/)) { const t2 = line ? line + ' ' + word : word; if (bg.measureText(t2).width > maxW && line) { out.push(line); line = word; } else line = t2; }
+    if (line) out.push(line); return out;
+  }
   function drawBubble(n) {
-    const { title, sub, step, tpx, spx, tw, sw } = v.text;
-    bg.clearRect(0, 0, 1024, 300);
-    bg.fillStyle = 'rgba(8,10,18,0.95)'; rr(bg, 10, 10, 1004, 230, 40); bg.fill();
-    bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, 10, 1004, 230, 40); bg.stroke();
-    bg.beginPath(); bg.moveTo(470, 238); bg.lineTo(512, 290); bg.lineTo(554, 238); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.95)'; bg.fill(); bg.stroke();
-    bg.textAlign = 'left';   // left-aligned from the full line's start, so text grows in place as it types
-    bg.font = `${tpx}px "Young Serif", Georgia, serif`; bg.fillStyle = '#f1e6cf'; bg.fillText(title.slice(0, Math.min(n, title.length)), 512 - tw / 2, 105);
-    bg.font = `${spx}px "IBM Plex Sans", sans-serif`; bg.fillStyle = '#5ff0ff'; bg.fillText(sub.slice(0, Math.max(0, n - title.length)), 512 - sw / 2, 180);
-    if (step) { bg.fillStyle = '#8e99b0'; bg.font = '600 24px "IBM Plex Mono", monospace'; bg.textAlign = 'right'; bg.fillText(step, 984, 226); }
+    const { tLines, sLines, step, tpx, spx, tLH, sLH, boxH, tw, sw } = v.text;
+    bg.clearRect(0, 0, BW, BH);
+    const bottom = BH - TIP - TAIL, top = bottom - boxH;
+    bg.fillStyle = 'rgba(8,10,18,0.95)'; rr(bg, 10, top, 1004, boxH, 40); bg.fill();
+    bg.strokeStyle = '#5ff0ff'; bg.lineWidth = 4; rr(bg, 10, top, 1004, boxH, 40); bg.stroke();
+    bg.beginPath(); bg.moveTo(470, bottom - 2); bg.lineTo(512, BH - TIP); bg.lineTo(554, bottom - 2); bg.closePath(); bg.fillStyle = 'rgba(8,10,18,0.95)'; bg.fill(); bg.stroke();
+    bg.textAlign = 'left';   // left-aligned from each block's start, so text grows in place as it types
+    let left = n, y = top + 30 + tpx;
+    bg.font = `${tpx}px "Young Serif", Georgia, serif`; bg.fillStyle = '#f1e6cf';
+    for (const ln of tLines) { if (left > 0) bg.fillText(ln.slice(0, left), 512 - tw / 2, y); left -= ln.length; y += tLH; }
+    y += sLines.length ? 10 - tLH + sLH : 0;
+    bg.font = `${spx}px "IBM Plex Sans", sans-serif`; bg.fillStyle = '#5ff0ff';
+    for (const ln of sLines) { if (left > 0) bg.fillText(ln.slice(0, left), 512 - sw / 2, y); left -= ln.length; y += sLH; }
+    if (step) { bg.fillStyle = '#8e99b0'; bg.font = '600 24px "IBM Plex Mono", monospace'; bg.textAlign = 'right'; bg.fillText(step, 984, bottom - 14); }
     bubbleTex.needsUpdate = true;
   }
 
@@ -2232,11 +2243,20 @@ function makeVee(parent, pos, facing) {
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
   // say a line; target (a world position) makes her point at it and pings the spot
   v.say = (title, sub, step, target) => {
-    let tpx = 60; do { bg.font = `${tpx}px "Young Serif", Georgia, serif`; } while (bg.measureText(title).width > 940 && --tpx > 30);
-    const tw = bg.measureText(title).width;
-    let spx = 44; do { bg.font = `${spx}px "IBM Plex Sans", sans-serif`; } while (bg.measureText(sub).width > 940 && --spx > 24);
-    const sw = bg.measureText(sub).width;
-    v.text = { title, sub, step, tpx, spx, tw, sw };
+    title = String(title || ''); sub = String(sub || ''); v.sticky = false;
+    // a short title shrinks to fit one line, as before; a long one (an answer) wraps in the same large serif
+    let tpx = 60; do { bg.font = `${tpx}px "Young Serif", Georgia, serif`; } while (bg.measureText(title).width > 940 && --tpx > 38);
+    let tLines = [title];
+    if (bg.measureText(title).width > 940) { tpx = 46; tLines = wrapLines(title, `${tpx}px "Young Serif", Georgia, serif`, 940); }
+    while (tLines.length > 8 && tpx > 30) { tpx -= 4; tLines = wrapLines(title, `${tpx}px "Young Serif", Georgia, serif`, 940); }
+    let spx = 44; do { bg.font = `${spx}px "IBM Plex Sans", sans-serif`; } while (bg.measureText(sub).width > 940 && --spx > 34);
+    const sLines = sub ? (bg.measureText(sub).width > 940 ? wrapLines(sub, `${spx}px "IBM Plex Sans", sans-serif`, 940) : [sub]) : [];
+    bg.font = `${tpx}px "Young Serif", Georgia, serif`; const tw = Math.max(...tLines.map(l => bg.measureText(l).width));
+    bg.font = `${spx}px "IBM Plex Sans", sans-serif`; const sw = sLines.length ? Math.max(...sLines.map(l => bg.measureText(l).width)) : 0;
+    const tLH = Math.round(tpx * 1.22), sLH = Math.round(spx * 1.3);
+    const boxH = Math.max(230, 30 + tpx + (tLines.length - 1) * tLH + (sLines.length ? 10 + sLines.length * sLH : 0) + (step ? 46 : 34));
+    v.text = { title, sub, step, tpx, spx, tw, sw, tLines, sLines, tLH, sLH, boxH };
+    v.name.position.y = 2.04 + (boxH + TAIL) / BW * BS + 0.32;   // her name sits just above the bubble, however tall
     v.total = title.length + sub.length; v.reveal = reduceMotion ? v.total : 0; v.drawn = -1; v.doneT = 0;
     if (target) { v.pointTarget = target.clone(); v.pointT = 3.4; veePing(v, target); } else { v.pointTarget = null; v.pointT = 0; }
     drawBubble(Math.floor(v.reveal)); v.drawn = Math.floor(v.reveal);
@@ -2413,10 +2433,10 @@ function updateVee(v, dt, t) {
   });
   v.motes.geometry.attributes.position.needsUpdate = true; v.motes.geometry.attributes.color.needsUpdate = true;
   if (v.text && v.reveal >= v.total) v.doneT += dt;
-  const showBubble = v.bodyTarget || (v.text && v.reveal < v.total) || v.doneT < 6 || dist < 2.2;   // she speaks, then goes quiet
+  const showBubble = (v.bodyTarget && !v.asking) || (v.text && v.reveal < v.total) || v.doneT < 6 + v.total / 30 || (dist < 2.2 && !v.asking) || (v.asking && v.sticky);   // answers fade once there's been time to read them; the Ask hint stays   // longer answers stay up longer to read   // she speaks, then goes quiet
   v.bubble.material.opacity += ((showBubble ? 1 : 0) - v.bubble.material.opacity) * Math.min(1, dt * 4);
   v.name.material.opacity = v.bubble.material.opacity;
-  v.bubble.position.y = 2.32 + Math.sin(t * 1.6) * 0.03 * m;
+  v.bubble.position.y = 2.04 + Math.sin(t * 1.6) * 0.03 * m;
   v.holoU.uTime.value = t; v.holoU.uGlow.value = v.glow;
   // pings fade out and clean up
   for (let i = v.pings.length - 1; i >= 0; i--) {
@@ -2593,7 +2613,7 @@ function updateMascot(dt, t) {
   vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
   vee.talk.center.copy(vee.pt.center);
   vee.pt.normal.set(camera.position.x - vee.body.position.x, 0, camera.position.z - vee.body.position.z).normalize();
-  if (tour || mode !== 'walk' && mode !== 'auto') return;   // the guided tour is speaking for her
+  if (tour || vee.asking || mode !== 'walk' && mode !== 'auto') return;   // the guided tour (or your question) is speaking for her
   vee.tourT += dt;   // the room tour plays through once, then rests on its last line
   if (vee.tourT > 5 && vee.reveal >= vee.total && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
 }
@@ -3091,6 +3111,7 @@ const promptEl = document.getElementById('prompt');
 const touchUI = matchMedia('(pointer: coarse)').matches, _ip = new THREE.Vector3();
 let lastIndicator = '';
 function showIndicator(target, verb, name, lift) {
+  if (!askEl.hidden) { promptEl.hidden = true; return; }   // the Ask panel is open: nothing else to press
   const key = verb + '|' + name;
   if (key !== lastIndicator) {
     lastIndicator = key;
@@ -4116,33 +4137,36 @@ function exitWorld() {
    Visitors can ask Vee anything; the vee-worker (a Cloudflare Worker running a Workers AI model,
    grounded in this site's own copy) answers. Hidden until VEE_API is set. */
 const VEE_API = 'https://vee-worker.nathaniel-a-vazquez.workers.dev/ask';   // the vee-worker's /ask (see ~/Projects/vee-worker)
-const askEl = document.getElementById('askVee'), askLog = askEl.querySelector('.ask-log'), askInput = document.getElementById('askInput'), askForm = askEl.querySelector('.ask-form');
-const askChips = askEl.querySelector('.ask-chips');
+const askEl = document.getElementById('askVee'), askLive = askEl.querySelector('.ask-live'), askInput = document.getElementById('askInput'), askForm = askEl.querySelector('.ask-form');
 const askState = { history: [], busy: false };
-const ASK_CHIPS = ['What is VIPER™?', 'What does STEADYWATCH™ PLATFORM do?', 'Who built this?', 'How do I contact Nathaniel?'];
 function askGuide() { return world ? world.vee : vee; }
 function askWhere() { return world ? `${world.pt.p.name} world` : `${FLOORS[player.floor].tag} · ${FLOORS[player.floor].name}`; }
 function openAsk() {
   const g = askGuide();
   if (!VEE_API || !g || g.away || tour) return false;
   askEl.hidden = false; promptEl.hidden = true;
-  if (!askLog.children.length && !askChips.children.length) ASK_CHIPS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.addEventListener('click', () => askSend(c)); askChips.appendChild(b); });
-  if (!askState.history.length) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.waveT = 1.4; }
+  if (g.tourK !== undefined && g.tour) g.tourK = g.tour.length - 1;   // her intro is done: you're talking now
+  askHint(g); g.waveT = 1.4;
   setTimeout(() => askInput.focus(), 0);
   return true;
 }
-function closeAsk() { askEl.hidden = true; askInput.blur(); canvas.focus(); }
-function askLine(cls, text, who) {
-  const d = document.createElement('div'); d.className = cls;
-  if (who) { const b = document.createElement('b'); b.textContent = who; d.appendChild(b); }
-  d.appendChild(document.createTextNode(text)); askLog.appendChild(d); askLog.scrollTop = askLog.scrollHeight; return d;
+function askHint(g) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.sticky = true; }   // stays up while the prompt is open
+function closeAsk() { askEl.hidden = true; askInput.blur(); canvas.focus(); const g = askGuide(); if (g) { g.asking = false; if (!tour) g.bodyTarget = null; } }
+// while you're asking, she stands close and a little to your left, so her answers are easy to read
+function askFollow() {
+  if (askEl.hidden) return;
+  const g = askGuide(); if (!g || tour) return;
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), side = camera.aspect < 0.85 ? 0.25 : 0.75, ahead = 2.7;
+  const p = new THREE.Vector3(camera.position.x + fx * ahead + fz * side, 0, camera.position.z + fz * ahead - fx * side);
+  if (g.bounds) g.bounds(p);
+  g.bodyTarget = p; g.asking = true;
+  if (!askState.busy && !g.sticky && g.text && g.reveal >= g.total && g.doneT > 6 + g.total / 30) askHint(g);   // an answer has faded: back to the hint
 }
 async function askSend(q) {
   q = String(q || '').trim().slice(0, 400);
   if (!q || askState.busy) return;
-  askState.busy = true; askForm.querySelector('button').disabled = true; askChips.innerHTML = ''; askInput.value = '';
-  askLine('q', q);
-  const wait = askLine('a wait', 'Thinking…', 'VEE'), g = askGuide();
+  askState.busy = true; askForm.querySelector('button').disabled = true; askInput.value = '';
+  const g = askGuide();
   if (g) g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null);
   let answer;
   try {
@@ -4151,20 +4175,12 @@ async function askSend(q) {
     answer = j.answer || "I can't reach my voice right now. Try again in a moment?";
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
   } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
-  wait.remove(); askLine('a', answer, 'VEE');
-  if (g) {   // her bubble shows the first sentence; the panel has the whole answer
-    const first = (answer.match(/^.*?[.!?](\s|$)/) || [answer])[0].trim();
-    g.say(first.length > 70 ? first.slice(0, 68) + '…' : first, '', null, null); g.waveT = 0.8;
-  }
+  askLive.textContent = 'Vee: ' + answer;
+  if (g) { g.say(answer, '', null, null); g.waveT = 0.8; }   // the whole answer, wrapped in her bubble
   askState.busy = false; askForm.querySelector('button').disabled = false; askInput.focus();
 }
 askForm.addEventListener('submit', e => { e.preventDefault(); askSend(askInput.value); });
 document.getElementById('askClose').addEventListener('click', closeAsk);
-if (VEE_API) {   // an Ask Vee button next to the tour
-  const b = document.createElement('button'); b.className = 'dir-btn tour-btn'; b.type = 'button'; b.id = 'go-ask'; b.textContent = '✦ Ask Vee';
-  b.addEventListener('click', () => { if (askEl.hidden) { if (!openAsk()) { const g = askGuide(); if (g && g.away) toastFloor(FI.l4); } } else closeAsk(); });
-  floorRow.insertBefore(b, floorRow.children[1] || null);
-}
 
 /* ---------- Guided tour with Vee ----------
    Walks you from stop to stop with the existing walk-to, while Vee floats beside you
@@ -4199,6 +4215,7 @@ function renderTourBar() {
 function startTour() {
   if (tour || !(mode === 'walk' || mode === 'auto')) return;
   if (!askEl.hidden) closeAsk();
+  for (const g of [vee, world && world.vee]) if (g) g.asking = false;
   if (veeDocked) setVeeDocked(false);   // a tour needs its guide: she wakes
   const g = tourGuide(); if (!g) return;
   const stops = world ? world.vee.tourStops : hallTourStops();
@@ -4410,10 +4427,11 @@ function tick() {
   }
 
   updateTour(dt);
+  askFollow();
   // stand still a while and she offers a hint
   if (!tour && mode === 'walk' && performance.now() - lastInput > 16000) {
     const g = world ? world.vee : vee;
-    if (g && !g.away && !g.resting && g.scale > 0.9 && g.reveal >= g.total && g.doneT > 6) {
+    if (g && !g.away && !g.resting && !g.asking && g.scale > 0.9 && g.reveal >= g.total && g.doneT > 6) {
       lastInput = performance.now();
       const hints = world ? WORLD_HINTS : HALL_HINTS, h = hints[hintK++ % hints.length];
       g.say(h[0], h[1], null, null); g.waveT = 1.4;
