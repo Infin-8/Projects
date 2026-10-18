@@ -2307,6 +2307,21 @@ function veeFollowSpot(v) {
   return p;
 }
 const VEE_MIN_DIST = 2.2;
+// Her moods, set from the mood her AI answer carries (and "thinking" while she waits for it). Each eases in:
+// eye shape, head tilt and nod, the colour and swirl of her particles, a bounce, and a pose.
+const VEE_MOODS = {
+  neutral:    { eyeX: 1,    eyeY: 1,    tilt: 0,     nod: 0,    tint: [0.56, 0.97, 1],    swirl: 1,   bounce: 0,    pose: null },
+  happy:      { eyeX: 1.1,  eyeY: 0.72, tilt: 0.07,  nod: -0.04, tint: [0.78, 0.98, 0.86], swirl: 1.4, bounce: 0.035, pose: 'wave' },
+  excited:    { eyeX: 1.25, eyeY: 1.35, tilt: 0,     nod: -0.08, tint: [0.8, 1.1, 1.15],   swirl: 2.2, bounce: 0.07, pose: 'wave' },
+  thinking:   { eyeX: 1,    eyeY: 0.45, tilt: 0.17,  nod: 0.05, tint: [0.7, 0.72, 1],     swirl: 0.6, bounce: 0,    pose: 'chin' },
+  curious:    { eyeX: 1.15, eyeY: 1.2,  tilt: -0.19, nod: -0.03, tint: [0.5, 1, 0.86],    swirl: 1.2, bounce: 0,    pose: null },
+  apologetic: { eyeX: 0.9,  eyeY: 0.65, tilt: 0.05,  nod: 0.2,  tint: [0.45, 0.66, 0.95], swirl: 0.7, bounce: 0,    pose: 'shrug' } };
+function setVeeMood(v, mood, secs) {
+  if (!v) return; const M = VEE_MOODS[mood] ? mood : 'neutral';
+  v.mood = M; v.moodT = secs;
+  if (VEE_MOODS[M].pose === 'wave' && !v.pointT) v.waveT = 1.6;
+}
+let veeLevel = () => 0;   // how loud her voice is right now (0…1), for lip sync; set up with her voice
 const VEE_TALK_REACH = 5.6;   // she floats about 4–5 m ahead of you, so E reaches her wherever she drifts
 // Vee can be docked at her Nesting Station in the builder's office. Docked, she rests on its pad and stays
 // out of sight everywhere else, until she's woken at the dock or a tour starts. Remembered on this device.
@@ -2315,6 +2330,12 @@ let veeDocked = (() => { try { return localStorage.getItem(VEE_DOCK_KEY) === '1'
 function setVeeDocked(on) { veeDocked = on; try { localStorage.setItem(VEE_DOCK_KEY, on ? '1' : '0'); } catch (e) {} }   // how close Vee may come to the camera, in metres (she's about 1.8 m tall)
 function updateVee(v, dt, t) {
   const m = reduceMotion ? 0.2 : 1, cam = camera.position, b = v.body.position, L = Math.min(1, dt * 8);
+  if (v.moodT > 0) { v.moodT -= dt; if (v.moodT <= 0) v.mood = 'neutral'; }
+  const MT = VEE_MOODS[v.mood] || VEE_MOODS.neutral, mk2 = Math.min(1, dt * 4);
+  if (!v.mp) v.mp = { ...VEE_MOODS.neutral, tint: [...VEE_MOODS.neutral.tint] };
+  for (const k of ['eyeX', 'eyeY', 'tilt', 'nod', 'swirl', 'bounce']) v.mp[k] += (MT[k] - v.mp[k]) * mk2;
+  for (let i = 0; i < 3; i++) v.mp.tint[i] += (MT.tint[i] - v.mp.tint[i]) * mk2;
+  const pose = MT.pose;
   if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken: she gathers beside you
   v.wasAway = v.away;
   // track whether you're walking; only then does her follow heading catch up with where you face
@@ -2391,7 +2412,7 @@ function updateVee(v, dt, t) {
   if (v.spinT > 0) { v.spinT -= dt; const k = 1 - Math.max(0, v.spinT) / 0.9; spin = (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2) * Math.PI * 2; }
   v.fig.rotation.y = v.baseYaw + spin;
   v.fig.rotation.z = Math.sin(t * 0.8) * 0.02 * m + v.lean;              // a slight weight shift, plus leaning into her drift
-  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m;
+  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m + v.mp.bounce * Math.abs(Math.sin(t * 6.5)) * m;   // a little bounce when she's happy or excited
   // typing out the current line
   const talking = (v.text && v.reveal < v.total) || v.speaking;
   if (talking) { v.reveal = Math.min(v.total, v.reveal + dt * 42); const n = Math.floor(v.reveal); if (n !== v.drawn) { v.draw(n); v.drawn = n; } }
@@ -2400,30 +2421,39 @@ function updateVee(v, dt, t) {
     const sh = new THREE.Vector3(); v.shoulder.getWorldPosition(sh);
     const e = Math.max(-0.6, Math.min(1.1, Math.atan2(v.pointTarget.y - sh.y, Math.hypot(v.pointTarget.x - sh.x, v.pointTarget.z - sh.z))));
     v.shoulder.rotation.x += (-(Math.PI / 2 + e) - v.shoulder.rotation.x) * L;
-    v.shoulder.rotation.z += (0 - v.shoulder.rotation.z) * L; v.elbow.rotation.z += (0 - v.elbow.rotation.z) * L;
+    v.shoulder.rotation.z += (0 - v.shoulder.rotation.z) * L; v.elbow.rotation.z += (0 - v.elbow.rotation.z) * L; v.elbow.rotation.x += (0 - v.elbow.rotation.x) * L;
     if (v.waveT > 0) v.waveT -= dt;
   } else if (v.waveT > 0) {
     v.waveT -= dt; const k = Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5);
     v.shoulder.rotation.x += (0 - v.shoulder.rotation.x) * L;
-    v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.5 * Math.sin(t * 11) * m) * k;
+    v.elbow.rotation.x *= 1 - L; v.shoulder.rotation.z = 2.5 * k; v.elbow.rotation.z = (0.5 + 0.5 * Math.sin(t * 11) * m) * k;
   } else {
-    v.shoulder.rotation.x *= 1 - L; v.shoulder.rotation.z *= 0.9; v.elbow.rotation.z *= 0.9;
+    const shrug = pose === 'shrug';   // apologetic: both forearms out, palms up
+    v.shoulder.rotation.x += ((shrug ? -0.35 : 0) - v.shoulder.rotation.x) * L; v.shoulder.rotation.z += ((shrug ? 0.42 : 0) - v.shoulder.rotation.z) * L;
+    v.elbow.rotation.z += (0 - v.elbow.rotation.z) * L; v.elbow.rotation.x = (v.elbow.rotation.x || 0) + ((shrug ? -1.1 : 0) - (v.elbow.rotation.x || 0)) * L;
   }
   // while she waves, she pops her left foot back with a single knee bend
   const waveK = v.waveT > 0 && !pointing ? Math.max(0, Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5)) : 0;
   v.knee.rotation.x += (1.05 * waveK * (reduceMotion ? 0.4 : 1) - v.knee.rotation.x) * Math.min(1, dt * 10);
   // left arm and head: gesture and nod while she talks, glance around when idle
-  v.shoulderL.rotation.x += ((talking ? -0.45 - 0.18 * Math.sin(t * 7) * m : 0) - v.shoulderL.rotation.x) * L;
-  v.elbowL.rotation.x += ((talking ? -0.6 : 0) - v.elbowL.rotation.x) * L;
-  v.headG.rotation.x = talking ? Math.sin(t * 13) * 0.07 * m : v.headG.rotation.x * 0.9;
-  v.mouth.scale.y += ((talking ? 1 + 2 * Math.abs(Math.sin(t * 17)) * Math.abs(Math.sin(t * 5.3)) : 1) - v.mouth.scale.y) * Math.min(1, dt * 20);
+  // left arm: a hand to her chin while thinking, palms up in a shrug when apologetic, else gesturing as she talks
+  const lx = pose === 'chin' ? -1.05 : pose === 'shrug' ? -0.35 : talking ? -0.45 - 0.18 * Math.sin(t * 7) * m : 0;
+  const lz = pose === 'chin' ? -0.55 : pose === 'shrug' ? -0.42 : 0, ex = pose === 'chin' ? -2.15 : pose === 'shrug' ? -1.1 : talking ? -0.6 : 0;
+  v.shoulderL.rotation.x += (lx - v.shoulderL.rotation.x) * L; v.shoulderL.rotation.z += (lz - v.shoulderL.rotation.z) * L;
+  v.elbowL.rotation.x += (ex - v.elbowL.rotation.x) * L;
+  v.nodA = talking ? Math.sin(t * 13) * 0.07 * m : (v.nodA || 0) * 0.9;
+  v.headG.rotation.x = v.nodA + v.mp.nod; v.headG.rotation.z = v.mp.tilt;   // her mood shows in how she holds her head
+  // her mouth follows her real voice when it's playing (lip sync), else it flutters as her words type out
+  const mouthT = v.speaking ? 1 + Math.min(4, veeLevel() * 14) : talking ? 1 + 2 * Math.abs(Math.sin(t * 17)) * Math.abs(Math.sin(t * 5.3)) : 1;
+  v.mouth.scale.y += (mouthT - v.mouth.scale.y) * Math.min(1, dt * 24);
   v.headG.rotation.y += (((!isNear && !v.bodyTarget && !pointing) ? Math.sin(t * 0.45) * 0.45 * m : 0) - v.headG.rotation.y) * Math.min(1, dt * 2);
   // blink, timed from the UTC clock: one blink every 4.2 s, a quick double blink every third time
   const now = Date.now(), P = 4200, ph = now % P;
   let open = 1;
   const blinkAt = start => { const d = ph - start; if (d >= 0 && d < 150) open = Math.min(open, Math.abs(d - 75) / 75); };
   blinkAt(0); if (Math.floor(now / P) % 3 === 0) blinkAt(240);
-  for (const e of v.eyes) e.scale.y = Math.max(0.08, open);
+  for (const e of v.eyes) { e.scale.y = Math.max(0.08, open) * v.mp.eyeY; e.scale.x = v.mp.eyeX; }
+  v.droneU.uColor.value.setRGB(v.mp.tint[0] * 0.55, v.mp.tint[1] * 0.55, v.mp.tint[2] * 0.55);   // her particles take on her mood
   v.holoU.uDim.value = v.resting ? 0.55 : 1;   // dimmer while she rests on her dock
   // now and then the hologram glitches: a brief sideways jolt and flicker
   if (!reduceMotion) {
@@ -2434,7 +2464,7 @@ function updateVee(v, dt, t) {
   }
   v.rings.forEach((r, i) => { r.rotation.z += dt * [0.8, -0.6, 1.1][i] * m; if (i === 2) r.scale.setScalar(1 + 0.08 * Math.sin(t * 2.2) * m); });   // the foot halo also breathes
   // motes: swirl faster and pull in tighter while she talks, twinkle as they go
-  v.moteSpeed += ((talking ? 2.6 : 1) - v.moteSpeed) * Math.min(1, dt * 3);
+  v.moteSpeed += ((talking ? 2.6 : 1) * v.mp.swirl - v.moteSpeed) * Math.min(1, dt * 3);
   const mp = v.motes.geometry.attributes.position.array, mc = v.motes.geometry.attributes.color.array, tight = 1 - 0.25 * (v.moteSpeed - 1) / 1.6;
   v.moteData.forEach((d, i) => {
     d.a += d.spin * v.moteSpeed * dt * m; d.y += d.rise * v.moteSpeed * dt * m;
@@ -4212,7 +4242,17 @@ const SILENT_WAV = (() => { const n = 800, b = new Uint8Array(44 + n), v = new D
   w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
   let s2 = ''; b.forEach(c => { s2 += String.fromCharCode(c); }); return 'data:audio/wav;base64,' + btoa(s2); })();
 function renderVoiceBtn() { askVoiceBtn.textContent = veeVoiceOn ? '🔊' : '🔇'; askVoiceBtn.setAttribute('aria-pressed', veeVoiceOn ? 'true' : 'false'); const l = `Vee's voice: ${veeVoiceOn ? 'on' : 'off'}`; askVoiceBtn.setAttribute('aria-label', l); askVoiceBtn.title = l; }
-function unlockAudio() { if (!veeVoiceOn) return; try { veeAudio.src = SILENT_WAV; veeAudio.play().catch(() => {}); } catch (e) {} }   // inside a tap
+let veeCtx = null, veeAnalyser = null, veeLevelBuf = null;
+function veeAudioGraph() {   // made inside a tap, then reused: her voice plays straight through, with an analyser listening in
+  if (veeCtx || !(window.AudioContext || window.webkitAudioContext)) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)(), src = ctx.createMediaElementSource(veeAudio), an = ctx.createAnalyser();
+    an.fftSize = 512; src.connect(an); an.connect(ctx.destination);
+    veeCtx = ctx; veeAnalyser = an; veeLevelBuf = new Uint8Array(an.fftSize);
+    veeLevel = () => { if (!veeAnalyser || veeAudio.paused) return 0; veeAnalyser.getByteTimeDomainData(veeLevelBuf); let sum = 0; for (const x of veeLevelBuf) { const d = (x - 128) / 128; sum += d * d; } return Math.sqrt(sum / veeLevelBuf.length); };
+  } catch (e) { veeCtx = null; }
+}
+function unlockAudio() { if (!veeVoiceOn) return; veeAudioGraph(); try { if (veeCtx && veeCtx.state === 'suspended') veeCtx.resume(); veeAudio.src = SILENT_WAV; veeAudio.play().catch(() => {}); } catch (e) {} }   // inside a tap
 function stopVoice() { try { veeAudio.pause(); } catch (e) {} for (const g of [vee, world && world.vee]) if (g) g.speaking = false; }
 askVoiceBtn.addEventListener('click', () => {
   veeVoiceOn = !veeVoiceOn; try { localStorage.setItem(VEE_VOICE_KEY, veeVoiceOn ? '1' : '0'); } catch (e) {}
@@ -4226,6 +4266,7 @@ async function veeSpeak(text, g) {
     if (!r.ok || !veeVoiceOn) return;
     const blob = await r.blob(); if (veeAudioURL) URL.revokeObjectURL(veeAudioURL); veeAudioURL = URL.createObjectURL(blob);
     veeAudio.src = veeAudioURL;
+    if (veeCtx && veeCtx.state !== 'running') await veeCtx.resume().catch(() => {});   // the analyser's context must be running, or she'd be silent
     if (g) { g.speaking = true; veeAudio.onended = veeAudio.onpause = () => { g.speaking = false; }; }
     await veeAudio.play();
   } catch (e) { if (g) g.speaking = false; }
@@ -4297,19 +4338,25 @@ async function askSend(q) {
   if (touchUI) askInput.blur();   // drop the keyboard so the whole view is clear for her answer
   stopVoice(); unlockAudio();
   const g = askGuide();
-  if (g) g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null);
-  let answer, go = null;
+  if (g) { g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null); setVeeMood(g, 'thinking', 30); }
+  let answer, go = null, mood = 'apologetic', point = null;
   const seenIds = visit.d.seen.filter(id => WORLD_NAMES[id]);
   try {
     const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       question: q, history: askState.history.slice(-6), floor: askWhere(), looking: askLooking(),
       seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]) }) });
     const j = await r.json().catch(() => ({}));
-    answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null;
+    answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null; mood = j.mood || 'neutral'; point = j.point || null;
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
   } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
   askLive.textContent = 'Vee: ' + answer;
-  if (g) { g.say(answer, '', null, null); g.waveT = 0.8; veeSpeak(answer, g); }   // the whole answer, wrapped in her bubble (and spoken, if her voice is on)
+  if (g) {
+    // she points at the place she names: right at it on this floor, or at the lift if it's on another
+    let target = null;
+    const d = point && !world ? veeDestination(point) : null;
+    if (d) target = d.floor === player.floor ? d.center.clone() : new THREE.Vector3(LIFT.x, FLOORS[player.floor].y + 2.2, LIFT.z);
+    g.say(answer, '', null, target); setVeeMood(g, mood, 8 + answer.length / 30); veeSpeak(answer, g);   // the whole answer, wrapped in her bubble (and spoken, if her voice is on)
+  }
   askState.busy = false; askForm.querySelector('button').disabled = false;
   askChips.querySelectorAll('button').forEach(b => { b.disabled = false; });
   if (go) { veeTakeTo(go); return; }   // she's taking you there
