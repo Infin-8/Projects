@@ -807,7 +807,7 @@ const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
-  { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where the entropy starts. Walk all the way around it.'] },
+  { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD, both on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and STEADYWATCH™ OIDC.'] },
@@ -1697,7 +1697,7 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
    doc and the live attestation): hive seed runs → master pool → HKDF stream → the API → client pools. Beside
    it, a glass storage rack shows this page's own live pool: one cell per byte it holds, lit by that byte's
    value, draining as bits go up the column and refilling when the page fetches more. */
-const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z: B1.z1 - 1.3 };
+const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z: B1.z1 - 1.3, flash: 0 };
 {
   const c = mk(3200, 1000), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
   const stage = (x, w, n, title, body, data) => {
@@ -1737,6 +1737,30 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
   draw();
   const { x, y, w, h } = POOL_WALL, z = B1.z1 - 0.06;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(x, y, z); m.rotation.y = Math.PI; B1.g.add(m);
+  // a glow over each stage: they light up in order whenever real bytes arrive, like the bytes passing through,
+  // and the story walkthrough holds one lit while Vee explains it
+  const stageGlows = [0, 1, 2, 3, 4].map(i => {
+    const lx = ((70 + i * 630 + 280) / 3200 - 0.5) * w, ly = (0.5 - 530 / 1000) * h;
+    const gm = new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const g2 = new THREE.Mesh(new THREE.PlaneGeometry(560 / 3200 * w + 0.06, 640 / 1000 * h + 0.06), gm); g2.position.set(lx, ly, 0.012); m.add(g2);
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(g2.geometry), new THREE.LineBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    edge.position.copy(g2.position); m.add(edge);
+    return { gm, edge, k: 0, world: new THREE.Vector3(x - lx, B1.y + y + ly, z) };   // the plane faces -z, so local +x is world -x
+  });
+  POOL_WALL.stages = stageGlows.map(s2 => s2.world);
+  POOL_WALL.hold = -1;   // a stage the story walkthrough is holding lit
+  let pulseT = 99, lastFetch = 0, idleT = 4;
+  buildingUpdates.push((dt, t) => {
+    if (!B1.g.visible) return;
+    if (QRNG.last !== lastFetch) { lastFetch = QRNG.last; pulseT = 0; POOL_RACK.flash = 1; }   // real bytes just arrived
+    idleT -= dt; if (idleT < 0 && !reduceMotion) { idleT = 9; if (pulseT > 3) pulseT = 0; }   // and a gentle reminder now and then
+    pulseT += dt;
+    stageGlows.forEach((g2, i) => {
+      const ph = pulseT - i * 0.32, want = POOL_WALL.hold === i ? 1 : POOL_WALL.hold >= 0 ? 0 : ph > 0 && ph < 0.7 ? Math.sin(ph / 0.7 * Math.PI) : 0;
+      g2.k += (want - g2.k) * Math.min(1, dt * (POOL_WALL.hold >= 0 ? 5 : 12));
+      g2.gm.opacity = g2.k * 0.24; g2.edge.material.opacity = g2.k;
+    });
+  });
   const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.14, h + 0.14, 0.04), colMat); fr.position.set(x, y, z + 0.035); B1.g.add(fr);   // just behind the screen, not level with it
   // the storage rack: a steel cabinet with a glass door, 16 × 16 cells, one per byte this page holds
   const R = new THREE.Group(); R.position.set(POOL_RACK.x, 0, POOL_RACK.z); R.rotation.y = Math.PI; B1.g.add(R);   // faces into the room
@@ -1770,10 +1794,11 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
     if (!B1.g.visible) return;
     acc += dt; wallT += dt;
     if (wallT > 2 || QRNG.att !== seenAtt || (QRNG.meta && QRNG.meta.counter) !== seenCounter) { wallT = 0; seenAtt = QRNG.att; seenCounter = QRNG.meta && QRNG.meta.counter; draw(); }   // the live counter and attestation, as soon as they arrive
-    if (acc < 0.2) return; acc = 0;
+    POOL_RACK.flash = Math.max(0, POOL_RACK.flash - dt * 0.8);
+    if (acc < 0.2 && POOL_RACK.flash <= 0) return; acc = 0;
     const hex = QRNG.hex, bytes = Math.min(CAP, Math.floor(hex.length / 2));
     for (let i = 0; i < CAP; i++) {
-      if (i < bytes) { const v = parseInt(hex.substr(i * 2, 2), 16) / 255; C.copy(lit).lerp(warm, v > 0.85 ? (v - 0.85) / 0.15 : 0).multiplyScalar(0.35 + 0.75 * v); }   // brighter for a bigger byte
+      if (i < bytes) { const v = parseInt(hex.substr(i * 2, 2), 16) / 255; C.copy(lit).lerp(warm, v > 0.85 ? (v - 0.85) / 0.15 : 0).multiplyScalar((0.35 + 0.75 * v) * (1 + 1.4 * POOL_RACK.flash)); }   // brighter for a bigger byte; a flash as a refill lands
       else C.copy(dim);
       cells.setColorAt(i, C);
     }
@@ -3203,7 +3228,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 // what's on each floor, in the order you meet it
 function floorStops(i) {
   const out = [];
-  if (i === FI.b1) out.push(['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
+  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
@@ -3215,7 +3240,7 @@ function renderNav() {
   const F = FLOORS[player.floor], lab = document.createElement('span'); lab.className = 'here-label'; lab.textContent = `${F.tag} · ${F.name}`; hereRow.appendChild(lab);
   for (const [label, stop] of floorStops(player.floor)) {
     const b = document.createElement('button'); b.className = 'dir-btn sub-btn'; b.type = 'button'; b.textContent = label;
-    b.addEventListener('click', () => walkTo(stop)); hereRow.appendChild(b);
+    b.addEventListener('click', () => (stop.run ? stop.run() : walkTo(stop))); hereRow.appendChild(b);
   }
   measureNav();
 }
@@ -4311,6 +4336,7 @@ function veeDestination(id) {
     case 'double-slit': return SLIT_STOP;
     case 'cryostat': return CRYO_STOP;
     case 'pool-storage': return POOL_STOP;
+    case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
     case 'timeline': return { exhibit: true, floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
@@ -4319,6 +4345,7 @@ function veeDestination(id) {
 }
 function veeTakeTo(id) {
   const dest = veeDestination(id); if (!dest) return;
+  if (dest.run) { closeAsk(true); if (world) { exitWorld(); setTimeout(dest.run, 500); } else setTimeout(dest.run, 900); return; }
   closeAsk(true);   // she keeps talking as she leads you
   const go = () => walkTo(dest);
   if (world) { exitWorld(); setTimeout(go, 400); } else setTimeout(go, 900);   // a beat to read her answer, then off you go
@@ -4487,15 +4514,31 @@ function renderTourBar() {
   document.getElementById('tourNext').textContent = tour.i >= tour.stops.length - 1 ? 'Finish' : 'Next ▸';
   const wb = document.getElementById('wpTour'); if (wb) wb.textContent = 'End tour';
 }
-function startTour() {
+// "The source": a short guided walk through B1 in story order, ending there rather than back at the lobby
+function storyStops() {
+  const S = POOL_WALL.stages, N = new THREE.Vector3(0, 0, -1), st = (i, line, sub) => ({ floor: FI.b1, center: S[i], normal: N, standOff: 2.3, pitch: 0.04, line, sub, onStop: () => { POOL_WALL.hold = i; } });
+  return [
+    { ...CRYO_STOP, line: 'This is where every key begins.', sub: 'Qubits cooled to about 10 mK, measured on IBM Quantum hardware.', onStop: () => { POOL_WALL.hold = -1; } },
+    st(0, '1 · Hive seed runs.', 'VAULT™, VIPER™ and LOTUS™: 912 real IBM Quantum jobs.'),
+    st(1, '2 · The master pool.', 'Their measurements, hashed with SHA-256 into 32 bytes.'),
+    st(2, '3 · The HKDF stream.', 'Expanded with a counter that never repeats, even across restarts.'),
+    st(3, '4 · Served by the API.', 'Bytes, numbers or UUIDs, with an attestation of where they came from.'),
+    st(4, '5 · Client pools.', 'Each app keeps its own pool, like the rack beside you.'),
+    { floor: FI.b1, center: new THREE.Vector3(POOL_RACK.x, B1.y + 1.3, POOL_RACK.z), normal: new THREE.Vector3(0, 0, -1), standOff: 2.4, pitch: 0.1,
+      line: "This page's own pool.", sub: 'One cell per byte, live from the API, feeding the column.', onStop: () => { POOL_WALL.hold = -1; } },
+    { floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 4.4, pitch: 0.12,
+      line: 'And all of it is live.', sub: 'Real draws, the attestation and IBM Quantum job IDs.', onStop: () => { POOL_WALL.hold = -1; } }];
+}
+function startStoryTour() { startTour(storyStops(), true); }
+function startTour(customStops, stayAfter) {
   if (tour || !(mode === 'walk' || mode === 'auto')) return;
   if (!askEl.hidden) closeAsk();
   for (const g of [vee, world && world.vee]) if (g) g.asking = false;
   if (veeDocked) setVeeDocked(false);   // a tour needs its guide: she wakes
   const g = tourGuide(); if (!g) return;
-  const stops = world ? world.vee.tourStops : hallTourStops();
+  const stops = customStops || (world ? world.vee.tourStops : hallTourStops());
   if (!stops || !stops.length) return;
-  tour = { stops, i: -1, t: 0, auto: true, arrived: false };
+  tour = { stops, i: -1, t: 0, auto: true, arrived: false, stayAfter: !!stayAfter };
   promptEl.hidden = true; liftPanel.hidden = true;
   setTouring(true);
   nextStop();
@@ -4503,7 +4546,7 @@ function startTour() {
 function nextStop() {
   if (!tour) return;
   tour.i++;
-  if (tour.i >= tour.stops.length) { endTour(); returnToStart(); return; }
+  if (tour.i >= tour.stops.length) { const stay = tour.stayAfter; endTour(); if (!stay) returnToStart(); else if (vee) vee.say('That\'s the foundation.', 'Every product in this building draws on it.', null, null); return; }
   const s = tour.stops[tour.i], g = tourGuide();
   tour.arrived = false; tour.t = 0; tour.auto = true;
   // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
@@ -4523,6 +4566,7 @@ function nextStop() {
     g.say(`Next: ${F.tag} · ${F.name}.`, 'This way, to the glass lift.', step, new THREE.Vector3(LIFT.x, FLOORS[player.floor].y + 2.2, LIFT.z));
   } else { g.bodyTarget = body; g.say(...line); }
   if (world) highlightStation(s.panelId || null);
+  if (s.onStop) s.onStop();
   // a moderate tilt keeps both Vee and what she's showing in frame, even for high things like the chandelier
   walkTo({ exhibit: true, tourStop: true, floor: s.floor, center: s.center, normal: s.normal, standOff, pitch: Math.min(s.pitch ?? 0.15, 0.3) });
   renderTourBar();
@@ -4540,6 +4584,7 @@ function returnToStart() {
   flash.style.opacity = 0.6; setTimeout(() => { flash.style.opacity = 0; }, 120);   // a quick blink to mark the jump
 }
 function endTour() {
+  POOL_WALL.hold = -1;
   if (!tour) return;
   tour = null; setTouring(false);
   const g = tourGuide();
