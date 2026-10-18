@@ -773,7 +773,8 @@ const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
    Quantum hardware. One small shared pool, refilled 128 bytes at a time only when it runs low: at most
    every 20 s, and only while the page is visible. If the API can't be reached, bits quietly fall back to
    the browser's crypto randomness and qrngLive() turns false, so nothing claims to be live when it isn't. */
-const QRNG = { url: 'https://api.steady-watch.com/qrng/bytes?n=128', hex: '', bits: [], draws: [], meta: null, last: 0, tried: 0, busy: false, fallback: true };
+const QRNG = { url: 'https://api.steady-watch.com/qrng/bytes?n=128', hex: '', bits: [], draws: [], meta: null, last: 0, tried: 0, busy: false, fallback: true,
+  received: 0, used: 0, ones: 0, att: null, attTried: false };   // this visit's tallies, and the pool's attestation
 function qrngRefill() {
   const now = Date.now();
   if (QRNG.busy || now - QRNG.tried < 20000 || document.visibilityState === 'hidden') return;
@@ -784,7 +785,7 @@ function qrngRefill() {
     .then(j => {
       const hex = String(j.hex || '').toLowerCase();
       if (!/^[0-9a-f]{64,}$/.test(hex) || j.source !== 'ibm-quantum-hardware') throw new Error('unexpected response');
-      QRNG.hex = (QRNG.hex + hex).slice(-2048);
+      QRNG.hex = (QRNG.hex + hex).slice(-2048); QRNG.received += hex.length / 2;
       for (let k = 0; k + 64 <= hex.length; k += 64) QRNG.draws.unshift(hex.slice(k, k + 64));   // shown as 32-byte draws
       QRNG.draws.length = Math.min(QRNG.draws.length, 6);
       QRNG.meta = { source: j.source, counter: j.counter, fingerprint: j.fingerprint }; QRNG.last = Date.now(); QRNG.fallback = false;
@@ -796,10 +797,21 @@ function qrngRefill() {
 function qrngBit() {
   if (!QRNG.bits.length) {
     if (QRNG.hex.length < 96) qrngRefill();
-    if (QRNG.hex.length) { const n = parseInt(QRNG.hex[0], 16); QRNG.hex = QRNG.hex.slice(1); for (let k = 3; k >= 0; k--) QRNG.bits.push((n >> k) & 1); QRNG.fallback = false; }
+    if (QRNG.hex.length) { const n = parseInt(QRNG.hex[0], 16); QRNG.hex = QRNG.hex.slice(1); for (let k = 3; k >= 0; k--) QRNG.bits.push((n >> k) & 1); QRNG.fallback = false; QRNG.live = 4; }
     else { const b = new Uint8Array(1); crypto.getRandomValues(b); for (let k = 7; k >= 0; k--) QRNG.bits.push((b[0] >> k) & 1); QRNG.fallback = true; }
   }
-  return QRNG.bits.shift();
+  const b = QRNG.bits.shift();
+  if (QRNG.live > 0) { QRNG.live--; QRNG.used++; QRNG.ones += b; }   // only live bits are counted
+  return b;
+}
+// the attestation: where the pool's entropy came from (hives, IBM Quantum job IDs, fingerprints); fetched once per visit
+function qrngAttest() {
+  if (QRNG.att || QRNG.attBusy) return; QRNG.attBusy = true;
+  fetch('https://api.steady-watch.com/qrng/attestation', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+    .then(j => { if (j && j.hives && j.master_fingerprint) QRNG.att = j; })
+    .catch(() => {})
+    .finally(() => { QRNG.attBusy = false; QRNG.attTried = true; });
 }
 const qrngLive = () => !!QRNG.last && !QRNG.fallback && Date.now() - QRNG.last < 5 * 60 * 1000;
 
@@ -1498,62 +1510,141 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
   { eyebrow: '2 · MEASURE', title: 'Random by physics', body: 'Qubits on IBM Quantum hardware are measured, and each outcome, 0 or 1, is random. Each batch of bits is tied to a verifiable IBM Quantum job ID.' },
   { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'The STEADYWATCH™ PLATFORM turns those bits into 32-byte QES-256 keys, each linked back to its IBM Quantum job ID.' }
 ].forEach((d, i) => infoPanel(B1.g, d, -4.4 + i * 4.4, 2.5, B1.z0 + 0.06, 0));
-// the wall monitor: stage temperatures, gently fluctuating
+/* ---------- The data wall ----------
+   Six screens on the west wall, behind the cryostat as you step out of the lift: what the live
+   QRNG service is producing, where its entropy comes from (the attestation, the three hives and
+   real IBM Quantum job IDs), the cryostat's stage temperatures, and the QES-256 library that puts
+   it all behind Math.random()'s signature. Everything marked live comes from api.steady-watch.com. */
+const hallLinks = [];   // things in the hall that open a link when tapped up close
 {
-  const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
-  const TEMPS = [['50 K plate', 50, 'K'], ['4 K plate', 4.0, 'K'], ['Still', 0.9, 'K'], ['Cold plate', 100, 'mK'], ['Mixing chamber', 10, 'mK']];
-  const draw = t => {
+  const coarseUI = matchMedia('(pointer: coarse)').matches;   // (touchUI is defined further down)
+  const WX = B1.x0 + 0.08, SW = 3.0, SH = SW * 0.625, GAP = 0.25;
+  const cols = [ATRIUM.z + SW + GAP, ATRIUM.z, ATRIUM.z - SW - GAP], rows = [4.35, 2.3];   // left to right as you face the wall
+  const hiveC = { VAULT: '#3fe0e0', VIPER: '#ff5a4e', LOTUS: '#ffc24a' };
+  const ago = ms => { const s2 = Math.round(ms / 1000); return s2 < 60 ? `${s2} s ago` : `${Math.round(s2 / 60)} min ago`; };
+  const head = (p, eyebrow, right, live) => {
     p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 640);
-    p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1004, 620);
-    p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText('STAGE TEMPERATURES', 48, 72);
-    p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.textAlign = 'right'; p.fillText('TYPICAL VALUES · ILLUSTRATION', 976, 72);
+    p.strokeStyle = live === false ? 'rgba(142,153,176,0.5)' : live ? 'rgba(0,255,102,0.65)' : 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1004, 620);
+    p.textAlign = 'left'; p.fillStyle = live === false ? '#8e99b0' : live ? '#00ff66' : '#5ff0ff'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText(eyebrow, 44, 66);
+    if (right) { p.textAlign = 'right'; p.fillText(right, 980, 66); p.textAlign = 'left'; }
+  };
+  const small = (p, text, x, y, color = '#8e99b0', px = 20) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
+  const screens = [];
+  function screen(col, row, draw, link) {
+    const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const z = cols[col], y = rows[row];
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(WX, y, z); m.rotation.y = Math.PI / 2; B1.g.add(m);
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, SH + 0.12, SW + 0.12), colMat); fr.position.set(WX - 0.04, y, z); B1.g.add(fr);
+    const s = { p, tex, draw, redraw(t) { draw(p, t); tex.needsUpdate = true; } };
+    s.redraw(0); screens.push(s);
+    if (link) hallLinks.push({ mesh: m, url: link, floor: FI.b1, stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + y, z), normal: new THREE.Vector3(1, 0, 0), standOff: 3.6, pitch: row ? 0.02 : 0.2 } });
+    return s;
+  }
+  // 1 · live draws, and what this visit has taken from the pool
+  const live = screen(0, 0, p => {
+    const on = qrngLive();
+    head(p, 'LIVE FROM IBM QUANTUM HARDWARE', on ? '● LIVE' : '○ OFFLINE', on);
+    small(p, 'LATEST 32-BYTE DRAWS · HEX', 44, 106);
+    p.font = '600 20px "IBM Plex Mono", monospace';   // 71 characters a line, inside the frame
+    if (QRNG.draws.length) QRNG.draws.slice(0, 4).forEach((h, i) => { p.fillStyle = i ? `rgba(200,255,224,${0.85 - i * 0.14})` : '#d8ffe6'; p.fillText(h.match(/.{8}/g).join(' '), 44, 148 + i * 38); });
+    else { p.fillStyle = '#c9d2e3'; p.fillText(QRNG.busy ? 'Fetching from the QRNG API…' : 'Waiting for the QRNG API…', 44, 160); }
+    small(p, 'THIS VISIT', 44, 340, '#5ff0ff');
+    const ones = QRNG.used ? QRNG.ones / QRNG.used : 0.5;
+    [['BYTES RECEIVED', QRNG.received.toLocaleString('en-US')], ['BITS UP THE COLUMN', QRNG.used.toLocaleString('en-US')], ['SHARE OF ONES', QRNG.used ? (ones * 100).toFixed(1) + '%' : '—']].forEach(([k, v], i) => {
+      small(p, k, 44, 380 + i * 36, '#8e99b0', 20); p.textAlign = 'right'; small(p, v, 560, 380 + i * 36, '#f1e6cf', 22); p.textAlign = 'left';
+    });
+    // the balance of 0s and 1s: a fair source sits near the middle
+    p.fillStyle = 'rgba(63,224,224,0.18)'; p.fillRect(600, 404, 380, 10); p.fillStyle = '#8e99b0'; p.fillRect(789, 396, 2, 26);
+    p.fillStyle = '#00ff66'; p.fillRect(600 + 380 * ones - 5, 398, 10, 22); small(p, '0s', 600, 446, '#8e99b0', 18); p.textAlign = 'right'; small(p, '1s', 980, 446, '#8e99b0', 18); p.textAlign = 'left';
+    if (QRNG.meta) small(p, `COUNTER ${QRNG.meta.counter} · FETCHED ${ago(Date.now() - QRNG.last).toUpperCase()}`, 44, 510);
+    p.fillStyle = '#c9d2e3'; p.font = '24px "IBM Plex Sans", sans-serif';
+    p.fillText(on ? 'The 0s and 1s rising up the column are these bits.' : 'Offline: the column is showing your browser\'s randomness for now.', 44, 580);
+  });
+  // 2 · the attestation for the master pool
+  const att = screen(1, 0, p => {
+    const a = QRNG.att;
+    head(p, 'ATTESTATION · MASTER POOL', a ? 'LIVE' : '', a ? null : false);
+    if (!a) { p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText(QRNG.attTried ? 'The attestation endpoint can\'t be reached right now.' : 'Fetching /qrng/attestation…', 44, 150); return; }
+    const rowsA = [['SERVICE', a.service], ['HIVES LOADED', String(a.hives_loaded)], ['SATELLITES', String(a.total_satellites)],
+      ['TOTAL ENTROPY', `${Number(a.total_entropy_bits).toLocaleString('en-US')} bits`],
+      ['YIELD', `${(a.avg_yield_efficiency * 100).toFixed(1)}% avg · ${(a.min_yield_efficiency * 100).toFixed(1)}–${(a.max_yield_efficiency * 100).toFixed(1)}%`],
+      ['GENERATED', String(a.generated_at).slice(0, 16).replace('T', ' ') + ' UTC']];
+    rowsA.forEach(([k, v], i) => { small(p, k, 44, 122 + i * 46, '#8e99b0', 20); p.fillStyle = '#f1e6cf'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText(v, 330, 124 + i * 46); });
+    small(p, 'MASTER FINGERPRINT · SHA-256 OF THE ENTROPY POOL', 44, 432, '#5ff0ff');
+    const fp = String(a.master_fingerprint || ''); p.font = '600 24px "IBM Plex Mono", monospace'; p.fillStyle = '#d8ffe6';
+    p.fillText(fp.slice(0, 32).match(/.{1,8}/g).join(' '), 44, 472); p.fillText(fp.slice(32).match(/.{1,8}/g).join(' '), 44, 506);
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Not reversible to key material.', 44, 570);
+  });
+  // 3 · the three hives seeding the pool
+  const hives = screen(2, 0, p => {
+    const a = QRNG.att;
+    head(p, 'THE THREE HIVES', a ? 'LIVE' : '', a ? null : false);
+    if (!a) { p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText('Waiting for the attestation…', 44, 150); return; }
+    const hd = ['HIVE', 'p', 'SATELLITES', 'AVG ENTROPY', 'YIELD'], xs = [44, 250, 340, 560, 800];
+    hd.forEach((h, i) => small(p, h, xs[i], 120, '#8e99b0', 20));
+    ['VAULT', 'VIPER', 'LOTUS'].forEach((k, i) => {
+      const h = a.hives[k]; if (!h) return; const y = 190 + i * 112;
+      p.fillStyle = hiveC[k]; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText(k + '™', 44, y);
+      p.fillStyle = '#f1e6cf'; p.font = '600 30px "IBM Plex Mono", monospace';
+      p.fillText(String(h.prime), 250, y); p.fillText(String(h.satellites), 340, y); p.fillText(`${h.avg_entropy_bits.toFixed(2)} bits`, 560, y); p.fillText(`${(h.yield_efficiency * 100).toFixed(1)}%`, 800, y);
+      p.fillStyle = 'rgba(63,224,224,0.14)'; p.fillRect(44, y + 22, 936, 8); p.fillStyle = hiveC[k]; p.fillRect(44, y + 22, 936 * h.yield_efficiency, 8);
+      small(p, `${h.total_jobs} JOBS · ${h.backend} · ${h.inferred_qubits} QUBITS`, 44, y + 60, '#8e99b0', 18);
+    });
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText(`Yield: average entropy against the ${a.hives.VAULT ? a.hives.VAULT.theoretical_max_bits : 10}-bit maximum per measurement.`, 44, 590);
+  });
+  // 4 · real IBM Quantum job IDs, one highlighted at a time; tap to open it on IBM Quantum
+  let jobK = 0;
+  const jobList = () => { const a = QRNG.att, out = []; if (a) for (const k of ['VAULT', 'VIPER', 'LOTUS']) for (const id of (a.hives[k] && a.hives[k].job_ids) || []) out.push([k, id]); return out; };
+  const jobs = screen(0, 1, p => {
+    const list = jobList();
+    head(p, 'IBM QUANTUM JOB IDS', list.length ? 'REAL JOBS' : '', list.length ? null : false);
+    if (!list.length) { p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText('Waiting for the attestation…', 44, 150); return; }
+    const cur = jobK % list.length;
+    ['VAULT', 'VIPER', 'LOTUS'].forEach((k, ci) => {
+      const x = 44 + ci * 316; p.fillStyle = hiveC[k]; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(k + '™', x, 116);
+      list.filter(j => j[0] === k).forEach(([, id], ri) => {
+        const idx = list.findIndex(j => j[1] === id), y = 162 + ri * 46, hl = idx === cur;
+        if (hl) { p.fillStyle = 'rgba(0,255,102,0.16)'; p.fillRect(x - 8, y - 30, 300, 42); }
+        p.fillStyle = hl ? '#d8ffe6' : '#9fdcb8'; p.font = `600 ${hl ? 22 : 21}px "IBM Plex Mono", monospace`; p.fillText(id, x, y);
+      });
+    });
+    small(p, 'VERIFY ANY JOB AT QUANTUM.IBM.COM/JOBS/{JOB_ID}', 44, 452, '#5ff0ff');
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif';
+    p.fillText(`Showing 15 of ${list.length && QRNG.att ? (QRNG.att.total_satellites || 912) : 912} seed jobs on ${(QRNG.att && QRNG.att.hives.VAULT && QRNG.att.hives.VAULT.backend) || 'IBM hardware'}.`, 44, 500);
+    p.fillText(coarseUI ? 'Tap to open the highlighted job on IBM Quantum.' : 'Click to open the highlighted job on IBM Quantum.', 44, 540);
+  }, () => { const list = jobList(); return list.length ? `https://quantum.ibm.com/jobs/${list[jobK % list.length][1]}` : 'https://quantum.ibm.com/'; });
+  // 5 · stage temperatures (typical values, gently fluctuating)
+  const TEMPS = [['50 K plate', 50, 'K'], ['4 K plate', 4.0, 'K'], ['Still', 0.9, 'K'], ['Cold plate', 100, 'mK'], ['Mixing chamber', 10, 'mK']];
+  const temps = screen(1, 1, (p, t) => {
+    head(p, 'STAGE TEMPERATURES', 'TYPICAL · ILLUSTRATION', null);
     TEMPS.forEach(([name, v, u], i) => {
       const y = 150 + i * 92, j = 1 + 0.006 * Math.sin(t * (0.7 + i * 0.37) + i * 2.1) + 0.003 * Math.sin(t * 2.3 + i);
       const val = v * j, txt = val >= 10 ? val.toFixed(1) : val.toFixed(2);
       p.textAlign = 'left'; p.fillStyle = '#c9d2e3'; p.font = '34px "IBM Plex Sans", sans-serif'; p.fillText(name, 48, y);
-      p.textAlign = 'right'; p.fillStyle = i === 4 ? '#5ff0ff' : '#f1e6cf'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(`${txt} ${u}`, 976, y);
+      p.textAlign = 'right'; p.fillStyle = i === 4 ? '#5ff0ff' : '#f1e6cf'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(`${txt} ${u}`, 976, y); p.textAlign = 'left';
       p.fillStyle = 'rgba(63,224,224,0.18)'; p.fillRect(48, y + 22, 928, 6);
       p.fillStyle = '#3fe0e0'; p.fillRect(48, y + 22, 928 * (1 - i / 5) * (0.98 + 0.02 * Math.sin(t + i)), 6);   // colder down the list
     });
-    tex.needsUpdate = true;
-  };
-  draw(0);
-  const W = 3.0, mon = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 0.625), new THREE.MeshBasicMaterial({ map: tex }));
-  mon.position.set(B1.x0 + 0.08, 2.5, ATRIUM.z); mon.rotation.y = Math.PI / 2; B1.g.add(mon);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, W * 0.625 + 0.12, W + 0.12), colMat); fr.position.set(B1.x0 + 0.04, 2.5, ATRIUM.z); B1.g.add(fr);
-  let last = -1;
-  buildingUpdates.push((dt, t) => { if (!B1.g.visible || t - last < 0.5) return; last = t; draw(reduceMotion ? 0 : t); });
-}
-// the live screen: the latest draws from the QRNG API, exactly as it returns them
-{
-  const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
-  const ago = ms => { const s2 = Math.round(ms / 1000); return s2 < 60 ? `${s2} s ago` : `${Math.round(s2 / 60)} min ago`; };
-  const draw = () => {
-    const live = qrngLive();
-    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 640);
-    p.strokeStyle = live ? 'rgba(0,255,102,0.65)' : 'rgba(142,153,176,0.5)'; p.lineWidth = 3; p.strokeRect(10, 10, 1004, 620);
-    p.textAlign = 'left'; p.fillStyle = live ? '#00ff66' : '#8e99b0'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText('LIVE FROM IBM QUANTUM HARDWARE', 44, 70);
-    p.textAlign = 'right'; p.fillText(live ? '● LIVE' : '○ OFFLINE', 980, 70);
-    p.textAlign = 'left'; p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText('LATEST 32-BYTE DRAWS · HEX', 44, 112);
-    p.font = '600 22px "IBM Plex Mono", monospace';   // 71 characters a line fit at this size
-    if (QRNG.draws.length) QRNG.draws.forEach((h, i) => { p.fillStyle = i ? 'rgba(200,255,224,' + (0.85 - i * 0.12) + ')' : '#d8ffe6'; p.fillText(h.match(/.{8}/g).join(' '), 44, 160 + i * 42); });
-    else { p.fillStyle = '#c9d2e3'; p.fillText(QRNG.busy ? 'Fetching from the QRNG API…' : 'Waiting for the QRNG API…', 44, 170); }
-    p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace';
-    if (QRNG.meta) {
-      p.fillText(`SOURCE ${QRNG.meta.source}   FINGERPRINT ${QRNG.meta.fingerprint}`, 44, 432);
-      p.fillText(`COUNTER ${QRNG.meta.counter}`, 44, 464);
-      p.fillText(`FETCHED ${ago(Date.now() - QRNG.last).toUpperCase()} · API.STEADY-WATCH.COM/QRNG/BYTES`, 44, 496);
-    }
-    p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif';
-    p.fillText(live ? 'The 0s and 1s rising up the column are these bits.' : 'Offline: the column is showing your browser\'s randomness for now.', 44, 560);
-    tex.needsUpdate = true;
-  };
-  draw();
-  const W = 3.2, scr = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 0.625), new THREE.MeshBasicMaterial({ map: tex }));
-  scr.position.set(B1.x1 - 0.08, 2.5, 2.7); scr.rotation.y = -Math.PI / 2; B1.g.add(scr);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, W * 0.625 + 0.12, W + 0.12), colMat); fr.position.set(B1.x1 - 0.04, 2.5, 2.7); B1.g.add(fr);
-  let lastDraw = -1;
-  buildingUpdates.push((dt, t) => { if (!B1.g.visible || t - lastDraw < 1) return; lastDraw = t; draw(); });
+  });
+  // 6 · the QES-256 library; tap to open its page
+  screen(2, 1, p => {
+    head(p, 'QES-256 · RNG LIBRARY', 'STEADY-WATCH.COM/QES-RNG', null);
+    p.fillStyle = '#c9d2e3'; p.font = '24px "IBM Plex Sans", sans-serif'; p.fillText('Drop-in replacements for Math.random() and Web Crypto,', 44, 112); p.fillText('drawing on the same quantum pool.', 44, 144);
+    [['await QES.random()', 'Math.random()'], ['await QES.randomInt(1, 100)', 'random integer'], ['await QES.getRandomValues(arr)', 'crypto.getRandomValues()'],
+     ['await QES.randomUUID()', 'crypto.randomUUID()'], ['await QES.shuffle([...])', 'Fisher–Yates'], ['await QES.pick([...])', 'random element']].forEach(([a, b], i) => {
+      const y = 204 + i * 50; p.fillStyle = '#00ff66'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(a, 44, y);
+      p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText('← ' + b, 600, y);
+    });
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Pool of 512 bytes, refilled at 20%. Falls back to Math.random() if offline.', 44, 526);
+    small(p, coarseUI ? 'TAP TO OPEN THE LIBRARY' : 'CLICK TO OPEN THE LIBRARY', 44, 586, '#5ff0ff');
+  }, 'https://steady-watch.com/qes-rng');
+  let lastLive = -1, lastJob = 0, attSeen = null;
+  buildingUpdates.push((dt, t) => {
+    if (!B1.g.visible) return;
+    if (t - lastLive > 1) { lastLive = t; live.redraw(t); temps.redraw(reduceMotion ? 0 : t); }
+    if (QRNG.att !== attSeen) { attSeen = QRNG.att; att.redraw(t); hives.redraw(t); jobs.redraw(t); }
+    if (!reduceMotion && t - lastJob > 2.5) { lastJob = t; jobK++; jobs.redraw(t); }
+  });
 }
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
@@ -1577,7 +1668,6 @@ for (const z of [1.5, -6.5]) {
 
 // Beside each app: a phone on a stand, cycling through its App Store screenshots (tap it to open the
 // App Store), with the app's icon turning above it. Built at load, once the icons are in.
-const hallLinks = [];   // things in the hall that open a link when tapped up close
 function buildAppKiosks() {
   const loader = new THREE.TextureLoader();
   for (const id of ['kaizendoku', 'handheld']) {
@@ -2688,7 +2778,7 @@ function clickAt(x, y) {
   if (vee && hit.object === vee.hitM) { vee.talk.next(); return; }   // tap Vee to talk, on any floor
   if (hit.object === liftCab.userData.shaft) { walkTo(liftStop()); return; }
   const lk = links.find(l => l.mesh === hit.object);
-  if (lk) { if (hit.distance < 6) openSite(lk.url); else walkTo(lk.stop); return; }   // the App Store phones   // tap the lift to step into it
+  if (lk) { if (hit.distance < 6) openSite(typeof lk.url === 'function' ? lk.url() : lk.url); else walkTo(lk.stop); return; }   // the App Store phones   // tap the lift to step into it
   const pt = here.find(p => p.mesh === hit.object);
   if (hit.distance < 6.5) enter(pt, hit.uv); else walkTo(pt);
 }
@@ -4281,7 +4371,7 @@ Promise.all([
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
   for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
-  qrngRefill();   // the first draw from the live pool
+  qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
   buildPaintings(); buildKiosk(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
