@@ -1805,6 +1805,8 @@ function makeVee(parent, pos, facing) {
   const holoMat = u => new THREE.ShaderMaterial({ uniforms: u, vertexShader: holoVert, fragmentShader: holoFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const holo = holoMat(holoU);
   const hair = holoMat({ uTime: holoU.uTime, uGlow: holoU.uGlow, uDim: holoU.uDim, uColor: { value: new THREE.Color(0x8fd2ff) } });
+  // her look is the particles alone: the laser shell still shapes her (the drones sit on it) but isn't drawn
+  holo.colorWrite = hair.colorWrite = false;
   const up = new THREE.Vector3(0, 1, 0);
   function limb(par, a, b, r0, r1, mat = holo) {
     const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), mat);
