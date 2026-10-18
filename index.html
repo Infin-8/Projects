@@ -171,6 +171,33 @@ body.in-world #navToggle, body.touring #navToggle { display: none !important; }
   padding: 6px 14px; border-radius: 999px; opacity: 0; transition: opacity .4s ease; pointer-events: none !important;
 }
 #floorToast:empty { display: none; }
+/* Ask Vee: a chat panel above the bottom buttons */
+#askVee {
+  left: 0; right: 0; margin-inline: auto; width: min(560px, calc(100vw - 24px)); bottom: calc(var(--dir-h, 76px) + 8px);
+  display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 8px;
+  background: color-mix(in srgb, var(--night) 90%, transparent); border: 1px solid #5ff0ff; border-radius: 4px;
+  font-family: var(--body); color: var(--parchment); box-shadow: 0 0 30px rgba(95, 240, 255, .15);
+}
+body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+.ask-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: #5ff0ff; }
+.ask-head button { font: inherit; color: #5ff0ff; background: transparent; border: 0; cursor: pointer; padding: 2px 6px; }
+.ask-log { max-height: min(34vh, 260px); overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.45; }
+.ask-log:empty { display: none; }
+.ask-log .q { align-self: flex-end; max-width: 85%; background: rgba(95, 240, 255, .12); border: 1px solid rgba(95, 240, 255, .35); border-radius: 10px 10px 2px 10px; padding: 6px 10px; }
+.ask-log .a { align-self: flex-start; max-width: 92%; color: #d9f2ee; }
+.ask-log .a b { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: #5ff0ff; margin-right: 6px; }
+.ask-log .a.wait { color: var(--muted); font-style: italic; }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ask-chips:empty { display: none; }
+.ask-chips button { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: #c8fbff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.ask-chips button:hover, .ask-chips button:focus-visible { border-color: #5ff0ff; color: #5ff0ff; outline: none; }
+.ask-form { display: flex; gap: 6px; }
+.ask-form input { flex: 1; min-width: 0; font: 15px var(--body); color: var(--parchment); background: rgba(8, 10, 18, .8); border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; padding: 9px 10px; }
+.ask-form input:focus { outline: none; border-color: #5ff0ff; }
+.ask-form button { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: #05070b; background: #5ff0ff; border: 0; border-radius: 3px; padding: 0 14px; cursor: pointer; }
+.ask-form button:disabled { opacity: .5; cursor: default; }
+.ask-note { margin: 0; font-size: 10.5px; color: var(--muted); }
+body.touring #askVee { display: none !important; }
 /* the office's operator terminal: green on black, like its screen */
 #terminal { position: fixed; inset: 0; z-index: 7; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(0, 6, 3, .78); }
 #terminal .term-frame { position: relative; width: min(1100px, 100%); height: min(780px, 100%); display: flex; flex-direction: column; background: #000a04; border: 1px solid #00ff66; border-radius: 6px; box-shadow: 0 0 40px rgba(0, 255, 102, .25), inset 0 0 60px rgba(0, 255, 102, .06); overflow: hidden; }
@@ -376,6 +403,13 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
 <div class="hud" id="floorToast" aria-live="polite"></div>
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
+<section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
+  <div class="ask-head"><span>ASK VEE</span><button type="button" id="askClose" aria-label="Close">✕</button></div>
+  <div class="ask-log" aria-live="polite"></div>
+  <div class="ask-chips"></div>
+  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask about the products, the builder or the hall…" aria-label="Your question for Vee"><button type="submit">Ask</button></form>
+  <p class="ask-note">Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong.</p>
+</section>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
@@ -2689,6 +2723,7 @@ let mode = 'walk'; // walk | auto | entering | inside | exiting
 let auto = null, anim = null, near = null, ride = null;
 
 addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.key === 'Escape') closeAsk(); return; }
   if (mode === 'inside') {
     if (!terminal.hidden) {
       if (e.key === 'Escape') { if (termMenu.hidden) showTermMenu(); else closeTerminal(); }
@@ -2775,7 +2810,7 @@ function clickAt(x, y) {
   const veeHit = vee && !vee.away && vee.scale > 0.5 ? [vee.hitM] : [];
   const hit = ray.intersectObjects([...veeHit, ...here.map(p => p.mesh), ...links.map(l => l.mesh), liftCab.userData.shaft])[0];
   if (!hit) return;
-  if (vee && hit.object === vee.hitM) { vee.talk.next(); return; }   // tap Vee to talk, on any floor
+  if (vee && hit.object === vee.hitM) { if (!openAsk()) vee.talk.next(); return; }   // tap Vee to talk, on any floor
   if (hit.object === liftCab.userData.shaft) { walkTo(liftStop()); return; }
   const lk = links.find(l => l.mesh === hit.object);
   if (lk) { if (hit.distance < 6) openSite(typeof lk.url === 'function' ? lk.url() : lk.url); else walkTo(lk.stop); return; }   // the App Store phones   // tap the lift to step into it
@@ -2785,7 +2820,7 @@ function clickAt(x, y) {
 
 // in the world, acting on a station shows its details; acting on the exit painting dives back to the hall
 function worldAct(st, uv) {
-  if (st.vee) { st.next(); return; }
+  if (st.vee) { if (!openAsk()) st.next(); return; }
   if (st.act) { st.act(); return; }
   if (st.portal) enter(st, uv);
   else if (st.site) { if (st.uniforms) { st.uniforms.uHit.value.copy(uv || new THREE.Vector2(.5, .5)); st.burst = 1; } openSite(st.site.url); }
@@ -4077,6 +4112,60 @@ function exitWorld() {
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
 }
 
+/* ---------- Ask Vee ----------
+   Visitors can ask Vee anything; the vee-worker (a Cloudflare Worker running a Workers AI model,
+   grounded in this site's own copy) answers. Hidden until VEE_API is set. */
+const VEE_API = 'https://vee-worker.nathaniel-a-vazquez.workers.dev/ask';   // the vee-worker's /ask (see ~/Projects/vee-worker)
+const askEl = document.getElementById('askVee'), askLog = askEl.querySelector('.ask-log'), askInput = document.getElementById('askInput'), askForm = askEl.querySelector('.ask-form');
+const askChips = askEl.querySelector('.ask-chips');
+const askState = { history: [], busy: false };
+const ASK_CHIPS = ['What is VIPER™?', 'What does STEADYWATCH™ PLATFORM do?', 'Who built this?', 'How do I contact Nathaniel?'];
+function askGuide() { return world ? world.vee : vee; }
+function askWhere() { return world ? `${world.pt.p.name} world` : `${FLOORS[player.floor].tag} · ${FLOORS[player.floor].name}`; }
+function openAsk() {
+  const g = askGuide();
+  if (!VEE_API || !g || g.away || tour) return false;
+  askEl.hidden = false; promptEl.hidden = true;
+  if (!askLog.children.length && !askChips.children.length) ASK_CHIPS.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.addEventListener('click', () => askSend(c)); askChips.appendChild(b); });
+  if (!askState.history.length) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.waveT = 1.4; }
+  setTimeout(() => askInput.focus(), 0);
+  return true;
+}
+function closeAsk() { askEl.hidden = true; askInput.blur(); canvas.focus(); }
+function askLine(cls, text, who) {
+  const d = document.createElement('div'); d.className = cls;
+  if (who) { const b = document.createElement('b'); b.textContent = who; d.appendChild(b); }
+  d.appendChild(document.createTextNode(text)); askLog.appendChild(d); askLog.scrollTop = askLog.scrollHeight; return d;
+}
+async function askSend(q) {
+  q = String(q || '').trim().slice(0, 400);
+  if (!q || askState.busy) return;
+  askState.busy = true; askForm.querySelector('button').disabled = true; askChips.innerHTML = ''; askInput.value = '';
+  askLine('q', q);
+  const wait = askLine('a wait', 'Thinking…', 'VEE'), g = askGuide();
+  if (g) g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null);
+  let answer;
+  try {
+    const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, history: askState.history.slice(-6), floor: askWhere() }) });
+    const j = await r.json().catch(() => ({}));
+    answer = j.answer || "I can't reach my voice right now. Try again in a moment?";
+    if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
+  } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
+  wait.remove(); askLine('a', answer, 'VEE');
+  if (g) {   // her bubble shows the first sentence; the panel has the whole answer
+    const first = (answer.match(/^.*?[.!?](\s|$)/) || [answer])[0].trim();
+    g.say(first.length > 70 ? first.slice(0, 68) + '…' : first, '', null, null); g.waveT = 0.8;
+  }
+  askState.busy = false; askForm.querySelector('button').disabled = false; askInput.focus();
+}
+askForm.addEventListener('submit', e => { e.preventDefault(); askSend(askInput.value); });
+document.getElementById('askClose').addEventListener('click', closeAsk);
+if (VEE_API) {   // an Ask Vee button next to the tour
+  const b = document.createElement('button'); b.className = 'dir-btn tour-btn'; b.type = 'button'; b.id = 'go-ask'; b.textContent = '✦ Ask Vee';
+  b.addEventListener('click', () => { if (askEl.hidden) { if (!openAsk()) { const g = askGuide(); if (g && g.away) toastFloor(FI.l4); } } else closeAsk(); });
+  floorRow.insertBefore(b, floorRow.children[1] || null);
+}
+
 /* ---------- Guided tour with Vee ----------
    Walks you from stop to stop with the existing walk-to, while Vee floats beside you
    and says a line at each stop. Moving yourself pauses it; Next / E carries on. */
@@ -4109,6 +4198,7 @@ function renderTourBar() {
 }
 function startTour() {
   if (tour || !(mode === 'walk' || mode === 'auto')) return;
+  if (!askEl.hidden) closeAsk();
   if (veeDocked) setVeeDocked(false);   // a tour needs its guide: she wakes
   const g = tourGuide(); if (!g) return;
   const stops = world ? world.vee.tourStops : hallTourStops();
@@ -4286,7 +4376,7 @@ function tick() {
         if (st && !st.vee.away) { const dx = st.center.x - camera.position.x, dz = st.center.z - camera.position.z, d = Math.hypot(dx, dz); if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = st; }
       }
       highlightStation(near ? near.id : null);
-      if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? 'Talk' : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? (near.actLift ?? -2.3) : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
+      if (near && mode === 'walk' && !tour) showIndicator(near, near.act ? near.actVerb() : near.vee ? (VEE_API ? 'Ask' : 'Talk') : near.portal ? 'Back' : near.site ? 'Open' : 'Details', near.info.title, near.act ? (near.actLift ?? -2.3) : near.vee ? -0.9 : near.portal ? 1.75 : near.site ? 1.25 : near.nearDist ? -1.9 : 0.4);   // beside Vee, above the screens, under the raised ones
       else promptEl.hidden = true;
     } else {
       for (const pt of paintings) {
@@ -4309,7 +4399,7 @@ function tick() {
         const dx = vee.talk.center.x - camera.position.x, dz = vee.talk.center.z - camera.position.z, d = Math.hypot(dx, dz);
         if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = vee.talk;
       }
-      if (near && near.vee && mode === 'walk' && !tour) showIndicator(near, 'Talk', 'Vee', -0.9);
+      if (near && near.vee && mode === 'walk' && !tour) showIndicator(near, VEE_API ? 'Ask' : 'Talk', 'Vee', -0.9);
       else if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
         showIndicator(near, 'Enter', near.p.promptName || near.p.name, near.kiosk ? 0.6 : 0.5);
       } else promptEl.hidden = true;
