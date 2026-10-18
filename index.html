@@ -4211,8 +4211,38 @@ let veeVoiceOn = (() => { try { return localStorage.getItem(VEE_VOICE_KEY) === '
 const SILENT_WAV = (() => { const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
   w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
   let s2 = ''; b.forEach(c => { s2 += String.fromCharCode(c); }); return 'data:audio/wav;base64,' + btoa(s2); })();
+/* Her "classic robot" sound: the clear Aura voice run through a small effects chain as it plays: a 60 Hz
+   buzz (tremolo), a gritty bit-crush blended in, a short metallic echo, trimmed top and bottom. Built on the
+   page, so it costs nothing extra on the Worker. robotChain(ctx, input) returns the chain's output node. */
+function robotChain(ctx, input) {
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200;
+  const trem = ctx.createGain(); trem.gain.value = 0.625;                       // swings between 0.25 and 1
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 60; const lfoAmt = ctx.createGain(); lfoAmt.gain.value = 0.375;
+  lfo.connect(lfoAmt).connect(trem.gain); lfo.start();
+  const crush = ctx.createWaveShaper(), N = 65536, steps = 64, curve = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const x = i / (N - 1) * 2 - 1; curve[i] = Math.round(x * steps) / steps; }   // fewer levels: the grit
+  crush.curve = curve;
+  const dry = ctx.createGain(); dry.gain.value = 0.3; const wet = ctx.createGain(); wet.gain.value = 0.7;
+  const mix = ctx.createGain();
+  const echo = ctx.createDelay(0.1); echo.delayTime.value = 0.018; const echoAmt = ctx.createGain(); echoAmt.gain.value = 0.31;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6500;
+  const out = ctx.createGain(); out.gain.value = 1.25;
+  input.connect(hp).connect(trem);
+  trem.connect(dry).connect(mix); trem.connect(crush).connect(wet).connect(mix);
+  mix.connect(lp); mix.connect(echo).connect(echoAmt).connect(lp);
+  lp.connect(out);
+  return out;
+}
+let veeCtx = null;
+function veeAudioGraph() {   // created inside a tap, then reused; the audio element plays through the chain
+  if (veeCtx || !(window.AudioContext || window.webkitAudioContext)) return;
+  try {
+    veeCtx = new (window.AudioContext || window.webkitAudioContext)();
+    robotChain(veeCtx, veeCtx.createMediaElementSource(veeAudio)).connect(veeCtx.destination);
+  } catch (e) { veeCtx = null; }
+}
 function renderVoiceBtn() { askVoiceBtn.textContent = veeVoiceOn ? '🔊' : '🔇'; askVoiceBtn.setAttribute('aria-pressed', veeVoiceOn ? 'true' : 'false'); const l = `Vee's voice: ${veeVoiceOn ? 'on' : 'off'}`; askVoiceBtn.setAttribute('aria-label', l); askVoiceBtn.title = l; }
-function unlockAudio() { if (!veeVoiceOn) return; try { veeAudio.src = SILENT_WAV; veeAudio.play().catch(() => {}); } catch (e) {} }   // inside a tap
+function unlockAudio() { if (!veeVoiceOn) return; veeAudioGraph(); try { if (veeCtx && veeCtx.state === 'suspended') veeCtx.resume(); veeAudio.src = SILENT_WAV; veeAudio.play().catch(() => {}); } catch (e) {} }   // inside a tap
 function stopVoice() { try { veeAudio.pause(); } catch (e) {} for (const g of [vee, world && world.vee]) if (g) g.speaking = false; }
 askVoiceBtn.addEventListener('click', () => {
   veeVoiceOn = !veeVoiceOn; try { localStorage.setItem(VEE_VOICE_KEY, veeVoiceOn ? '1' : '0'); } catch (e) {}
@@ -4226,6 +4256,7 @@ async function veeSpeak(text, g) {
     if (!r.ok || !veeVoiceOn) return;
     const blob = await r.blob(); if (veeAudioURL) URL.revokeObjectURL(veeAudioURL); veeAudioURL = URL.createObjectURL(blob);
     veeAudio.src = veeAudioURL;
+    if (veeCtx && veeCtx.state !== 'running') await veeCtx.resume().catch(() => {});   // the effects chain must be running, or she'd be silent
     if (g) { g.speaking = true; veeAudio.onended = veeAudio.onpause = () => { g.speaking = false; }; }
     await veeAudio.play();
   } catch (e) { if (g) g.speaking = false; }
