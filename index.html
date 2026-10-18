@@ -1692,6 +1692,97 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
     if (!reduceMotion && t - lastJob > 2.5) { lastJob = t; jobK++; jobs.redraw(t); }
   });
 }
+/* ---------- Entropy pool storage ----------
+   B1's south wall explains how the entropy is stored and served, in five stages (from the QES-256 technical
+   doc and the live attestation): hive seed runs → master pool → HKDF stream → the API → client pools. Beside
+   it, a glass storage rack shows this page's own live pool: one cell per byte it holds, lit by that byte's
+   value, draining as bits go up the column and refilling when the page fetches more. */
+const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z: B1.z1 - 1.3 };
+{
+  const c = mk(3200, 1000), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+  const stage = (x, w, n, title, body, data) => {
+    p.fillStyle = 'rgba(63,224,224,0.06)'; rr(p, x, 210, w, 640, 22); p.fill(); p.strokeStyle = 'rgba(63,224,224,0.45)'; p.lineWidth = 3; rr(p, x, 210, w, 640, 22); p.stroke();
+    p.fillStyle = '#5ff0ff'; p.font = '600 34px "IBM Plex Mono", monospace'; p.textAlign = 'left'; p.fillText(String(n), x + 30, 272);
+    p.fillStyle = '#f1e6cf'; let px = 46; do { p.font = `${px}px "Young Serif", Georgia, serif`; } while (p.measureText(title).width > w - 60 && --px > 28); p.fillText(title, x + 30, 336);
+    p.fillStyle = '#c9d2e3'; p.font = '30px "IBM Plex Sans", sans-serif'; wrapText(p, body, x + 30, 400, w - 60, 42);
+    p.fillStyle = 'rgba(8,10,18,0.9)'; rr(p, x + 18, 728, w - 36, 104, 12); p.fill();
+    p.font = '600 22px "IBM Plex Mono", monospace'; p.fillStyle = '#00ff66'; wrapText(p, data, x + 34, 768, w - 68, 30);
+  };
+  const draw = () => {
+    const a = QRNG.att, H = a && a.hives || {};
+    p.fillStyle = '#0b1220'; p.fillRect(0, 0, 3200, 1000);
+    p.strokeStyle = 'rgba(63,224,224,0.55)'; p.lineWidth = 4; p.strokeRect(14, 14, 3172, 972);
+    p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText('HOW THE ENTROPY IS STORED AND SERVED', 70, 96);
+    p.fillStyle = '#f1e6cf'; p.font = '72px "Young Serif", Georgia, serif'; p.fillText('Entropy pool storage', 70, 172);
+    const jobs = ['VAULT', 'VIPER', 'LOTUS'].reduce((s2, k) => s2 + ((H[k] && H[k].total_jobs) || 0), 0);
+    const W = 560, gap = 70, x0 = 70;
+    const S = [
+      ['Hive seed runs', 'VAULT™, VIPER™ and LOTUS™ are measured on IBM Quantum hardware. Each measurement is a real IBM Quantum job.',
+        `p = 5 · 13 · 17 · ${jobs || 912} JOBS · ${(H.VAULT && H.VAULT.backend) || 'IBM QUANTUM'}`],
+      ['Master pool', 'The SHA-256 of the three hives\' hardware seed measurements makes a 32-byte master entropy pool.',
+        a ? `FINGERPRINT ${String(a.master_fingerprint).slice(0, 16)}… · NOT REVERSIBLE TO KEY MATERIAL` : 'FINGERPRINT · SHA-256 OF THE POOL'],
+      ['HKDF stream', 'Output is expanded from the master pool with HKDF-Expand, keyed by a counter that only counts up, so it never repeats, even across restarts.',
+        QRNG.meta ? `COUNTER ${QRNG.meta.counter} · LIVE` : 'COUNTER · MONOTONIC'],
+      ['Served by the API', 'The STEADYWATCH™ QRNG service hands it out as bytes, numbers or UUIDs, with an attestation of where the pool came from.',
+        '/qrng/bytes · /int · /float · /uuid · /batch · /attestation'],
+      ['Client pools', 'Each app keeps its own pool and drains it instantly, refilling in the background. QES-256 holds 512 bytes, refills at 20% and falls back to Math.random() offline.',
+        'THIS PAGE: 128-BYTE TOP-UPS · SEE THE RACK →']];
+    S.forEach(([t, b, d], i) => {
+      const x = x0 + i * (W + gap); stage(x, W, i + 1, t, b, d);
+      if (i < 4) { p.fillStyle = '#3fe0e0'; p.beginPath(); const ax = x + W + 12, ay = 530; p.moveTo(ax, ay - 20); p.lineTo(ax + gap - 24, ay); p.lineTo(ax, ay + 20); p.closePath(); p.fill(); }
+    });
+    p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText('EVERY BYTE TRACES BACK TO A REAL IBM QUANTUM JOB · VERIFY ANY JOB AT QUANTUM.IBM.COM/JOBS/{JOB_ID}', 70, 930);
+    tex.needsUpdate = true;
+  };
+  draw();
+  const { x, y, w, h } = POOL_WALL, z = B1.z1 - 0.06;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(x, y, z); m.rotation.y = Math.PI; B1.g.add(m);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.14, h + 0.14, 0.04), colMat); fr.position.set(x, y, z + 0.035); B1.g.add(fr);   // just behind the screen, not level with it
+  // the storage rack: a steel cabinet with a glass door, 16 × 16 cells, one per byte this page holds
+  const R = new THREE.Group(); R.position.set(POOL_RACK.x, 0, POOL_RACK.z); R.rotation.y = Math.PI; B1.g.add(R);   // faces into the room
+  B1.blocks.push({ x0: POOL_RACK.x - 0.95, x1: POOL_RACK.x + 0.95, z0: POOL_RACK.z - 0.75, z1: POOL_RACK.z + 0.75 });
+  const RW = 1.3, RH = 2.4, RD = 0.6, cab = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 });
+  [[RW, 0.08, RD, 0, RH], [RW, 0.12, RD, 0, 0.06], [0.08, RH, RD, -RW / 2, RH / 2], [0.08, RH, RD, RW / 2, RH / 2]].forEach(([bw, bh, bd, bx, by]) => {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), cab); b.position.set(bx, by, 0); R.add(b);
+  });
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(0, RH / 2, -RD / 2 + 0.02); R.add(back);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(RW - 0.08, RH - 0.14), glassMat); door.position.set(0, RH / 2, RD / 2 - 0.01); R.add(door);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(RW + 0.02, 0.03, 0.03), lineMat); trim.position.set(0, RH + 0.05, RD / 2); R.add(trim);
+  const N = 16, CAP = N * N, cell = 0.055, pitch = 0.07, cells = new THREE.InstancedMesh(new THREE.BoxGeometry(cell, cell, cell * 0.6), new THREE.MeshBasicMaterial({ color: 0xffffff }), CAP);
+  cells.position.set(0, (RH - (N - 1) * pitch) / 2, 0); R.add(cells);   // centred in the cabinet
+  const M = new THREE.Matrix4(), C = new THREE.Color(), dim = new THREE.Color(0x0e1a22), lit = new THREE.Color(0x7ff0f0), warm = new THREE.Color(0xffe2b0);
+  for (let i = 0; i < CAP; i++) { const cx = (i % N - (N - 1) / 2) * pitch, cy = Math.floor(i / N) * pitch; M.makeTranslation(cx, cy, 0); cells.setMatrixAt(i, M); cells.setColorAt(i, dim); }
+  const glow = new THREE.PointLight(0x7ff0f0, 0.5, 4, 2); glow.position.set(0, 1.3, 0.9); R.add(glow);
+  // the live label over the rack
+  const lc = mk(1024, 256), lg = lc.getContext('2d'), ltex = new THREE.CanvasTexture(lc);
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), new THREE.MeshBasicMaterial({ map: ltex, transparent: true })); label.position.set(0, RH + 0.4, RD / 2); R.add(label);
+  const drawLabel = bytes => {
+    lg.clearRect(0, 0, 1024, 256); lg.fillStyle = 'rgba(8,10,18,0.92)'; rr(lg, 6, 6, 1012, 244, 24); lg.fill(); lg.strokeStyle = '#5ff0ff'; lg.lineWidth = 3; rr(lg, 6, 6, 1012, 244, 24); lg.stroke();
+    lg.textAlign = 'center'; lg.fillStyle = '#5ff0ff'; lg.font = '600 34px "IBM Plex Mono", monospace'; const fresh = QRNG.last && Date.now() - QRNG.last < 5 * 60 * 1000;   // drained between refills isn't offline
+    lg.fillText(`THIS PAGE'S POOL · ${!QRNG.last ? (QRNG.tried ? 'OFFLINE' : 'CONNECTING') : !fresh ? 'OFFLINE' : bytes ? 'LIVE' : 'DRAINED · REFILLING'}`, 512, 70);
+    lg.fillStyle = '#f1e6cf'; lg.font = '76px "Young Serif", Georgia, serif'; lg.fillText(`${bytes} bytes`, 512, 160);
+    lg.fillStyle = '#8e99b0'; lg.font = '600 26px "IBM Plex Mono", monospace'; lg.fillText('TOPS UP 128 AT A TIME · ONE CELL PER BYTE', 512, 214);
+    ltex.needsUpdate = true;
+  };
+  drawLabel(0);
+  let acc = 0, lastBytes = -1, wallT = 0, seenAtt = null, seenCounter = null;
+  buildingUpdates.push((dt, t) => {
+    if (!B1.g.visible) return;
+    acc += dt; wallT += dt;
+    if (wallT > 2 || QRNG.att !== seenAtt || (QRNG.meta && QRNG.meta.counter) !== seenCounter) { wallT = 0; seenAtt = QRNG.att; seenCounter = QRNG.meta && QRNG.meta.counter; draw(); }   // the live counter and attestation, as soon as they arrive
+    if (acc < 0.2) return; acc = 0;
+    const hex = QRNG.hex, bytes = Math.min(CAP, Math.floor(hex.length / 2));
+    for (let i = 0; i < CAP; i++) {
+      if (i < bytes) { const v = parseInt(hex.substr(i * 2, 2), 16) / 255; C.copy(lit).lerp(warm, v > 0.85 ? (v - 0.85) / 0.15 : 0).multiplyScalar(0.35 + 0.75 * v); }   // brighter for a bigger byte
+      else C.copy(dim);
+      cells.setColorAt(i, C);
+    }
+    cells.instanceColor.needsUpdate = true;
+    const total = Math.floor(hex.length / 2);
+    if (total !== lastBytes || wallT === 0) { lastBytes = total; drawLabel(total); }
+  });
+}
+const POOL_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(POOL_WALL.x, B1.y + POOL_WALL.y, B1.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 5.6, pitch: 0.06 };
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
 /* ---------- L2 · Apps ----------
@@ -1954,7 +2045,7 @@ const LIGHT_PATHS = (() => {
   const plat = PROJECTS.find(q => q.id === 'platform'), front = ATRIUM.z + ATRIUM.r + 0.6;
   add(FI.l1, 0, L1.z1 - 0.6, 0, plat.pos[2] + 3.4, PATH_W.main);
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
-  add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, 0, 1.6); add(FI.b1, 0, 1.6, 0, front);
+  add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
@@ -3112,7 +3203,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 // what's on each floor, in the order you meet it
 function floorStops(i) {
   const out = [];
-  if (i === FI.b1) out.push(['Cryostat', CRYO_STOP]);
+  if (i === FI.b1) out.push(['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
@@ -4219,6 +4310,7 @@ function veeDestination(id) {
     case 'lobby': return plat && { exhibit: true, floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z, pitch: 0.05 };
     case 'double-slit': return SLIT_STOP;
     case 'cryostat': return CRYO_STOP;
+    case 'pool-storage': return POOL_STOP;
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
     case 'timeline': return { exhibit: true, floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
