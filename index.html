@@ -189,6 +189,12 @@ body.in-world #navToggle, body.touring #navToggle { display: none !important; }
 #terminal .term-opt span { font-size: 13px; color: #9fdcb8; line-height: 1.5; }
 #terminal .term-opt:hover, #terminal .term-opt:focus-visible { background: rgba(0, 255, 102, .14); border-color: #00ff66; outline: none; }
 #terminal .term-foot { margin: 8px 0 0; font-size: 11px; letter-spacing: .12em; color: #4f9c6e; }
+#terminal .term-contact { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 24px clamp(16px, 6vw, 72px); font-family: var(--mono); color: #c8ffe0; overflow: auto; }
+#terminal .term-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; padding: 14px 16px; border: 1px solid rgba(0, 255, 102, .4); border-radius: 4px; background: rgba(0, 255, 102, .04); }
+#terminal .term-row b { width: 7.5em; color: #00ff66; letter-spacing: .1em; font-size: 13px; }
+#terminal .term-row span { flex: 1; min-width: 12em; font-size: 15px; color: #d8ffe6; overflow-wrap: anywhere; }
+#terminal .term-row button, #terminal .term-row a { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: #00ff66; background: transparent; border: 1px solid #00ff66; border-radius: 2px; padding: 6px 10px; cursor: pointer; text-decoration: none; }
+#terminal .term-row button:hover, #terminal .term-row a:hover, #terminal .term-row button:focus-visible, #terminal .term-row a:focus-visible { background: #00ff66; color: #000a04; outline: none; }
 #terminal .term-game { flex: 1; width: 100%; border: 0; background: #fff; }
 /* touring: nothing on screen but the 3D view, Vee's words and a passing hint */
 body.touring #directory, body.touring #tourBar, body.touring #liftPanel, body.touring #prompt, body.touring #helpBtn,
@@ -381,7 +387,15 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
       <p class="term-prompt">&gt; SELECT PROGRAM<span class="term-caret">_</span></p>
       <button type="button" class="term-opt" data-opt="resume"><b>[1] RESUME</b><span>Nathaniel Vazquez · opens the PDF</span></button>
       <button type="button" class="term-opt" data-opt="kz"><b>[2] KAIZENDOKU v1</b><span>The first version: a React web Sudoku. Play it here; your progress stays in this browser.</span></button>
-      <p class="term-foot">1 / 2 TO CHOOSE · ESC TO CLOSE</p>
+      <button type="button" class="term-opt" data-opt="contact"><b>[3] CONTACT</b><span>Email, LinkedIn and GitHub</span></button>
+      <p class="term-foot">1 · 2 · 3 TO CHOOSE · ESC TO CLOSE</p>
+    </div>
+    <div class="term-contact" hidden>
+      <p class="term-prompt">&gt; CONTACT · NATHANIEL VAZQUEZ<span class="term-caret">_</span></p>
+      <div class="term-row"><b>EMAIL</b><span>nate_vazquez@icloud.com</span><button type="button" data-copy="nate_vazquez@icloud.com">Copy</button><a href="mailto:nate_vazquez@icloud.com">Write ↗</a></div>
+      <div class="term-row"><b>LINKEDIN</b><span>in/nathaniel-vazquez-b41631153</span><a href="https://www.linkedin.com/in/nathaniel-vazquez-b41631153" target="_blank" rel="noopener">Open ↗</a></div>
+      <div class="term-row"><b>GITHUB</b><span>github.com/Infin-8</span><a href="https://github.com/Infin-8" target="_blank" rel="noopener">Open ↗</a></div>
+      <p class="term-foot" aria-live="polite"></p>
     </div>
     <iframe class="term-game" hidden title="KaizenDoku v1"></iframe>
   </div>
@@ -466,7 +480,7 @@ const ABOUT = {
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
-    heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it to read the Resume, or to play KaizenDoku v1, the first version of the game.' },
+    heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
   theme: { bg: '#141826', fg: '#f1e6cf', accent: '#3fe0e0' },
   logo: null   // a monogram drawn at load, see makeMonogram()
 };
@@ -2587,8 +2601,8 @@ let auto = null, anim = null, near = null, ride = null;
 addEventListener('keydown', e => {
   if (mode === 'inside') {
     if (!terminal.hidden) {
-      if (e.key === 'Escape') { if (!termGame.hidden) showTermMenu(); else closeTerminal(); }
-      else if (!termMenu.hidden && (e.key === '1' || e.key === '2')) termChoose(e.key === '1' ? 'resume' : 'kz');
+      if (e.key === 'Escape') { if (termMenu.hidden) showTermMenu(); else closeTerminal(); }
+      else if (!termMenu.hidden && ['1', '2', '3'].includes(e.key)) termChoose(['resume', 'kz', 'contact'][+e.key - 1]);
       return;
     }
     if (e.key === 'Escape') exitRoom(); return;
@@ -2696,9 +2710,11 @@ function openTerminal() {
   showTermMenu(); terminal.hidden = false;
   terminal.querySelector('.term-opt').focus();
 }
-function showTermMenu() { termMenu.hidden = false; termGame.hidden = true; termBack.hidden = true; termGame.src = 'about:blank'; }
+const termContact = terminal.querySelector('.term-contact');
+function showTermMenu() { termMenu.hidden = false; termGame.hidden = true; termContact.hidden = true; termBack.hidden = true; termGame.src = 'about:blank'; }
 function termChoose(opt) {
   if (opt === 'resume') { openSite(ABOUT.site.url); closeTerminal(); return; }
+  if (opt === 'contact') { termMenu.hidden = true; termBack.hidden = false; termContact.hidden = false; termContact.querySelector('.term-foot').textContent = ''; termContact.querySelector('button, a').focus(); return; }
   termMenu.hidden = true; termBack.hidden = false; termGame.hidden = false; termGame.src = 'kaizendoku-v1/'; termGame.focus();
 }
 function closeTerminal() {
@@ -2706,6 +2722,11 @@ function closeTerminal() {
   terminal.hidden = true; showTermMenu(); mode = 'walk'; canvas.focus();
 }
 terminal.querySelectorAll('.term-opt').forEach(b => b.addEventListener('click', () => termChoose(b.dataset.opt)));
+terminal.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
+  const foot = termContact.querySelector('.term-foot'), text = b.dataset.copy;
+  const done = ok => { foot.textContent = ok ? `> COPIED ${text}` : `> COPY BLOCKED · SELECT THE ADDRESS ABOVE`; };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done(true), () => done(false)); else done(false);
+}));
 document.getElementById('termClose').addEventListener('click', closeTerminal);
 termBack.addEventListener('click', () => { showTermMenu(); terminal.querySelector('.term-opt').focus(); });
 terminal.addEventListener('click', e => { if (e.target === terminal) closeTerminal(); });   // a click outside the frame closes it
@@ -2806,6 +2827,7 @@ function updateRide(dt) {
 // on a new floor (by lift or by jumping): its name shows, and Vee gathers again beside you with a word about it
 function arriveOnFloor(i) {
   toastFloor(i); lastInput = performance.now();
+  try { history.replaceState(null, '', i === FI.l1 ? location.pathname + location.search : '#' + FLOORS[i].id); } catch (e) {}   // the address is always a link to this floor
   if (!vee) return;
   veeRoot.position.y = FLOORS[i].y;
   if (tour && tour.pendingBody) { vee.bodyTarget = tour.pendingBody; tour.pendingBody = null; }
@@ -3666,7 +3688,7 @@ function buildOfficeWorld(p) {
   };
   const cols = Array.from({ length: COLS }, () => ({ key: newKey(), k: Math.floor(Math.random() * 64), y: -Math.random() * ROWS, speed: 0.35 + Math.random() * 0.6 }));
   const HEX = '0123456789abcdef';
-  const decodeLines = [['OPERATOR TERMINAL', '700 64px "IBM Plex Mono", monospace', 214], ['[1] RESUME        NATHANIEL VAZQUEZ · PDF', '600 28px "IBM Plex Mono", monospace', 284], ['[2] KAIZENDOKU v1  THE FIRST VERSION · PLAY', '600 28px "IBM Plex Mono", monospace', 334], [touchUI ? 'TAP TO OPEN THE TERMINAL' : 'PRESS E TO OPEN THE TERMINAL', '600 24px "IBM Plex Mono", monospace', 398]];
+  const decodeLines = [['OPERATOR TERMINAL', '700 64px "IBM Plex Mono", monospace', 214], ['[1] RESUME        NATHANIEL VAZQUEZ · PDF', '600 26px "IBM Plex Mono", monospace', 272], ['[2] KAIZENDOKU v1  THE FIRST VERSION · PLAY', '600 26px "IBM Plex Mono", monospace', 314], ['[3] CONTACT       EMAIL · LINKEDIN · GITHUB', '600 26px "IBM Plex Mono", monospace', 356], [touchUI ? 'TAP TO OPEN THE TERMINAL' : 'PRESS E TO OPEN THE TERMINAL', '600 22px "IBM Plex Mono", monospace', 408]];
   let rainAcc = 0, decodeT = 0;
   function drawMain(dt) {
     rainAcc += dt;
@@ -4262,7 +4284,9 @@ Promise.all([
   qrngRefill();   // the first draw from the live pool
   buildPaintings(); buildKiosk(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
-  const hash = location.hash.slice(1); const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP })[hash] || null;
+  const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
+  if (floorHash >= 0) placeOnFloor(floorHash);
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
