@@ -1613,7 +1613,12 @@ floorSign(L3.g, 'STEADYWATCH™ PLATFORM', 'Platform Wing', 0, 6.3, L3.z1 - 0.06
   const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012, i === 0); o.group.position.set(ATRIUM.x, L3.y + 3.0, ATRIUM.z); scene.add(o.group); return o; });   // always drawn: you see it at the top of the column from any floor
   const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(ATRIUM.x, 5.3, ATRIUM.z); L3.g.add(nl);
   const nLight = new THREE.PointLight(0xffe2b0, 0.6, 8, 2); nLight.position.set(ATRIUM.x, 3, ATRIUM.z); L3.g.add(nLight);
-  buildingUpdates.push((dt, t) => { const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m)); });
+  let nestFrame = 0;
+  buildingUpdates.push((dt, t) => {
+    // the heaviest per-frame work in the building: full rate from L2 up, every third frame from B1 and L1, where it's far overhead
+    if (player.floor < FI.l2 && nestFrame++ % 3) return;
+    const m = reduceMotion ? 0.15 : 1; nest.forEach((o, i) => o.update(0.4 + t * (0.1 + i * 0.03) * m, 0.2 + t * (0.07 - i * 0.015) * m));
+  });
   infoPanel(L3.g, { eyebrow: 'THE MATH', title: 'Hurwitz shells', body: 'Each pool is one shell of the F4 lattice: all the Hurwitz quaternions of norm p, a prime. There are exactly 24(p + 1) of them. p = 5 gives 144, p = 13 gives 336 and p = 17 gives 432.', foot: 'VAULT™ 144 · VIPER™ 336 · LOTUS™ 432' },
     L3.x1 - 0.06, 3.0, -8.4, -Math.PI / 2, 3.2);
 }
@@ -4083,9 +4088,26 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 const clock = new THREE.Clock();
+// Adaptive resolution: if frames run slow (under ~45 fps) the page renders at a lower pixel ratio, a step at a
+// time; with headroom (over ~58 fps) it steps back up, but not within 30 s of stepping down, so it can't see-saw.
+const DPR_MAX = Math.min(devicePixelRatio, 2), DPR_STEPS = [DPR_MAX, 1.5, 1.25, 1, 0.85].filter((v, i, a) => v <= DPR_MAX && a.indexOf(v) === i);
+let dprI = 0, perfAcc = 0, perfN = 0, perfHold = 0, lastDown = -1e9, lastFrameT = performance.now();
+function adaptResolution() {
+  const now = performance.now(), raw = (now - lastFrameT) / 1000; lastFrameT = now;
+  if (document.visibilityState === 'hidden' || raw > 0.25) return;   // tab switches and one-off hitches don't count
+  perfAcc += raw; perfN++; perfHold -= raw;
+  if (perfAcc < 2) return;
+  const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
+  if (perfHold > 0) return;
+  if (avg > 1 / 45 && dprI < DPR_STEPS.length - 1) { dprI++; lastDown = now; }
+  else if (avg < 1 / 58 && dprI > 0 && now - lastDown > 30000) dprI--;
+  else return;
+  renderer.setPixelRatio(DPR_STEPS[dprI]); resize(); perfHold = 3;   // let it settle before judging again
+}
 const fwd = new THREE.Vector3(), right = new THREE.Vector3(), mv = new THREE.Vector3();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  adaptResolution();
 
   if (mode === 'lift' && ride) updateRide(dt);
   if (mode === 'walk' || mode === 'auto') {
