@@ -2241,9 +2241,9 @@ function makeVee(parent, pos, facing) {
   holo.colorWrite = hair.colorWrite = false;
   const up = new THREE.Vector3(0, 1, 0);
   function limb(par, a, b, r0, r1, mat = holo) {
-    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 14, 1), mat);
+    const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, d.length(), 28, 6), mat);
     m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(up, d.clone().normalize()); par.add(m);
-    const jn = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 12, 8), mat); jn.position.copy(b); par.add(jn);
+    const jn = new THREE.Mesh(new THREE.SphereGeometry(r1 * 1.05, 24, 16), mat); jn.position.copy(b); par.add(jn);
   }
   const V = (x, y, z = 0) => new THREE.Vector3(x, y, z);
   const addBlend = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
@@ -2259,7 +2259,7 @@ function makeVee(parent, pos, facing) {
   // the figure (faces local +z)
   const fig = new THREE.Group(); fig.position.y = 0.15; body.add(fig);
   const headG = new THREE.Group(); headG.position.y = 1.66; fig.add(headG);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), holo); head.scale.set(1, 1.18, 1.02); headG.add(head);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 48, 32), holo); head.scale.set(1, 1.18, 1.02); headG.add(head);
   const visorM = new THREE.MeshBasicMaterial({ color: 0xe8ffff, opacity: 0.9, side: THREE.DoubleSide, ...addBlend });
   const eyes = [-1, 1].map(sx => {   // two short vertical eyes, set into the curve of the face
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.013, 0.03, 0.008), visorM);
@@ -2267,13 +2267,16 @@ function makeVee(parent, pos, facing) {
   });
   const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.0045, 0.008), visorM);   // a short glowing line that opens as she talks
   mouth.position.set(0, -0.042, 0.11); headG.add(mouth);
-  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 12, 0, Math.PI * 2, 0, 1.2), hair); cap.scale.set(1.02, 1.18, 1.06); cap.position.set(0, 0.012, -0.012); headG.add(cap);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 48, 24, 0, Math.PI * 2, 0, 1.2), hair); cap.scale.set(1.02, 1.18, 1.06); cap.position.set(0, 0.012, -0.012); headG.add(cap);
   limb(headG, V(0, 0.06, -0.1), V(0, -0.2, -0.115), 0.07, 0.028, hair);          // hair swept back
   limb(headG, V(0.085, 0.1, 0.07), V(0.128, -0.07, 0.045), 0.03, 0.011, hair);   // one side bang
   limb(fig, V(0, 1.48), V(0, 1.56), 0.05, 0.042);                                  // neck
-  const torso = new THREE.Mesh(new THREE.LatheGeometry([V(0, 0.93), V(0.128, 0.95), V(0.15, 1.04), V(0.112, 1.17), V(0.1, 1.25), V(0.142, 1.37), V(0.165, 1.43), V(0.118, 1.49), V(0.03, 1.5)].map(v => new THREE.Vector2(v.x, v.y)), 28), holo);
+  // her torso: the same profile, run through a smooth curve and turned with many more segments, so her outline is round, not faceted
+  const torsoCurve = new THREE.SplineCurve([new THREE.Vector2(0, 0.93), new THREE.Vector2(0.128, 0.95), new THREE.Vector2(0.15, 1.04), new THREE.Vector2(0.112, 1.17), new THREE.Vector2(0.1, 1.25), new THREE.Vector2(0.142, 1.37), new THREE.Vector2(0.165, 1.43), new THREE.Vector2(0.118, 1.49), new THREE.Vector2(0.03, 1.5)]);
+  const torso = new THREE.Mesh(new THREE.LatheGeometry(torsoCurve.getPoints(48), 64), holo);
   torso.scale.z = 0.66; fig.add(torso);
   const seam = new THREE.Mesh(new THREE.TorusGeometry(0.104, 0.006, 6, 40), visorM); seam.rotation.x = Math.PI / 2; seam.scale.y = 0.66; seam.position.y = 1.2; fig.add(seam);   // a lit circuit line at the waist
+  for (const sx of [-1, 1]) { const sc = new THREE.Mesh(new THREE.SphereGeometry(0.06, 32, 20), holo); sc.scale.set(1.15, 0.9, 0.85); sc.position.set(0.172 * sx, 1.425, 0); fig.add(sc); }   // rounded shoulders
   const shoulderL = new THREE.Group(); shoulderL.position.set(-0.19, 1.44, 0); fig.add(shoulderL);   // left arm gestures while she talks
   limb(shoulderL, V(0, 0), V(-0.045, -0.27), 0.048, 0.04);
   const elbowL = new THREE.Group(); elbowL.position.set(-0.045, -0.27, 0); shoulderL.add(elbowL);
@@ -2293,7 +2296,7 @@ function makeVee(parent, pos, facing) {
   const droneMat = new THREE.ShaderMaterial({ uniforms: droneU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
   const parts = [];
   fig.traverse(o => { if (o.isMesh && (o.material === holo || o.material === hair)) { const sc = o.scale; parts.push({ o, info: surfaceArea(o.geometry), k: Math.pow(Math.abs(sc.x * sc.y * sc.z), 2 / 3) }); } });
-  const totalArea = parts.reduce((a, q) => a + q.info.tot * q.k, 0), DRONES = camera.aspect < 0.85 ? 1100 : 1800;
+  const totalArea = parts.reduce((a, q) => a + q.info.tot * q.k, 0), DRONES = camera.aspect < 0.85 ? 1600 : 2600;   // denser, so her outline reads smooth
   for (const q of parts) {
     const n = Math.max(6, Math.round(DRONES * q.info.tot * q.k / totalArea));
     const g = new THREE.BufferGeometry(), rnd = new Float32Array(n), dir = new Float32Array(n * 3);
