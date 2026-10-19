@@ -4313,6 +4313,15 @@ if (window.visualViewport) { visualViewport.addEventListener('resize', askKeyboa
 askInput.addEventListener('focus', () => setTimeout(askKeyboard, 50));
 askInput.addEventListener('blur', () => { askEl.classList.remove('kb'); });
 function askGuide() { return world ? world.vee : vee; }
+// a compact summary of the live QRNG data this page has, so Vee can quote real figures
+function askLive() {
+  const a = QRNG.att, H = a && a.hives || {};
+  return {
+    live: qrngLive(), counter: QRNG.meta ? Number(QRNG.meta.counter) : null, pageBytes: Math.floor(QRNG.hex.length / 2), bitsUsed: QRNG.used,
+    att: a ? { hives: a.hives_loaded, satellites: a.total_satellites, entropyBits: a.total_entropy_bits, avgYield: a.avg_yield_efficiency,
+      fingerprint: a.master_fingerprint, generated: String(a.generated_at || '').slice(0, 16),
+      byHive: Object.fromEntries(['VAULT', 'VIPER', 'LOTUS'].filter(k => H[k]).map(k => [k, { jobs: H[k].total_jobs, backend: H[k].backend, avgBits: H[k].avg_entropy_bits, yield: H[k].yield_efficiency }])) } : null };
+}
 // what the visitor is looking at: the station you're near in a world, or the display most in front of you on this floor
 function askLooking() {
   if (world) return near && near.info ? `${near.info.title} (in the ${world.pt.p.name} world)` : '';
@@ -4463,7 +4472,7 @@ async function askSend(q) {
   try {
     const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       question: q, history: askState.history.slice(-6), floor: askWhere(), looking: askLooking(),
-      seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]) }) });
+      seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]), live: askLive() }) });
     const j = await r.json().catch(() => ({}));
     answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null; mood = j.mood || 'neutral'; point = j.point || null;
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
