@@ -460,7 +460,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PROJECTS = [
   {
     id: 'kaizendoku', name: 'KaizenDoku', tagline: 'Sudoku. With Friends.', wing: 'Apps',
-    desc: 'Sudoku for solo play or head-to-head with a friend. Co-op matches run inside iMessage, and time-attack mode tracks your solo best times. Results post to Game Center leaderboards and achievements, and mindful minutes log to Apple Health. Every board is generated from IBM Quantum hardware entropy through the STEADYWATCH™ Platform (QES-256).',
+    desc: 'Sudoku for solo play or head-to-head with a friend. Co-op matches run inside iMessage, and time-attack mode tracks your solo best times. Results post to Game Center leaderboards and achievements, and mindful minutes log to Apple Health. Every board is generated from IBM Quantum hardware entropy through the STEADYWATCH™ PLATFORM (QES-256).',
     modules: [['CO-OP','Matches played inside iMessage'],['TIME ATTACK','Solo best times'],['GAME CENTER','Leaderboards and achievements'],['HEALTH','Mindful minutes logged']],
     stack: 'iMessage · Game Center · Apple Health · QES-256 boards',
     links: [['App Store','https://apps.apple.com/us/app/kaizendoku/id6748037311'],['kaizendoku.com','https://kaizendoku.com']],
@@ -485,7 +485,7 @@ const PROJECTS = [
   {
     id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
     desc: 'Quantum-derived randomness and security as a service. Every product produces 32-byte QES-256 keys, each tied to a verifiable IBM Quantum job ID.',
-    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with Face ID in Handheld'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with Face ID in STEADYWATCH™ HANDHELD'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
     links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
@@ -3299,7 +3299,7 @@ const PLATFORM_STATIONS = [
   { id: 'quantum', title: 'IBM Quantum', text: 'Random bits come from measuring qubits on IBM Quantum hardware. Each batch is tied to a verifiable IBM Quantum job ID.' },
   { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform, serving the API and the live demos.' },
   { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
-  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ Handheld keeps keys bound to the Secure Enclave and approves sign-ins with Face ID.' },
+  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ HANDHELD keeps keys bound to the Secure Enclave and approves sign-ins with Face ID.' },
   { id: 'key', title: 'QES-256 key', text: 'Every product surface produces 32-byte QES-256 keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
   { id: 'shqkd', title: 'SHQKD', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
