@@ -2366,7 +2366,7 @@ function makeVee(parent, pos, facing) {
   fig.rotation.y = restYaw;
   const v = { parent, pad, body, fig, headG, mouth, eyes, knee: knees[0], shoulder, elbow, shoulderL, elbowL, rings, bubble, name, hoverM, holoU, hitM,
     droneU, follow: true, bounds: null, seed: Math.random() * 100, lean: 0, heading: null, lastP: null, motes, moteData, moteSpeed: 1,
-    pool, poolM, floorSwarm, floorData, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 6 + Math.random() * 5, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
+    pool, poolM, floorSwarm, floorData, trail, tPos, tCol, TN, tHead: 0, tSamples: [], glitchT: 15 + Math.random() * 10, glitchD: 0, reacted: new Set(), lastReact: null, doneT: 0, appearT: 0.8, vanishT: -1, scale: 0,
     home: pos.clone(), pos: pos.clone(), normal, restYaw, baseYaw: restYaw, waveT: 0, wasNear: false, glow: 0,
     awayT: 0, spinT: 0, blinkT: 4, blinkD: 0, text: null, reveal: 0, total: 0, drawn: -1,
     pointTarget: null, pointT: 0, bodyTarget: null, pings: [] };
@@ -2489,7 +2489,7 @@ function updateVee(v, dt, t) {
   else if (v.vanishT >= 0) { v.vanishT += dt; v.scale = Math.max(0, 1 - v.vanishT / 0.45); scatter = Math.min(1, v.vanishT / 0.45) * 1.4; }
   else if (v.appearT > 0) { v.appearT = Math.max(0, v.appearT - dt); const k = 1 - v.appearT / 0.8; v.scale = Math.min(1, 0.35 + k); scatter = (1 - k) * (1 - k) * 1.6; v.glow = Math.max(v.glow, 1 - k); }   // the swarm gathers into her
   else v.scale = 1;
-  v.droneU.uScatter.value += ((reduceMotion ? 0 : scatter + (v.glitchD > 0 ? 0.12 : 0)) - v.droneU.uScatter.value) * Math.min(1, dt * 14);
+  v.droneU.uScatter.value += ((reduceMotion ? 0 : scatter + (v.glitchD > 0 ? 0.04 : 0)) - v.droneU.uScatter.value) * Math.min(1, dt * 14);
   v.droneU.uPx.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
   v.body.scale.setScalar(Math.max(0.001, v.scale)); v.body.visible = v.scale > 0.01;
   v.pool.position.set(b.x, 0.025, b.z); v.poolM.opacity = 0.16 * v.scale * (1 - Math.min(0.6, b.y)); v.pool.scale.setScalar(1 + b.y * 0.8);
@@ -2571,11 +2571,11 @@ function updateVee(v, dt, t) {
   for (const e of v.eyes) { e.scale.y = Math.max(0.08, open) * v.mp.eyeY; e.scale.x = v.mp.eyeX; }
   v.droneU.uColor.value.setRGB(v.mp.tint[0] * 0.55, v.mp.tint[1] * 0.55, v.mp.tint[2] * 0.55);   // her particles take on her mood
   v.holoU.uDim.value = v.resting ? 0.55 : 1;   // dimmer while she rests on her dock
-  // now and then the hologram glitches: a brief sideways jolt and flicker
+  // once in a while the hologram glitches: a quick, small jolt and a faint flicker (kept subtle)
   if (!reduceMotion) {
     v.glitchT -= dt;
-    if (v.glitchT < 0) { v.glitchT = 6 + Math.random() * 7; v.glitchD = 0.16; }
-    if (v.glitchD > 0) { v.glitchD -= dt; v.fig.position.x = (Math.random() - 0.5) * 0.09; v.holoU.uDim.value = 0.45 + Math.random() * 0.5; }
+    if (v.glitchT < 0) { v.glitchT = 18 + Math.random() * 14; v.glitchD = 0.09; }
+    if (v.glitchD > 0) { v.glitchD -= dt; v.fig.position.x = (Math.random() - 0.5) * 0.025; v.holoU.uDim.value = 0.8 + Math.random() * 0.2; }
     else v.fig.position.x = 0;
   }
   v.rings.forEach((r, i) => { r.rotation.z += dt * [0.8, -0.6, 1.1][i] * m; if (i === 2) r.scale.setScalar(1 + 0.08 * Math.sin(t * 2.2) * m); });   // the foot halo also breathes
