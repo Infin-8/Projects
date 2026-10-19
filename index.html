@@ -419,7 +419,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
   <div class="ask-chips" role="group" aria-label="Suggested questions"></div>
-  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
+  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" hidden aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
   <p class="ask-live" aria-live="polite"></p>
 </section>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
@@ -4365,7 +4365,9 @@ function veeTakeTo(id) {
    inside your tap, so phones let it play when the answer arrives. */
 const VEE_VOICE_KEY = 'quantum-hall-vee-voice', askVoiceBtn = document.getElementById('askVoice'), askMic = document.getElementById('askMic');
 const veeAudio = new Audio(); veeAudio.preload = 'auto';
-let veeVoiceOn = (() => { try { return localStorage.getItem(VEE_VOICE_KEY) === '1'; } catch (e) { return false; } })(), veeAudioURL = null;
+// her spoken voice is switched off (it used too much of the free Workers AI allowance); set VEE_VOICE_ENABLED to bring it back
+const VEE_VOICE_ENABLED = false;
+let veeVoiceOn = VEE_VOICE_ENABLED && (() => { try { return localStorage.getItem(VEE_VOICE_KEY) === '1'; } catch (e) { return false; } })(), veeAudioURL = null;
 const SILENT_WAV = (() => { const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
   w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
   let s2 = ''; b.forEach(c => { s2 += String.fromCharCode(c); }); return 'data:audio/wav;base64,' + btoa(s2); })();
@@ -4387,8 +4389,9 @@ askVoiceBtn.addEventListener('click', () => {
   renderVoiceBtn(); if (veeVoiceOn) unlockAudio(); else stopVoice();
 });
 renderVoiceBtn();
+if (VEE_VOICE_ENABLED) askVoiceBtn.hidden = false;
 async function veeSpeak(text, g) {
-  if (!veeVoiceOn || !text) return;
+  if (!VEE_VOICE_ENABLED || !veeVoiceOn || !text) return;
   try {
     const r = await fetch(VEE_API.replace(/\/ask$/, '/speak'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
     if (!r.ok || !veeVoiceOn) return;
