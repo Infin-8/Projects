@@ -4314,7 +4314,7 @@ askInput.addEventListener('focus', () => setTimeout(askKeyboard, 50));
 askInput.addEventListener('blur', () => { askEl.classList.remove('kb'); });
 function askGuide() { return world ? world.vee : vee; }
 // a compact summary of the live QRNG data this page has, so Vee can quote real figures
-function askLive() {
+function askLiveData() {
   const a = QRNG.att, H = a && a.hives || {};
   return {
     live: qrngLive(), counter: QRNG.meta ? Number(QRNG.meta.counter) : null, pageBytes: Math.floor(QRNG.hex.length / 2), bitsUsed: QRNG.used,
@@ -4472,7 +4472,7 @@ async function askSend(q) {
   try {
     const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       question: q, history: askState.history.slice(-6), floor: askWhere(), looking: askLooking(),
-      seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]), live: askLive() }) });
+      seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]), live: askLiveData() }) });
     const j = await r.json().catch(() => ({}));
     answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null; mood = j.mood || 'neutral'; point = j.point || null;
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
