@@ -523,7 +523,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', 'How Vee works', 'The plaque beside her nest: the AI behind her, from the model to the research library she reads from.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -4130,6 +4130,33 @@ function buildOfficeWorld(p) {
     if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
     else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); v.waveT = 2.4; }
   };
+  // beside the nest, a plaque on how she works: the AI behind the hologram
+  {
+    const c = mk(1500, 1000), g = c.getContext('2d'), PW = 3.0, PH = 2.0, PX = NW / 2 + 0.25 + PW / 2;
+    g.fillStyle = '#0b1220'; g.fillRect(0, 0, 1500, 1000); g.strokeStyle = 'rgba(63,224,224,0.55)'; g.lineWidth = 4; g.strokeRect(12, 12, 1476, 976);
+    g.fillStyle = '#5ff0ff'; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText('HOW VEE WORKS', 60, 84);
+    g.fillStyle = '#f1e6cf'; g.font = '60px "Young Serif", Georgia, serif'; g.fillText('An embodied AI guide', 60, 156);
+    g.fillStyle = '#c9d2e3'; g.font = '26px "IBM Plex Sans", sans-serif';
+    wrapText(g, 'A large language model, grounded in this building and the research behind it, with a body that acts on what she says.', 60, 204, 1380, 34);
+    [['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
+     ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
+     ['LIBRARY', 'About 1,000 passages of steady-watch.com research, searched for every question.'],
+     ['ACTIONS', 'Tags she writes become motion: walk you somewhere, change her mood, point at an exhibit.'],
+     ['GUARDRAILS', "Answers only from her sources, credits each paper, and says when she doesn't know."],
+     ['RUNS FREE', "An answer cache, rate limits and a daily budget keep her on Cloudflare's free tier."]].forEach(([k, v], i) => {
+      const y = 300 + i * 100;
+      g.fillStyle = 'rgba(63,224,224,0.07)'; rr(g, 50, y - 46, 1400, 84, 12); g.fill();
+      g.fillStyle = '#5ff0ff'; g.font = '600 24px "IBM Plex Mono", monospace'; g.fillText(k, 76, y + 6);
+      g.fillStyle = '#f1e6cf'; let px = 28; do { g.font = `${px}px "IBM Plex Sans", sans-serif`; } while (g.measureText(v).width > 1110 && --px > 18); g.fillText(v, 316, y + 6);
+    });
+    g.fillStyle = '#00ff66'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText('CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 950);
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.06); nestG.add(plaque);
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.12, PH + 0.12, 0.06), gold); fr.position.set(PX, NY, 0.0); nestG.add(fr);   // a gold backing, its face just behind the plaque
+    const st = { id: 'howvee', info: { title: 'How Vee works' }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
+    nestG.updateMatrixWorld(true); st.center = new THREE.Vector3().setFromMatrixPosition(plaque.matrixWorld); st.center.z -= 0.05;
+    plaque.userData.station = st; hit.push(plaque); stations.push(st);
+  }
   let nested = false, explained = false;
   updates.push((dt, t) => {
     const v = worldVee; if (!v) return;
