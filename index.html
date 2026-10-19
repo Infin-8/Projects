@@ -4365,7 +4365,7 @@ function veeTakeTo(id) {
    inside your tap, so phones let it play when the answer arrives. */
 const VEE_VOICE_KEY = 'quantum-hall-vee-voice', askVoiceBtn = document.getElementById('askVoice'), askMic = document.getElementById('askMic');
 const veeAudio = new Audio(); veeAudio.preload = 'auto';
-// her spoken voice is switched off (it used too much of the free Workers AI allowance); set VEE_VOICE_ENABLED to bring it back
+// her voice and hold-to-talk are switched off (they used too much of the free Workers AI allowance); set VEE_VOICE_ENABLED to bring both back
 const VEE_VOICE_ENABLED = false;
 let veeVoiceOn = VEE_VOICE_ENABLED && (() => { try { return localStorage.getItem(VEE_VOICE_KEY) === '1'; } catch (e) { return false; } })(), veeAudioURL = null;
 const SILENT_WAV = (() => { const n = 800, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
@@ -4407,7 +4407,7 @@ async function veeSpeak(text, g) {
    (Workers AI speech-to-text) and the words are asked like typed ones. Up to 12 s; the mic is released
    after every recording. Shown only where the browser can record. */
 const askRec = { rec: null, stream: null, chunks: [], held: false, timer: null };
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) askMic.hidden = false;
+if (VEE_VOICE_ENABLED && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) askMic.hidden = false;   // off with her voice
 async function micDown(e) {
   e.preventDefault(); if (askState.busy || askRec.rec) return;
   askRec.held = true; unlockAudio();
