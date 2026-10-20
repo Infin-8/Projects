@@ -2397,7 +2397,7 @@ function makeVee(parent, pos, facing) {
   };
   v.setLine = (title, sub, step) => v.say(title, sub, step, null);
   v.draw = drawBubble;
-  if (VEE_RIG_ON) { if (veeRigGltf) attachVeeRig(v); else veeRigWaiting.push(v); }   // her rigged body, once it has loaded
+  if (VEE_RIG_ON) { if (veeRigGltf) attachVeeRig(v); else { veeRigWaiting.push(v); v.rigWait = performance.now(); } }   // her rigged body: she waits, dissolved, until it has loaded (up to 6 s)
   return v;
 }
 
@@ -2418,7 +2418,7 @@ function loadVeeRig() {
   return (loadVeeRig.p = js(base + 'loaders/GLTFLoader.js').then(() => js(base + 'utils/SkeletonUtils.js'))
     .then(() => new Promise((res, rej) => new THREE.GLTFLoader().load(VEE_RIG_URL, res, undefined, rej)))
     .then(g => { veeRigGltf = g; veeRigWaiting.splice(0).forEach(attachVeeRig); })
-    .catch(e => console.warn('Vee: rigged body unavailable, keeping her built one', e)));
+    .catch(e => { console.warn('Vee: rigged body unavailable, keeping her built one', e); veeRigWaiting.splice(0).forEach(v => { v.rigWait = 0; }); }));
 }
 const droneSkinVert = `
 #include <common>
@@ -2494,6 +2494,7 @@ function attachVeeRig(v) {
   // the built body steps aside: its drones and waist seam hide (its joints stay, invisibly, to drive the gestures)
   v.bodyDrones.forEach(p => { p.visible = false; }); if (v.seam) v.seam.visible = false;
   v.fig.add(rigG);
+  if (v.rigWait) { v.rigWait = 0; v.appearT = 0.8; }   // she was waiting for this body: now she shimmers in, in it
   const mixer = new THREE.AnimationMixer(root), clip = n => veeRigGltf.animations.find(a => a.name === n);
   const idle = mixer.clipAction(clip('idle')), walk = null;   // she floats, so only the idle clip; her legs are posed in code
   idle.play(); mixer.update(Math.random() * 3);   // not all in step
@@ -2730,7 +2731,8 @@ function updateVee(v, dt, t) {
   v.pos.copy(b);
   // shimmer in when she arrives somewhere, shrink away when she zips into a display
   let scatter = 0;
-  if (v.away) { v.scale = Math.max(0, v.scale - dt * 2.5); scatter = (1 - v.scale) * 1.4; }   // docked elsewhere: she's not here
+  if (v.rigWait && performance.now() - v.rigWait < 6000) { v.scale = 0; scatter = 1.4; v.appearT = 0.8; }   // waiting for her rigged body, so she doesn't appear in the old one first
+  else if (v.away) { v.scale = Math.max(0, v.scale - dt * 2.5); scatter = (1 - v.scale) * 1.4; }   // docked elsewhere: she's not here
   else if (v.vanishT >= 0) { v.vanishT += dt; v.scale = Math.max(0, 1 - v.vanishT / 0.45); scatter = Math.min(1, v.vanishT / 0.45) * 1.4; }
   else if (v.appearT > 0) { v.appearT = Math.max(0, v.appearT - dt); const k = 1 - v.appearT / 0.8; v.scale = Math.min(1, 0.35 + k); scatter = (1 - k) * (1 - k) * 1.6; v.glow = Math.max(v.glow, 1 - k); }   // the swarm gathers into her
   else v.scale = 1;
@@ -2953,7 +2955,7 @@ const hallBounds = p => { if (walkable(p.x, p.z)) return; const c = camera.posit
 function buildMascot() {
   const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
   vee = makeVee(veeRoot, VEE_POS, normal); vee.bounds = p => { if (mode !== 'lift') hallBounds(p); };
-  setTimeout(loadVeeRig, 1500);   // her rigged body, after the hall is up
+  loadVeeRig();   // her rigged body, straight away (she waits for it, dissolved)
   const plat = paintings.find(p => p.p.id === 'platform'), liftAt = new THREE.Vector3(LIFT.x, 2.2, LIFT.z);
   const firstUnseen = unseenWorlds()[0], firstTarget = firstUnseen && firstUnseen !== 'about' ? paintings.find(p => p.p.id === firstUnseen) : null;
   // the lines play on their own while you stand near her; pressing E (or tapping her) always leads to About
