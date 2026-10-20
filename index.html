@@ -2498,7 +2498,7 @@ function attachVeeRig(v) {
   const idle = mixer.clipAction(clip('idle')), walk = null;   // she floats, so only the idle clip; her legs are posed in code
   idle.play(); mixer.update(Math.random() * 3);   // not all in step
   const W = new THREE.Vector3(), rest = (x, y) => new THREE.Vector3(x, y, 0).normalize();
-  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), move: null, fast: 0, fidgetT: 25 + Math.random() * 20, lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
+  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), move: null, next: null, waveLen: 2.4, lastWaveT: 0, waveK: 0, fast: 0, fidgetT: 25 + Math.random() * 20, lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
     // her built limbs at rest, in her own frame: a gesture is how far they've moved from these
     rest: { upR: rest(0.045, -0.27), foreR: rest(0.015, -0.24), upL: rest(-0.045, -0.27), foreL: rest(-0.015, -0.24), shin: rest(0, -1) }, W };
 }
@@ -2521,7 +2521,8 @@ const VEE_MOVES = {
 };
 function veeMove(v, name) {
   if (!v || !v.rig || !VEE_MOVES[name] || v.away || reduceMotion) return false;
-  v.rig.move = { name, t: 0 }; v.waveT = 0; v.pointT = 0; return true;   // a move takes over from a wave or a point
+  if (v.rig.move) { v.rig.next = name; return true; }   // one at a time: the next waits for this one to finish, so nothing snaps
+  v.rig.move = { name, t: 0 }; v.pointT = 0; return true;   // a move takes over from a point (a wave fades out on its own)
 }
 const _wq = new THREE.Quaternion(), _wp = new THREE.Quaternion(), _wd = new THREE.Quaternion(), _wa = new THREE.Vector3();
 function turnBone(bone, axisLocal, angle, frameQ) {   // rotate a bone about an axis given in her frame
@@ -2575,7 +2576,7 @@ function updateVeeRig(v, dt) {
   const ease = a => Math.max(0, Math.min(1, (a - 0.08) / 0.3));
   for (const [sh, el, sx, arm, fore, up, fo] of [[v.shoulder, v.elbow, 1, R.B.armL, R.B.foreL, R.rest.upR, R.rest.foreR], [v.shoulderL, v.elbowL, -1, R.B.armR, R.B.foreR, R.rest.upL, R.rest.foreL]]) {
     const dU = seg(sh, 0.045 * sx, -0.27, new THREE.Vector3()), dF = seg(el, 0.015 * sx, -0.24, new THREE.Vector3());
-    const waving = sx > 0 && v.waveT > 0 && !(v.pointT > 0 && v.pointTarget);   // the rig has its own wave (below): don't copy the old overhead one
+    const waving = sx > 0 && (v.waveT > 0 || R.waveK > 0.005) && !(v.pointT > 0 && v.pointTarget);   // the rig has its own wave (below): don't copy the old overhead one
     const k = waving ? 0 : ease(Math.max(away(dU, up), away(dF, fo)));
     if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
   }
@@ -2583,7 +2584,7 @@ function updateVeeRig(v, dt) {
   let M = null, e = 0;
   if (R.move) {
     const mv = VEE_MOVES[R.move.name]; R.move.t += dt; const p = R.move.t / mv.dur;
-    if (p >= 1) R.move = null;
+    if (p >= 1) { R.move = R.next ? { name: R.next, t: 0 } : null; R.next = null; }
     else { M = mv.pose(p, R.move.t); e = ease3(Math.min(1, R.move.t / 0.25)) * ease3(Math.min(1, (mv.dur - R.move.t) / 0.3)); }
   }
   R.rigG.position.y = M && M.lift ? M.lift * e : 0;
@@ -2621,8 +2622,13 @@ function updateVeeRig(v, dt) {
     if (['cheer', 'clap', 'twirl', 'wave2'].includes(R.move && R.move.name)) { openHand(R.B.handL, k); openHand(R.B.handR, k); }
   }
   // her wave, on the rigged body: elbow tucked near her side, forearm up, waving from the elbow (not the whole arm overhead)
-  if (v.waveT > 0 && !(v.pointT > 0 && v.pointTarget) && !M) {
-    const wk = Math.max(0, Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5)), sw = Math.sin(performance.now() / 1000 * 9) * 0.5 * (reduceMotion ? 0.3 : 1);
+  if (v.waveT > R.lastWaveT + 0.01) R.waveLen = v.waveT;   // a new wave: remember its length (1.2 to 2.4 s), so it always eases in
+  R.lastWaveT = v.waveT;
+  // the wave eases in and out on its own, so a move or a point taking over never snaps her arm
+  const waveOn = v.waveT > 0 && !(v.pointT > 0 && v.pointTarget) && !(M && M.a);
+  R.waveK += ((waveOn ? ease3(Math.max(0, Math.min(1, Math.min(R.waveLen - v.waveT, v.waveT) * 2.5))) : 0) - R.waveK) * Math.min(1, dt * 7);
+  if (R.waveK > 0.005) {
+    const wk = R.waveK * (1 - R.pointK), sw = Math.sin(performance.now() / 1000 * 9) * 0.5 * (reduceMotion ? 0.3 : 1);
     const dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
     aimBone(R.B.armL, dir([0.42, -0.8, 0.3]), wk); aimBone(R.B.foreL, dir([0.12 + sw, 1, 0.3]), wk);
     openHand(R.B.handL, wk);   // fingers straight as she waves
