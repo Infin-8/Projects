@@ -2469,7 +2469,7 @@ function attachVeeRig(v) {
   const root = THREE.SkeletonUtils.clone(veeRigGltf.scene), rigG = new THREE.Group(); rigG.add(root);
   root.updateMatrixWorld(true);
   const bone = n => { let b = null; root.traverse(o => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
-  const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), legR: bone('RightLeg'),
+  const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), handR: bone('RightHand'), legR: bone('RightLeg'),
     upLegL: bone('LeftUpLeg'), legL: bone('LeftLeg'), footL: bone('LeftFoot'), upLegR: bone('RightUpLeg'), footR: bone('RightFoot'),
     spine: [bone('Spine'), bone('Spine1'), bone('Spine2')], shL: bone('LeftShoulder'), shR: bone('RightShoulder') };
   // her height, measured on the skeleton: the mesh is authored in centimetres under a 0.01 armature
@@ -2530,17 +2530,26 @@ function turnBone(bone, axisLocal, angle, frameQ) {   // rotate a bone about an 
   _wd.setFromAxisAngle(_wa, angle); bone.quaternion.copy(_wp.multiply(_wd.multiply(_wq))); bone.updateMatrixWorld(true);
 }
 const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
-// a bone runs toward its child, along whichever local axis the rig uses (this one's arms run along -X): aim that axis
-const _rq = new THREE.Quaternion(), _rp = new THREE.Quaternion(), _rax = new THREE.Vector3(), _rd = new THREE.Vector3();
+// aim a bone (toward its child) along a direction: turn it the shortest way from where the animation has it, by k.
+// Turning from the current pose keeps the animation's twist, so easing in and out can never spin the limb round.
+const _rq = new THREE.Quaternion(), _rp = new THREE.Quaternion(), _rax = new THREE.Vector3(), _rd = new THREE.Vector3(), _rI = new THREE.Quaternion(), _rw = new THREE.Quaternion();
 function aimBone(bone, dirWorld, k) {
   const child = bone.children.find(c => c.isBone); if (!child || k <= 0.001) return;
-  _rax.copy(child.position).normalize(); bone.parent.getWorldQuaternion(_rp).invert();
-  _rq.setFromUnitVectors(_rax, _rd.copy(dirWorld).normalize().applyQuaternion(_rp));
-  bone.quaternion.slerp(_rq, Math.min(1, k)); bone.updateMatrixWorld(true);
+  bone.getWorldPosition(_rd); child.getWorldPosition(_rax); _rax.sub(_rd).normalize();          // where it points now
+  _rq.setFromUnitVectors(_rax, _rd.copy(dirWorld).normalize());                                  // the shortest turn to the target
+  if (k < 1) _rq.copy(_rI.set(0, 0, 0, 1).slerp(_rq, k));
+  bone.getWorldQuaternion(_rw); bone.parent.getWorldQuaternion(_rp).invert();
+  bone.quaternion.copy(_rp.multiply(_rq.multiply(_rw))); bone.updateMatrixWorld(true);
 }
 // a pointing hand: index straight, the other fingers curled into the palm and the thumb tucked. Fingers run along
 // the hand's local axis (±X here) with the palm facing -Y at rest, so each curls about the axis across its knuckles.
 const _hq = new THREE.Quaternion(), _hx = new THREE.Vector3(), _hn = new THREE.Vector3(0, -1, 0), _hI = new THREE.Quaternion();
+// an open hand: every finger straight, the thumb relaxed alongside (for waving, cheering, clapping)
+const _hO = new THREE.Quaternion();
+function openHand(hand, k) {
+  if (!hand || k <= 0.001) return;
+  hand.traverse(o => { if (o.isBone && o !== hand && /Hand(Index|Middle|Ring|Pinky|Thumb)\d$/.test(o.name)) o.quaternion.slerp(_hO, Math.min(1, k) * (/Thumb/.test(o.name) ? 0.6 : 1)); });
+}
 function pointHand(hand, k) {
   if (!hand || k <= 0.001) return;
   const fingers = {}; hand.traverse(o => { const m = o.isBone && /Hand(Thumb|Index|Middle|Ring|Pinky)(\d)$/.exec(o.name); if (m) fingers[m[1] + m[2]] = o; });
@@ -2566,7 +2575,8 @@ function updateVeeRig(v, dt) {
   const ease = a => Math.max(0, Math.min(1, (a - 0.08) / 0.3));
   for (const [sh, el, sx, arm, fore, up, fo] of [[v.shoulder, v.elbow, 1, R.B.armL, R.B.foreL, R.rest.upR, R.rest.foreR], [v.shoulderL, v.elbowL, -1, R.B.armR, R.B.foreR, R.rest.upL, R.rest.foreL]]) {
     const dU = seg(sh, 0.045 * sx, -0.27, new THREE.Vector3()), dF = seg(el, 0.015 * sx, -0.24, new THREE.Vector3());
-    const k = ease(Math.max(away(dU, up), away(dF, fo)));
+    const waving = sx > 0 && v.waveT > 0 && !(v.pointT > 0 && v.pointTarget);   // the rig has its own wave (below): don't copy the old overhead one
+    const k = waving ? 0 : ease(Math.max(away(dU, up), away(dF, fo)));
     if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
   }
   // her current move: its pose this frame, and how far it's eased in (e)
@@ -2608,12 +2618,14 @@ function updateVeeRig(v, dt) {
     if (M.a) { aimBone(R.B.armL, dir(M.a), k); aimBone(R.B.foreL, dir(M.af), k); }
     if (M.b) { aimBone(R.B.armR, dir(M.b), k); aimBone(R.B.foreR, dir(M.bf), k); }
     v.headG.rotation.x += (M.head || 0) * e; v.headG.rotation.z += (M.tilt || 0) * e;
+    if (['cheer', 'clap', 'twirl', 'wave2'].includes(R.move && R.move.name)) { openHand(R.B.handL, k); openHand(R.B.handR, k); }
   }
   // her wave, on the rigged body: elbow tucked near her side, forearm up, waving from the elbow (not the whole arm overhead)
   if (v.waveT > 0 && !(v.pointT > 0 && v.pointTarget) && !M) {
     const wk = Math.max(0, Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5)), sw = Math.sin(performance.now() / 1000 * 9) * 0.5 * (reduceMotion ? 0.3 : 1);
     const dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
     aimBone(R.B.armL, dir([0.42, -0.8, 0.3]), wk); aimBone(R.B.foreL, dir([0.12 + sw, 1, 0.3]), wk);
+    openHand(R.B.handL, wk);   // fingers straight as she waves
   }
   pointHand(R.B.handL, R.pointK);
 }
@@ -2744,7 +2756,7 @@ function updateVee(v, dt, t) {
   const dx = cam.x - b.x, dz = cam.z - b.z, dist = Math.hypot(dx, dz);
   const isNear = dist < 5.5;
   if (!isNear) v.awayT += dt;
-  if (isNear && !v.wasNear) { v.waveT = 2.4; if (v.awayT > 8 && !reduceMotion) v.spinT = 0.9; v.awayT = 0; }   // wave hello, with a twirl if you've been gone a while
+  if (isNear && !v.wasNear) { v.waveT = 2.4; if (v.awayT > 8 && !reduceMotion && !v.rig) v.spinT = 0.9; v.awayT = 0; }   // the welcome-back spin is for her built body; on the rig it twisted her mid-wave   // wave hello, with a twirl if you've been gone a while
   v.wasNear = isNear;
   // facing: what she's pointing at, else you, else her resting direction
   v.pointT -= dt;
