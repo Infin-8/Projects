@@ -4098,7 +4098,7 @@ function buildOfficeWorld(p) {
   }
   drawHex(0);
   const hexPanel = new THREE.Mesh(new THREE.PlaneGeometry(NW, NH), new THREE.MeshBasicMaterial({ map: hexTex })); hexPanel.position.set(0, NY, 0.03); nestG.add(hexPanel);
-  [[NW + 0.24, 0.12, 0, NH / 2 + 0.06], [NW + 0.24, 0.12, 0, -NH / 2 - 0.06], [0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+  [[0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {   // side posts; the rails over and under are shared with her manual, below
     const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
   });
   const nestLabel = stationLabel("VEE'S NEST", 'Nesting Station'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); nestG.add(nestLabel);
@@ -4132,24 +4132,27 @@ function buildOfficeWorld(p) {
   };
   // beside the nest, her user manual: a printed page on how to use her and how she works
   {
-    const c = mk(1800, 1200), g = c.getContext('2d'), PW = 3.0, PH = 2.0, PX = NW / 2 + 0.25 + PW / 2;
-    const INK = '#1b2230', SOFT = '#4a5466', ACC = '#0b7f86', PAPER = '#efe7d4', RULE = 'rgba(27,34,48,0.35)';
+    const c = mk(1800, 1200), g = c.getContext('2d'), PW = 3.0, PH = NH, PX = NW / 2 + 0.12 + PW / 2;   // against the dock, sharing its frame
+    const INK = '#f1e6cf', SOFT = '#9aa6bd', ACC = '#5ff0ff', PAPER = '#05080d', RULE = 'rgba(95,240,255,0.22)';
     const mono = (px, w = 600) => `${w} ${px}px "IBM Plex Mono", monospace`, sans = (px, w = 400) => `${w} ${px}px "IBM Plex Sans", sans-serif`, serif = px => `${px}px "Young Serif", Georgia, serif`;
     const line = (x0, y, x1, w = 2, col = RULE) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
     const fit = (text, x, y, maxW, font, px, min = 16) => { do g.font = font(px); while (g.measureText(text).width > maxW && --px > min); g.fillText(text, x, y); };
     const section = (n, title, x, y, w) => { g.fillStyle = ACC; g.font = mono(26); g.fillText(n, x, y); g.fillStyle = INK; g.font = serif(36); g.fillText(title, x + 56, y + 2); line(x, y + 22, x + w, 2); };
-    // the paper, with a faint grain and a darker edge
+    // the panel: the dock's dark glass, with a faint hex field carried over from it
     g.fillStyle = PAPER; g.fillRect(0, 0, 1800, 1200);
-    for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(80,60,30,${Math.random() * 0.05})`; g.fillRect(Math.random() * 1800, Math.random() * 1200, 2, 2); }
-    const vg = g.createRadialGradient(900, 600, 500, 900, 600, 1150); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,40,10,0.22)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);
+    g.strokeStyle = 'rgba(95,240,255,0.05)'; g.lineWidth = 1.5;
+    for (let row = 0, y = 26; y < 1240; row++, y += 39) for (let x = (row % 2) * 22.5; x < 1830; x += 45) {
+      g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } g.closePath(); g.stroke();
+    }
+    const vg = g.createRadialGradient(900, 600, 300, 900, 600, 1100); vg.addColorStop(0, 'rgba(5,8,13,0.55)'); vg.addColorStop(1, 'rgba(5,8,13,0)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);   // calmer behind the text
     // masthead
-    g.fillStyle = INK; g.fillRect(60, 56, 1680, 8);
+    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
     g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
     g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
     g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
     g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
     g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what she says.', 60, 254);
-    line(60, 284, 1740, 3, INK);
+    line(60, 284, 1740, 2, 'rgba(95,240,255,0.55)');
     const LX = 60, LW = 800, RX2 = 940, RW2 = 800;
     // 1 quick start
     section('01', 'Quick start', LX, 350, LW);
@@ -4159,7 +4162,7 @@ function buildOfficeWorld(p) {
      ['Rest', 'Dock her here to rest; wake her the same way.']].forEach(([k, v], i) => {
       const y = 420 + i * 62;
       g.fillStyle = ACC; g.beginPath(); g.arc(LX + 18, y - 9, 18, 0, Math.PI * 2); g.fill();
-      g.fillStyle = PAPER; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
+      g.fillStyle = '#05080d'; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
       g.fillStyle = INK; g.font = sans(26, 600); g.fillText(k, LX + 52, y);
       g.fillStyle = SOFT; fit(v, LX + 140, y, LW - 140, f => sans(f), 25);
     });
@@ -4169,11 +4172,11 @@ function buildOfficeWorld(p) {
     const bw = 176, gap = (LW - bw * 4) / 3;
     boxes.forEach(([t, d], i) => {
       const x = LX + i * (bw + gap), y = 752;
-      g.fillStyle = i === 2 ? INK : 'rgba(255,255,255,0.45)'; rr(g, x, y, bw, 118, 10); g.fill();
-      g.strokeStyle = INK; g.lineWidth = 2; rr(g, x, y, bw, 118, 10); g.stroke();
-      g.fillStyle = i === 2 ? PAPER : ACC; g.font = mono(17); g.textAlign = 'center'; g.fillText(t, x + bw / 2, y + 44);
-      g.fillStyle = i === 2 ? '#c9d2e3' : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
-      if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = INK; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
+      g.fillStyle = i === 2 ? 'rgba(95,240,255,0.22)' : 'rgba(95,240,255,0.06)'; rr(g, x, y, bw, 118, 10); g.fill();
+      g.strokeStyle = i === 2 ? ACC : 'rgba(95,240,255,0.5)'; g.lineWidth = i === 2 ? 3 : 2; rr(g, x, y, bw, 118, 10); g.stroke();
+      g.fillStyle = i === 2 ? '#ffffff' : ACC; g.font = mono(17); g.textAlign = 'center'; g.fillText(t, x + bw / 2, y + 44);
+      g.fillStyle = i === 2 ? INK : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
+      if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = ACC; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
     });
     g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes her reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
     // 3 specifications
@@ -4181,7 +4184,7 @@ function buildOfficeWorld(p) {
     [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
      ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,600 particle nanobots']].forEach(([k, v], i) => {
       const y = 420 + i * 58;
-      g.fillStyle = INK; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
+      g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
       g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
       line(RX2, y + 20, RX2 + RW2, 1);
     });
@@ -4192,16 +4195,21 @@ function buildOfficeWorld(p) {
      ['Honesty', 'Answers only from her sources and credits each paper.'],
      ["If she's unsure", 'She says so, and offers the contact details.']].forEach(([k, v], i) => {
       const y = 864 + i * 46;
-      g.fillStyle = ACC; g.font = sans(23, 600); g.fillText(k, RX2, y);
+      g.fillStyle = INK; g.font = sans(23, 600); g.fillText(k, RX2, y);
       g.fillStyle = SOFT; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 23);
     });
     // footer
-    line(60, 1100, 1740, 3, INK);
+    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
     g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 1140);
     g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
     const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.06); nestG.add(plaque);
-    const fr = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.12, PH + 0.12, 0.06), gold); fr.position.set(PX, NY, 0.0); nestG.add(fr);   // a gold backing, its face just behind the plaque
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); nestG.add(plaque);
+    // one frame around dock and manual: long rails top and bottom, and an end post (the dock's own right post divides them)
+    const x0 = -NW / 2 - 0.12, x1 = PX + PW / 2 + 0.12, back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(PX, NY, 0.02); nestG.add(back);
+    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06], [0.12, NH, x1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
+    });
+    nestLabel.position.x = (x0 + x1) / 2;   // the title spans the whole station
     const st = { id: 'howvee', info: { title: "Vee's user manual" }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
     nestG.updateMatrixWorld(true); st.center = new THREE.Vector3().setFromMatrixPosition(plaque.matrixWorld); st.center.z -= 0.05;
     plaque.userData.station = st; hit.push(plaque); stations.push(st);
