@@ -523,7 +523,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', 'How Vee works', 'The plaque beside her nest: the AI behind her, from the model to the research library she reads from.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', "Vee's user manual", 'Beside her nest: how to use her, how she thinks, her specifications, and care and charging.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -4130,30 +4130,79 @@ function buildOfficeWorld(p) {
     if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
     else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); v.waveT = 2.4; }
   };
-  // beside the nest, a plaque on how she works: the AI behind the hologram
+  // beside the nest, her user manual: a printed page on how to use her and how she works
   {
-    const c = mk(1500, 1000), g = c.getContext('2d'), PW = 3.0, PH = 2.0, PX = NW / 2 + 0.25 + PW / 2;
-    g.fillStyle = '#0b1220'; g.fillRect(0, 0, 1500, 1000); g.strokeStyle = 'rgba(63,224,224,0.55)'; g.lineWidth = 4; g.strokeRect(12, 12, 1476, 976);
-    g.fillStyle = '#5ff0ff'; g.font = '600 30px "IBM Plex Mono", monospace'; g.fillText('HOW VEE WORKS', 60, 84);
-    g.fillStyle = '#f1e6cf'; g.font = '60px "Young Serif", Georgia, serif'; g.fillText('An embodied AI guide', 60, 156);
-    g.fillStyle = '#c9d2e3'; g.font = '26px "IBM Plex Sans", sans-serif';
-    wrapText(g, 'A large language model, grounded in this building and the research behind it, with a body that acts on what she says.', 60, 204, 1380, 34);
-    [['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
-     ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
-     ['LIBRARY', 'About 1,000 passages of steady-watch.com research, searched for every question.'],
-     ['ACTIONS', 'Tags she writes become motion: walk you somewhere, change her mood, point at an exhibit.'],
-     ['GUARDRAILS', "Answers only from her sources, credits each paper, and says when she doesn't know."],
-     ['RUNS FREE', "An answer cache, rate limits and a daily budget keep her on Cloudflare's free tier."]].forEach(([k, v], i) => {
-      const y = 300 + i * 100;
-      g.fillStyle = 'rgba(63,224,224,0.07)'; rr(g, 50, y - 46, 1400, 84, 12); g.fill();
-      g.fillStyle = '#5ff0ff'; g.font = '600 24px "IBM Plex Mono", monospace'; g.fillText(k, 76, y + 6);
-      g.fillStyle = '#f1e6cf'; let px = 28; do { g.font = `${px}px "IBM Plex Sans", sans-serif`; } while (g.measureText(v).width > 1110 && --px > 18); g.fillText(v, 316, y + 6);
+    const c = mk(1800, 1200), g = c.getContext('2d'), PW = 3.0, PH = 2.0, PX = NW / 2 + 0.25 + PW / 2;
+    const INK = '#1b2230', SOFT = '#4a5466', ACC = '#0b7f86', PAPER = '#efe7d4', RULE = 'rgba(27,34,48,0.35)';
+    const mono = (px, w = 600) => `${w} ${px}px "IBM Plex Mono", monospace`, sans = (px, w = 400) => `${w} ${px}px "IBM Plex Sans", sans-serif`, serif = px => `${px}px "Young Serif", Georgia, serif`;
+    const line = (x0, y, x1, w = 2, col = RULE) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
+    const fit = (text, x, y, maxW, font, px, min = 16) => { do g.font = font(px); while (g.measureText(text).width > maxW && --px > min); g.fillText(text, x, y); };
+    const section = (n, title, x, y, w) => { g.fillStyle = ACC; g.font = mono(26); g.fillText(n, x, y); g.fillStyle = INK; g.font = serif(36); g.fillText(title, x + 56, y + 2); line(x, y + 22, x + w, 2); };
+    // the paper, with a faint grain and a darker edge
+    g.fillStyle = PAPER; g.fillRect(0, 0, 1800, 1200);
+    for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(80,60,30,${Math.random() * 0.05})`; g.fillRect(Math.random() * 1800, Math.random() * 1200, 2, 2); }
+    const vg = g.createRadialGradient(900, 600, 500, 900, 600, 1150); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,40,10,0.22)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);
+    // masthead
+    g.fillStyle = INK; g.fillRect(60, 56, 1680, 8);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
+    g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
+    g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
+    g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what she says.', 60, 254);
+    line(60, 284, 1740, 3, INK);
+    const LX = 60, LW = 800, RX2 = 940, RW2 = 800;
+    // 1 quick start
+    section('01', 'Quick start', LX, 350, LW);
+    [['Ask', 'Walk up and press E, or tap Ask. Ask her anything.'],
+     ['Go', 'Say "take me to…" and she walks you there.'],
+     ['Tour', 'Press T and she leads a guided tour.'],
+     ['Rest', 'Dock her here to rest; wake her the same way.']].forEach(([k, v], i) => {
+      const y = 420 + i * 62;
+      g.fillStyle = ACC; g.beginPath(); g.arc(LX + 18, y - 9, 18, 0, Math.PI * 2); g.fill();
+      g.fillStyle = PAPER; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
+      g.fillStyle = INK; g.font = sans(26, 600); g.fillText(k, LX + 52, y);
+      g.fillStyle = SOFT; fit(v, LX + 140, y, LW - 140, f => sans(f), 25);
     });
-    g.fillStyle = '#00ff66'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText('CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 950);
+    // 2 how she thinks: a little flow diagram
+    section('02', 'How she thinks', LX, 700, LW);
+    const boxes = [['YOUR QUESTION', 'with your floor and view'], ['LIBRARY', 'closest research passages'], ['MODEL', 'Mistral Small 3.1 · 24B'], ['REPLY + ACTION', 'walk · mood · point']];
+    const bw = 176, gap = (LW - bw * 4) / 3;
+    boxes.forEach(([t, d], i) => {
+      const x = LX + i * (bw + gap), y = 752;
+      g.fillStyle = i === 2 ? INK : 'rgba(255,255,255,0.45)'; rr(g, x, y, bw, 118, 10); g.fill();
+      g.strokeStyle = INK; g.lineWidth = 2; rr(g, x, y, bw, 118, 10); g.stroke();
+      g.fillStyle = i === 2 ? PAPER : ACC; g.font = mono(17); g.textAlign = 'center'; g.fillText(t, x + bw / 2, y + 44);
+      g.fillStyle = i === 2 ? '#c9d2e3' : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
+      if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = INK; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
+    });
+    g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes her reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
+    // 3 specifications
+    section('03', 'Specifications', RX2, 350, RW2);
+    [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
+     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,600 particle nanobots']].forEach(([k, v], i) => {
+      const y = 420 + i * 58;
+      g.fillStyle = INK; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
+      g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
+      line(RX2, y + 20, RX2 + RW2, 1);
+    });
+    // 4 care and charging
+    section('04', 'Care & charging', RX2, 800, RW2);
+    [['Charging', 'Her nanobots rest and recharge in this dock.'],
+     ['Daily limit', 'After a very busy day she rests until 00:00 UTC.'],
+     ['Honesty', 'Answers only from her sources and credits each paper.'],
+     ["If she's unsure", 'She says so, and offers the contact details.']].forEach(([k, v], i) => {
+      const y = 864 + i * 46;
+      g.fillStyle = ACC; g.font = sans(23, 600); g.fillText(k, RX2, y);
+      g.fillStyle = SOFT; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 23);
+    });
+    // footer
+    line(60, 1100, 1740, 3, INK);
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 1140);
+    g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
     const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.06); nestG.add(plaque);
     const fr = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.12, PH + 0.12, 0.06), gold); fr.position.set(PX, NY, 0.0); nestG.add(fr);   // a gold backing, its face just behind the plaque
-    const st = { id: 'howvee', info: { title: 'How Vee works' }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
+    const st = { id: 'howvee', info: { title: "Vee's user manual" }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
     nestG.updateMatrixWorld(true); st.center = new THREE.Vector3().setFromMatrixPosition(plaque.matrixWorld); st.center.z -= 0.05;
     plaque.userData.station = st; hit.push(plaque); stations.push(st);
   }
