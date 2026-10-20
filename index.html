@@ -2402,8 +2402,9 @@ function makeVee(parent, pos, facing) {
 }
 
 /* ---------- Vee's rigged body ----------
-   Her nanobots ride a motion-captured skeleton (three.js's Xbot, rigged by Mixamo; idle and walk clips) instead of
-   her built shapes, so she has real weight and a real stride. Each drone is a point on the body's surface carrying
+   Her nanobots ride a motion-captured skeleton (three.js's Xbot, rigged by Mixamo; its idle clip) instead of her
+   built shapes, so she has real weight. She still floats: her legs hang loose and trail the way she's flying, on a
+   spring, so they swing back as she sets off and settle when she stops. Her arms carry more drones, so gestures read. Each drone is a point on the body's surface carrying
    that spot's bone weights, and the GPU moves it with the skeleton. Her own head (eyes, mouth, hair) sits on the
    skeleton's neck, and the gestures her code makes with her built arms are mirrored onto the bones, so moods,
    pointing, waving and lip sync all carry over. It loads after the hall; until then (or if it can't), she keeps
@@ -2441,19 +2442,19 @@ void main(){
 }`;
 // points over a skinned mesh's surface, spread by area, each with the bone weights of its triangle's nearest corner;
 // points belonging to the skipped bones (the head, which is hers) are left out
-function sampleSkinned(mesh, n, skip) {
+function sampleSkinned(mesh, n, skip, keep) {
   const geo = mesh.geometry, pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, idx = geo.index;
   const tris = (idx ? idx.count : pos.count) / 3, cum = new Float32Array(tris), A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
   const vi = k => (idx ? idx.getX(k) : k), get = (attr, i, j) => [attr.getX, attr.getY, attr.getZ, attr.getW][j].call(attr, i);   // plain or interleaved
   let tot = 0;
   for (let t = 0; t < tris; t++) { A.fromBufferAttribute(pos, vi(3 * t)); B.fromBufferAttribute(pos, vi(3 * t + 1)); C.fromBufferAttribute(pos, vi(3 * t + 2)); tot += B.sub(A).cross(C.sub(A)).length() / 2; cum[t] = tot; }
   const P = [], SI = [], SW = [], R = [], D = [];
-  for (let tries = 0; R.length < n && tries < n * 4; tries++) {
+  for (let tries = 0; R.length < n && tries < n * 12; tries++) {
     const r = Math.random() * tot; let lo = 0, hi = tris - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < r) lo = m + 1; else hi = m; }
     let a = Math.random(), b = Math.random(); if (a + b > 1) { a = 1 - a; b = 1 - b; }
     const w = [1 - a - b, a, b], k = [vi(3 * lo), vi(3 * lo + 1), vi(3 * lo + 2)], main = k[w.indexOf(Math.max(...w))];
     let top = 0; for (let j = 1; j < 4; j++) if (get(sw, main, j) > get(sw, main, top)) top = j;
-    if (skip.has(get(si, main, top))) continue;
+    const jt = get(si, main, top); if (skip.has(jt) || Math.random() > keep(jt)) continue;   // keep: how much of each bone's surface to keep
     for (let c = 0; c < 3; c++) P.push(w[0] * get(pos, k[0], c) + w[1] * get(pos, k[1], c) + w[2] * get(pos, k[2], c));
     for (let j = 0; j < 4; j++) { SI.push(get(si, main, j)); SW.push(get(sw, main, j)); }
     R.push(Math.random()); const z = Math.random() * 2 - 1, an = Math.random() * Math.PI * 2, rr2 = Math.sqrt(1 - z * z); D.push(Math.cos(an) * rr2, z, Math.sin(an) * rr2);
@@ -2468,7 +2469,8 @@ function attachVeeRig(v) {
   const root = THREE.SkeletonUtils.clone(veeRigGltf.scene), rigG = new THREE.Group(); rigG.add(root);
   root.updateMatrixWorld(true);
   const bone = n => { let b = null; root.traverse(o => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
-  const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), legR: bone('RightLeg') };
+  const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), legR: bone('RightLeg'),
+    upLegL: bone('LeftUpLeg'), legL: bone('LeftLeg'), footL: bone('LeftFoot'), upLegR: bone('RightUpLeg'), footR: bone('RightFoot') };
   // her height, measured on the skeleton: the mesh is authored in centimetres under a 0.01 armature
   rigG.scale.setScalar(VEE_HEIGHT / B.top.getWorldPosition(new THREE.Vector3()).y); rigG.updateMatrixWorld(true);
   // the drones, on the body below her head
@@ -2478,7 +2480,8 @@ function attachVeeRig(v) {
     const share = /surface/i.test(m.name) ? 0.8 : 0.2, skip = new Set([B.head, B.top].map(b => m.skeleton.bones.indexOf(b)));
     const u = v.droneU, mat = new THREE.ShaderMaterial({ uniforms: { uTime: u.uTime, uPx: u.uPx, uSize: u.uSize, uScatter: u.uScatter, uColor: u.uColor, uDim: u.uDim, uGlow: u.uGlow,
       uUnit: { value: 1 / new THREE.Vector3().setFromMatrixColumn(m.matrixWorld, 1).length() } }, vertexShader: droneSkinVert, fragmentShader: droneFrag, skinning: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    const pts = new THREE.Points(sampleSkinned(m, Math.round(v.droneCount * 0.82 * share), skip), mat);
+    const limb = new Set(m.skeleton.bones.map((b, i) => /(Arm|Hand)/.test(b.name) ? i : -1));   // arms and hands get ~2.5x the density, so gestures read
+    const pts = new THREE.Points(sampleSkinned(m, Math.round(v.droneCount * 0.82 * share), skip, j => (limb.has(j) ? 1 : 0.4)), mat);
     Object.assign(pts, { isSkinnedMesh: true, skeleton: m.skeleton, bindMatrix: m.bindMatrix, bindMatrixInverse: m.bindMatrixInverse, bindMode: m.bindMode });
     pts.frustumCulled = false; pts.position.copy(m.position); pts.quaternion.copy(m.quaternion); pts.scale.copy(m.scale); m.parent.add(pts);
     m.visible = false;
@@ -2491,10 +2494,10 @@ function attachVeeRig(v) {
   v.bodyDrones.forEach(p => { p.visible = false; }); if (v.seam) v.seam.visible = false;
   v.fig.add(rigG);
   const mixer = new THREE.AnimationMixer(root), clip = n => veeRigGltf.animations.find(a => a.name === n);
-  const idle = mixer.clipAction(clip('idle')), walk = mixer.clipAction(clip('walk'));
-  idle.play(); walk.play(); walk.setEffectiveWeight(0); mixer.update(Math.random() * 3);   // not all in step
+  const idle = mixer.clipAction(clip('idle')), walk = null;   // she floats, so only the idle clip; her legs are posed in code
+  idle.play(); mixer.update(Math.random() * 3);   // not all in step
   const W = new THREE.Vector3(), rest = (x, y) => new THREE.Vector3(x, y, 0).normalize();
-  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
+  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
     // her built limbs at rest, in her own frame: a gesture is how far they've moved from these
     rest: { upR: rest(0.045, -0.27), foreR: rest(0.015, -0.24), upL: rest(-0.045, -0.27), foreL: rest(-0.015, -0.24), shin: rest(0, -1) }, W };
 }
@@ -2523,13 +2526,9 @@ function pointHand(hand, k) {
 const _ra = new THREE.Vector3(), _rb = new THREE.Vector3(), _rfq = new THREE.Quaternion();
 function updateVeeRig(v, dt) {
   const R = v.rig, b = v.body.position;
-  // how fast she's moving over the floor: walking pace walks, a zip across the hall glides like before
-  if (dt > 0) { const sp = Math.hypot(b.x - R.lx, b.z - R.lz) / dt; R.spd += (sp - R.spd) * Math.min(1, dt * 6); if (sp > 0.05) R.moveYaw = Math.atan2(b.x - R.lx, b.z - R.lz); }
+  // she floats: the idle clip moves her upper body, and her legs hang loose and trail the way she's flying
+  if (dt > 0) { R.vel.set((b.x - R.lx) / dt, 0, (b.z - R.lz) / dt); R.vel.clampLength(0, 6); }
   R.lx = b.x; R.lz = b.z;
-  const want = Math.max(0, Math.min(1, (R.spd - 0.12) / 0.45)) * Math.max(0, Math.min(1, (3.4 - R.spd) / 1.2));
-  R.walkW += (want - R.walkW) * Math.min(1, dt * 5);
-  R.walk.setEffectiveWeight(R.walkW); R.idle.setEffectiveWeight(1 - R.walkW);
-  R.walk.timeScale = Math.max(0.6, Math.min(1.5, R.spd / 1.1));
   R.mixer.update(dt * (reduceMotion ? 0.5 : 1));
   // her gestures: wherever her built arms and knee have moved from rest, aim the matching bones the same way
   v.fig.updateMatrixWorld(true); v.fig.getWorldQuaternion(_rfq).invert();
@@ -2541,7 +2540,19 @@ function updateVeeRig(v, dt) {
     const k = ease(Math.max(away(dU, up), away(dF, fo)));
     if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
   }
-  const dS = seg(v.knee, 0, -0.38, new THREE.Vector3()); aimBone(R.B.legR, dS, ease(away(dS, R.rest.shin)));
+  // legs: her velocity in her own frame swings them the other way (they trail), on a spring so they overshoot and settle
+  const vl = _rb.copy(R.vel).applyQuaternion(_rfq), m = reduceMotion ? 0.3 : 1;
+  const tx = Math.max(-0.7, Math.min(0.7, -vl.x * 0.2)), tz = Math.max(-0.8, Math.min(0.8, -vl.z * 0.2)), tt = performance.now() / 1000;
+  R.swayV.x += (tx + Math.sin(tt * 1.1) * 0.04 * m - R.sway.x) * 28 * dt; R.swayV.y += (tz + Math.sin(tt * 0.8 + 1) * 0.05 * m - R.sway.y) * 28 * dt;
+  R.swayV.multiplyScalar(Math.exp(-3.2 * dt)); R.sway.addScaledVector(R.swayV, dt);
+  const figQ = v.fig.getWorldQuaternion(new THREE.Quaternion());
+  const pop = Math.max(0, v.knee.rotation.x);   // her wave's knee pop, on her right leg
+  for (const [up, low, foot, sx, extra] of [[R.B.upLegL, R.B.legL, R.B.footL, 1, 0], [R.B.upLegR, R.B.legR, R.B.footR, -1, pop]]) {
+    const thigh = new THREE.Vector3(0.05 * sx + R.sway.x, -1, -0.1 + R.sway.y).normalize().applyQuaternion(figQ);        // hanging, a little behind
+    const shin = new THREE.Vector3(0.03 * sx + R.sway.x * 1.4, -1, -0.38 - extra * 1.1 + R.sway.y * 1.4).normalize().applyQuaternion(figQ);   // knees softly bent
+    aimBone(up, thigh, 1); aimBone(low, shin, 1);
+    aimBone(foot, new THREE.Vector3(0, -1, -0.55 + R.sway.y).normalize().applyQuaternion(figQ), 1);   // toes pointed down
+  }
   // and when she points (with the arm on her built right, the rig's left), her hand makes a proper point
   R.pointK += ((v.pointT > 0 && v.pointTarget ? 1 : 0) - R.pointK) * Math.min(1, dt * 6);
   pointHand(R.B.handL, R.pointK);
@@ -2631,7 +2642,6 @@ function updateVee(v, dt, t) {
   // she floats up and down too: rising slowly, dipping back, with a little bob; lower while guiding a tour
   const ft = t + v.seed;
   let liftY = reduceMotion ? 0.12 : v.bodyTarget ? 0.15 + 0.06 * Math.sin(ft * 1.2) : 0.12 + 0.22 * (1 + Math.sin(ft * 0.37)) + 0.06 * Math.sin(ft * 1.3);
-  if (v.rig) liftY = (reduceMotion ? 0.04 : 0.04 + 0.03 * Math.sin(ft * 1.1)) * (1 - v.rig.walkW) + Math.max(0, v.rig.spd - 3) * 0.08;   // on her rigged body she walks on the floor, hovering a touch when still and lifting off when she zips
   b.y += (liftY - b.y) * Math.min(1, dt * 2);
   // lean into the drift, like she's gliding
   if (dt > 0) { const hy = v.heading ?? player.yaw, cx = Math.cos(hy), cz = -Math.sin(hy), lat = (kx * cx + kz * cz) / dt; v.lean += (Math.max(-0.25, Math.min(0.25, -lat * 0.12)) - v.lean) * Math.min(1, dt * 3); }
@@ -2676,14 +2686,13 @@ function updateVee(v, dt, t) {
   // facing: what she's pointing at, else you, else her resting direction
   v.pointT -= dt;
   const pointing = v.pointT > 0 && v.pointTarget;
-  const walking = v.rig && v.rig.walkW > 0.4 && v.rig.moveYaw !== null;   // walking, she faces where she's going
-  const want = pointing ? Math.atan2(v.pointTarget.x - b.x, v.pointTarget.z - b.z) : walking ? v.rig.moveYaw : (dist < 9 || v.bodyTarget) ? Math.atan2(dx, dz) : v.restYaw;
+  const want = pointing ? Math.atan2(v.pointTarget.x - b.x, v.pointTarget.z - b.z) : (dist < 9 || v.bodyTarget) ? Math.atan2(dx, dz) : v.restYaw;
   v.baseYaw += angleTo(v.baseYaw, want) * Math.min(1, dt * 4);
   let spin = 0;
   if (v.spinT > 0) { v.spinT -= dt; const k = 1 - Math.max(0, v.spinT) / 0.9; spin = (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2) * Math.PI * 2; }
   v.fig.rotation.y = v.baseYaw + spin;
   v.fig.rotation.z = Math.sin(t * 0.8) * 0.02 * m + v.lean;              // a slight weight shift, plus leaning into her drift
-  v.fig.position.y = (v.rig ? 0 : 0.15 + Math.sin(t * 1.6) * 0.035 * m) + v.mp.bounce * Math.abs(Math.sin(t * 6.5)) * m;   // a little bounce when she's happy or excited
+  v.fig.position.y = 0.15 + Math.sin(t * 1.6) * 0.035 * m + v.mp.bounce * Math.abs(Math.sin(t * 6.5)) * m;   // a little bounce when she's happy or excited
   // typing out the current line
   const talking = (v.text && v.reveal < v.total) || v.speaking;
   if (talking) { v.reveal = Math.min(v.total, v.reveal + dt * 42); const n = Math.floor(v.reveal); if (n !== v.drawn) { v.draw(n); v.drawn = n; } }
