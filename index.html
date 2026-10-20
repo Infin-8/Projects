@@ -523,7 +523,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', "Vee's user manual", 'Beside her nest: how to use her, how she thinks, her specifications, and care and charging.'], ['veetech', 'How Vee works', "On the nest's other side: her technical description, from her body to the model and the research library."]],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -2697,7 +2697,7 @@ function updateVee(v, dt, t) {
   for (const k of ['eyeX', 'eyeY', 'tilt', 'nod', 'swirl', 'bounce']) v.mp[k] += (MT[k] - v.mp[k]) * mk2;
   for (let i = 0; i < 3; i++) v.mp.tint[i] += (MT.tint[i] - v.mp.tint[i]) * mk2;
   const pose = MT.pose;
-  if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken: she gathers beside you
+  if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeDocked && v.restSpot ? v.restSpot : veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken (or back on L4 while she rests at reception)   // woken: she gathers beside you
   v.wasAway = v.away;
   // track whether you're walking; only then does her follow heading catch up with where you face
   const pp = camera.position;
@@ -2921,6 +2921,237 @@ function buildKiosk() {
     setOpen(k) { this.open = k; gd.setOpen(k); spill.intensity = 0.25 + k * 2.0; } };
   kiosk.setOpen(0);
 }
+
+/* ---------- Vee's reception ----------
+   In front of the builder's office on L4: her Nesting Station on the south wall either side of the office door
+   (the dock with her user manual on one side, her technical description on the other) and a reception desk in
+   front, with her landing pad behind it. Docked, she rests there on L4 and stays out of sight elsewhere. */
+const hallActs = [];   // things in the hall you can walk up to and act on (press E): her dock
+const RC = { dockX: 2.75, techX: -2.75 };   // the dock's and the technical page's centres along the wall (nest frame: + is to your right as you face the door)
+function buildReception() {
+  const L4 = FLOORS[FI.l4];
+  // her Nesting Station on the south wall, either side of the office door: the dock (where her micro-drones rest and
+  // recharge) and her user manual on one side, her technical description on the other, under one gold rail
+  const nestG = new THREE.Group(); nestG.position.set(0, 0, L4.z1 - 0.04); nestG.rotation.y = Math.PI; L4.g.add(nestG);   // faces into the floor
+  const dockG = new THREE.Group(); dockG.position.x = RC.dockX; nestG.add(dockG);   // the dock's own frame of reference
+  const deskMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.35 });
+  const NW = 3.2, NH = 2.0, NY = 1.95;
+  const hexC = mk(1024, 640), hg = hexC.getContext('2d'), hexTex = new THREE.CanvasTexture(hexC);
+  const HR = 17, hexCells = [];
+  for (let row = 0, y = HR; y < 640 + HR; row++, y += HR * 1.5) for (let x = (row % 2) * HR * 0.866, col = 0; x < 1024 + HR; x += HR * 1.732, col++) hexCells.push({ x, y, ph: Math.random() * 6.28 });
+  let hexAcc = 1, charge = 0;
+  function drawHex(t) {
+    hg.fillStyle = '#05080d'; hg.fillRect(0, 0, 1024, 640);
+    for (const c of hexCells) {
+      const sweep = Math.max(0, Math.sin(t * 1.2 - c.x * 0.008 + c.y * 0.003)), k = 0.12 + 0.55 * sweep * sweep + 0.12 * Math.sin(t * 2 + c.ph) + charge * 0.25;
+      hg.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; hg.lineTo(c.x + Math.cos(a) * (HR - 2), c.y + Math.sin(a) * (HR - 2)); } hg.closePath();
+      hg.fillStyle = `rgba(63,224,224,${Math.min(0.9, k * 0.45)})`; hg.fill();
+      hg.strokeStyle = `rgba(95,240,255,${Math.min(1, 0.25 + k * 0.6)})`; hg.lineWidth = 1.5; hg.stroke();
+    }
+    hg.fillStyle = 'rgba(5,8,13,0.75)'; rr(hg, 352, 560, 320, 56, 12); hg.fill();
+    hg.fillStyle = '#5ff0ff'; hg.font = '600 24px "IBM Plex Mono", monospace'; hg.textAlign = 'center'; hg.textBaseline = 'middle';
+    hg.fillText(charge > 0.3 ? 'VEE · DOCKED · CHARGING' : 'VEE · DOCK · READY', 512, 589); hg.textAlign = 'left'; hg.textBaseline = 'alphabetic';
+    hexTex.needsUpdate = true;
+  }
+  drawHex(0);
+  const hexPanel = new THREE.Mesh(new THREE.PlaneGeometry(NW, NH), new THREE.MeshBasicMaterial({ map: hexTex })); hexPanel.position.set(0, NY, 0.03); dockG.add(hexPanel);
+  [[0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {   // side posts; the rails over and under are shared with her manual, below
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); dockG.add(f);
+  });
+  const nestLabel = stationLabel('VEE · RECEPTION', 'Nesting Station'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); dockG.add(nestLabel);
+  // parked drones resting in the cells
+  const parkU = { uTime: { value: 0 }, uDim: { value: 1 }, uGlow: { value: 0 }, uPx: { value: 800 }, uSize: { value: 0.012 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
+  const parkMat = new THREE.ShaderMaterial({ uniforms: parkU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const PN = 1400, pkPos = new Float32Array(PN * 3), pkRnd = new Float32Array(PN), pkDir = new Float32Array(PN * 3);
+  for (let i = 0; i < PN; i++) { pkPos[i * 3] = (Math.random() - 0.5) * (NW - 0.1); pkPos[i * 3 + 1] = NY + (Math.random() - 0.5) * (NH - 0.1); pkPos[i * 3 + 2] = 0.06; pkRnd[i] = Math.random(); pkDir[i * 3 + 2] = 1; }
+  const pkG = new THREE.BufferGeometry(); pkG.setAttribute('position', new THREE.BufferAttribute(pkPos, 3)); pkG.setAttribute('aRnd', new THREE.BufferAttribute(pkRnd, 1)); pkG.setAttribute('aDir', new THREE.BufferAttribute(pkDir, 3));
+  dockG.add(new THREE.Points(pkG, parkMat));
+  // the landing pad on the floor in front of the dock
+  const padPos = new THREE.Vector3(-RC.dockX, 0, L4.z1 - 0.85);   // behind the reception desk
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.06, 48), deskMat); pad.position.set(padPos.x, 0.03, padPos.z); L4.g.add(pad);
+  const padRings = [0.5, 0.64].map((r, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.015, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); m.rotation.x = Math.PI / 2; m.position.set(padPos.x, 0.07 + i * 0.005, padPos.z); L4.g.add(m); return m; });
+  const nestLight = new THREE.PointLight(0x5ff0ff, 0.7, 6, 2); nestLight.position.set(-RC.dockX, NY, L4.z1 - 1.0); L4.g.add(nestLight);
+  // a stream of drones always flowing between the dock and Vee: half heading out, half coming home
+  const SN = 220, sPos = new Float32Array(SN * 3), sCol = new Float32Array(SN * 3), sData = [];
+  for (let i = 0; i < SN; i++) sData.push({ u: Math.random(), out: i % 2 === 0, from: new THREE.Vector3(-RC.dockX + (Math.random() - 0.5) * (NW - 0.2), NY + (Math.random() - 0.5) * (NH - 0.2), L4.z1 - 0.1), lift: 0.4 + Math.random() * 0.9, sp: 0.18 + Math.random() * 0.22, off: new THREE.Vector3((Math.random() - 0.5) * 0.5, Math.random() * 1.6, (Math.random() - 0.5) * 0.5) });
+  const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3)); sGeo.setAttribute('color', new THREE.BufferAttribute(sCol, 3));
+  const stream = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); stream.frustumCulled = false; L4.g.add(stream);
+  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _m = new THREE.Vector3();
+  const dockSt = { id: 'dock', info: { title: "Vee's Nesting Station" }, floor: FI.l4, standOff: 3.5, pitch: 0.06 };
+  dockSt.center = new THREE.Vector3(-RC.dockX, L4.y + NY, L4.z1 - 0.1); dockSt.normal = new THREE.Vector3(0, 0, -1); dockSt.mesh = hexPanel;
+  hallActs.push(dockSt); vee && (vee.restSpot = padPos);
+  // the dock is a switch: dock her (she glides onto her pad and rests, here and everywhere else) or wake her
+  dockSt.actVerb = () => veeDocked ? 'Wake Vee' : 'Dock Vee';
+  dockSt.act = () => {
+    const v = vee; if (!v) return; setVeeDocked(!veeDocked);
+    if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
+    else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); if (!veeMove(v, 'stretch')) v.waveT = 2.4; }
+  };
+  // beside the nest, her user manual: a printed page on how to use her and how she works
+  {
+    const c = mk(1800, 1200), PW = 3.0, PH = NH, PX = NW / 2 + 0.12 + PW / 2;   // against the dock, sharing its frame
+    let g = c.getContext('2d');   // the helpers below draw on g; page 2 switches it to its own canvas
+    const INK = '#f1e6cf', SOFT = '#9aa6bd', ACC = '#5ff0ff', PAPER = '#05080d', RULE = 'rgba(95,240,255,0.22)';
+    const mono = (px, w = 600) => `${w} ${px}px "IBM Plex Mono", monospace`, sans = (px, w = 400) => `${w} ${px}px "IBM Plex Sans", sans-serif`, serif = px => `${px}px "Young Serif", Georgia, serif`;
+    const line = (x0, y, x1, w = 2, col = RULE) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
+    const fit = (text, x, y, maxW, font, px, min = 16) => { do g.font = font(px); while (g.measureText(text).width > maxW && --px > min); g.fillText(text, x, y); };
+    const section = (n, title, x, y, w) => { g.fillStyle = ACC; g.font = mono(26); g.fillText(n, x, y); g.fillStyle = INK; g.font = serif(36); g.fillText(title, x + 56, y + 2); line(x, y + 22, x + w, 2); };
+    // the panel: the dock's dark glass, with a faint hex field carried over from it
+    const panel = () => {
+    g.fillStyle = PAPER; g.fillRect(0, 0, 1800, 1200);
+    g.strokeStyle = 'rgba(95,240,255,0.05)'; g.lineWidth = 1.5;
+    for (let row = 0, y = 26; y < 1240; row++, y += 39) for (let x = (row % 2) * 22.5; x < 1830; x += 45) {
+      g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } g.closePath(); g.stroke();
+    }
+    const vg = g.createRadialGradient(900, 600, 300, 900, 600, 1100); vg.addColorStop(0, 'rgba(5,8,13,0.55)'); vg.addColorStop(1, 'rgba(5,8,13,0)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);   // calmer behind the text
+    };
+    panel();
+    // masthead
+    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
+    g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
+    g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
+    g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what she says.', 60, 254);
+    line(60, 284, 1740, 2, 'rgba(95,240,255,0.55)');
+    const LX = 60, LW = 800, RX2 = 940, RW2 = 800;
+    // 1 quick start
+    section('01', 'Quick start', LX, 350, LW);
+    [['Ask', 'Walk up and press E, or tap Ask. Ask her anything.'],
+     ['Go', 'Say "take me to…" and she walks you there.'],
+     ['Tour', 'Press T and she leads a guided tour.'],
+     ['Rest', 'Dock her here to rest; wake her the same way.']].forEach(([k, v], i) => {
+      const y = 420 + i * 62;
+      g.fillStyle = ACC; g.beginPath(); g.arc(LX + 18, y - 9, 18, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#05080d'; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
+      g.fillStyle = INK; g.font = sans(26, 600); g.fillText(k, LX + 52, y);
+      g.fillStyle = SOFT; fit(v, LX + 140, y, LW - 140, f => sans(f), 25);
+    });
+    // 2 how she thinks: a little flow diagram
+    section('02', 'How she thinks', LX, 700, LW);
+    const boxes = [['YOUR QUESTION', 'with your floor and view'], ['LIBRARY', 'closest research passages'], ['MODEL', 'Mistral Small 3.1 · 24B'], ['REPLY + ACTION', 'walk · mood · point']];
+    const bw = 176, gap = (LW - bw * 4) / 3;
+    boxes.forEach(([t, d], i) => {
+      const x = LX + i * (bw + gap), y = 752;
+      g.fillStyle = i === 2 ? 'rgba(95,240,255,0.22)' : 'rgba(95,240,255,0.06)'; rr(g, x, y, bw, 118, 10); g.fill();
+      g.strokeStyle = i === 2 ? ACC : 'rgba(95,240,255,0.5)'; g.lineWidth = i === 2 ? 3 : 2; rr(g, x, y, bw, 118, 10); g.stroke();
+      g.fillStyle = i === 2 ? '#ffffff' : ACC; g.font = mono(17); g.textAlign = 'center'; g.fillText(t, x + bw / 2, y + 44);
+      g.fillStyle = i === 2 ? INK : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
+      if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = ACC; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
+    });
+    g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes her reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
+    // 3 specifications
+    section('03', 'Specifications', RX2, 350, RW2);
+    [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
+     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
+      const y = 420 + i * 58;
+      g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
+      g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
+      line(RX2, y + 20, RX2 + RW2, 1);
+    });
+    // 4 care and charging
+    section('04', 'Care & charging', RX2, 800, RW2);
+    [['Charging', 'Her nanobots rest and recharge in this dock.'],
+     ['Daily limit', 'After a very busy day she rests until 00:00 UTC.'],
+     ['Honesty', 'Answers only from her sources and credits each paper.'],
+     ["If she's unsure", 'She says so, and offers the contact details.']].forEach(([k, v], i) => {
+      const y = 864 + i * 46;
+      g.fillStyle = INK; g.font = sans(23, 600); g.fillText(k, RX2, y);
+      g.fillStyle = SOFT; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 23);
+    });
+    // footer
+    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 1140);
+    g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); dockG.add(plaque);
+    // page 2, on the dock's other side: her technical description
+    const c2 = mk(1800, 1200), PX2 = RC.techX - RC.dockX; g = c2.getContext('2d'); panel();   // page 2 hangs across the office door
+    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
+    g.fillStyle = INK; g.font = serif(84); g.fillText('How Vee works', 60, 210);
+    g.fillStyle = SOFT; g.font = sans(27);
+    wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
+    line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
+    [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
+     ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
+     ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
+     ['RETRIEVAL', 'RAG: ~1,000 steady-watch.com research passages in Vectorize; the closest join each question.'],
+     ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
+     ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
+     ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
+     ['COST', 'An answer cache, rate limits and a daily neuron budget keep her on the free tier.'],
+     ['QUALITY', 'An evaluation suite checks accuracy, honesty, navigation and brand voice.']].forEach(([k, v], i) => {
+      const y = 380 + i * 80;
+      g.fillStyle = 'rgba(95,240,255,0.06)'; rr(g, 50, y - 44, 1700, 66, 10); g.fill();
+      g.fillStyle = ACC; g.font = mono(22); g.fillText(k, 76, y);
+      g.fillStyle = INK; fit(v, 330, y, 1390, f => sans(f), 27, 18);
+    });
+    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('NOT TRAINED ON THE RESEARCH: SHE RETRIEVES IT · NO MEMORY BETWEEN VISITS', 60, 1140);
+    g.textAlign = 'right'; g.fillText('P. 2', 1740, 1140); g.textAlign = 'left';
+    const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
+    const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); dockG.add(page2);
+    // one gold rail across the top of all three, passing over the office door; bottom rails and posts frame each side
+    const x0 = PX2 - PW / 2 - 0.12, x1 = PX + PW / 2 + 0.12, xt1 = PX2 + PW / 2 + 0.12, xd0 = -NW / 2 - 0.12;
+    for (const bx of [PX, PX2]) { const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(bx, NY, 0.02); dockG.add(back); }
+    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - xd0, 0.12, (xd0 + x1) / 2, -NH / 2 - 0.06], [xt1 - x0, 0.12, (x0 + xt1) / 2, -NH / 2 - 0.06],
+     [0.12, NH, x1 - 0.06, 0], [0.12, NH, x0 + 0.06, 0], [0.12, NH, xt1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); dockG.add(f);
+    });
+    nestLabel.position.x = 0;   // over the dock
+  }
+  let nested = false, explained = false;
+  buildingUpdates.push((dt, t) => {
+    const v = vee; if (!v || world || !L4.g.visible) return;
+    v.restSpot = padPos;
+    const docked = veeDocked && !tour && player.floor === FI.l4;
+    v.resting = docked;
+    if (docked && !nested) { nested = true; v.bodyTarget = padPos.clone(); }
+    else if (!docked && nested) { nested = false; if (!tour) v.bodyTarget = null; }
+    // the first time you walk up to it, she explains the dock
+    if (near === dockSt && !explained && !tour && mode === 'walk' && !veeDocked) { explained = true; v.say('Welcome to my Nesting Station.', touchUI ? 'Tap it to dock me here. I rest until you wake me.' : 'Press E to dock me here. I rest until you wake me.', null, null); }
+    const home = Math.hypot(v.body.position.x - padPos.x, v.body.position.z - padPos.z) < 0.5;
+    charge += ((nested && home ? 1 : 0) - charge) * Math.min(1, dt * 1.5);
+    hexAcc += dt; if (hexAcc > (reduceMotion ? 0.5 : 0.12)) { hexAcc = 0; drawHex(t); }
+    parkU.uTime.value = t; parkU.uGlow.value = charge * 0.6;
+    parkU.uPx.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    padRings.forEach((r, i) => { r.material.opacity = 0.35 + 0.35 * Math.sin(t * 2 + i) + charge * 0.3; });
+    _b.copy(v.body.position);
+    const m = reduceMotion ? 0.3 : 1, rate = 1 + charge * 1.8;
+    sData.forEach((d, i) => {
+      d.u += d.sp * rate * dt * m; if (d.u > 1) d.u -= 1;
+      const k = d.out ? d.u : 1 - d.u;                                    // 0 at the dock, 1 at Vee
+      _a.copy(d.from); const vb = _m.copy(_b).add(d.off);
+      const mx = (_a.x + vb.x) / 2, my = Math.max(_a.y, vb.y) + d.lift, mz = (_a.z + vb.z) / 2;   // a curved arc between them
+      const q = 1 - k;
+      sPos[i * 3] = q * q * _a.x + 2 * q * k * mx + k * k * vb.x; sPos[i * 3 + 1] = q * q * _a.y + 2 * q * k * my + k * k * vb.y; sPos[i * 3 + 2] = q * q * _a.z + 2 * q * k * mz + k * k * vb.z;
+      const f = Math.min(1, Math.sin(d.u * Math.PI) * (0.75 + 0.5 * charge)) * v.scale;
+      sCol[i * 3] = 0.56 * f; sCol[i * 3 + 1] = 0.97 * f; sCol[i * 3 + 2] = f;
+    });
+    sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
+  });
+
+  // the reception desk: a curved counter in front of her dock, dark metal with a lit edge and a gold top rail; she rests behind it
+  {
+    const DXw = -RC.dockX, DZ = L4.z1 - 1.75, DR = 1.25, ARC = 1.9;   // centre on the floor, radius, how much of a circle
+    const metal = new THREE.MeshStandardMaterial({ color: 0x141a26, metalness: 0.7, roughness: 0.35 });
+    const desk = new THREE.Group(); desk.position.set(DXw, 0, DZ + DR * 0.55); desk.rotation.y = Math.PI; L4.g.add(desk);   // the arc bulges toward the atrium
+    const front = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, 1.0, 64, 1, true, -ARC / 2, ARC), metal); front.position.y = 0.5; front.material.side = THREE.DoubleSide; desk.add(front);
+    const top = new THREE.Mesh(new THREE.RingGeometry(DR - 0.32, DR + 0.04, 64, 1, -ARC / 2 + Math.PI / 2, ARC), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }));
+    top.rotation.x = -Math.PI / 2; top.position.y = 1.0; desk.add(top);
+    const rail = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.02, 0.022, 8, 64, ARC), gold); rail.rotation.x = Math.PI / 2; rail.rotation.z = -ARC / 2 + Math.PI / 2; rail.position.y = 1.01; desk.add(rail);
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.005, 0.01, 6, 64, ARC), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); glow.rotation.x = Math.PI / 2; glow.rotation.z = -ARC / 2 + Math.PI / 2; glow.position.y = 0.12; desk.add(glow);
+    // her name on the front of the desk
+    const nc = mk(1024, 192), ng = nc.getContext('2d');
+    ng.textAlign = 'center'; ng.fillStyle = '#5ff0ff'; ng.font = '600 44px "IBM Plex Mono", monospace'; ng.fillText('RECEPTION', 512, 70);
+    ng.fillStyle = '#f1e6cf'; ng.font = '84px "Young Serif", Georgia, serif'; ng.fillText('Vee', 512, 160);
+    const name = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.21), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(nc), transparent: true, depthWrite: false }));
+    name.position.set(0, 0.62, DR + 0.012); desk.add(name);   // on the front, facing the atrium
+    L4.blocks.push({ x0: DXw - DR - 0.1, x1: DXw + DR + 0.1, z0: DZ - 0.2, z1: DZ + DR * 0.55 + 0.25 });   // you walk around it
+  }
+}
 function updateKiosk(dt, t) {
   if (!kiosk) return;
   kiosk.sillM.opacity = 0.45 + 0.12 * Math.sin(t * 1.3) * (reduceMotion ? 0 : 1);   // a warm glow under the door
@@ -3015,7 +3246,7 @@ function updateMascot(dt, t) {
   updateKiosk(dt, t);
   if (!vee) return;
   veeRoot.position.y = ride ? player.pos.y - 1.7 : FLOORS[player.floor].y;
-  vee.away = veeDocked;
+  vee.away = veeDocked && player.floor !== FI.l4;   // docked, she rests at her reception on L4
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
   // her record follows her around
   vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
@@ -3039,6 +3270,8 @@ function hallTourStops() {
   }
   stops.push({ ...wingStop, line: 'L3 · The Platform Wing.', sub: 'The column of light from the lab ends here, in three entropy pools.' });
   stops.push({ floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05, line: 'L4 · The builder.', sub: 'From semiconductor fabrication in 2005 to quantum software today.' });
+  const rcp = hallActs.find(a => a.id === 'dock');
+  if (rcp) stops.push({ floor: FI.l4, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. Dock me here to rest me.' });
   if (kiosk) stops.push({ floor: FI.l4, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
   if (plat) stops.push({ floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z - 1.3, pitch: 0.05, home: true,
     line: "That's the Quantum Hall.", sub: 'Take the lift to any floor, or step into a display.' });
@@ -3070,7 +3303,6 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ["Welcome to the builder's office.", 'This is the operator desk.', 'site'],
       ['The main screen holds the Resume.', 'It decodes out of a stream of QES-256 keys. Press E to open it.', 'site'],
       ['Career on the left, skills on the right.', 'Tap any screen for details.', 'm0'],
-      ['Turn around: that\'s my Nesting Station.', 'Where the nanobots that compile my image recharge.', 'dock'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The door on your left goes to the hall.', 'portal']];
     stops = [
@@ -3137,7 +3369,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
     center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
   v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
-  updates.push((dt, t) => { v.away = veeDocked && kind !== 'office'; updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
+  updates.push((dt, t) => { v.away = veeDocked; /* docked, she's resting at her reception on L4 */ updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
   return v;
 }
 
@@ -3166,7 +3398,7 @@ addEventListener('keydown', e => {
     if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'KeyN') && (e.target === document.body || e.target === canvas)) { nextStop(); return; }
   } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
-  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world || near.vee) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
+  if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
   if (!liftPanel.hidden) { const k = { KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
@@ -3534,7 +3766,7 @@ function showIndicator(target, verb, name, lift) {
   promptEl.style.left = x + 'px'; promptEl.style.top = y + 'px';
   promptEl.hidden = false;
 }
-promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee) worldAct(near); else enter(near); } });
+promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near); } });
 
 /* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
@@ -4321,211 +4553,6 @@ function buildOfficeWorld(p) {
   ob.group.position.set(RX - 0.12, 2.25, 0.9); ob.group.rotation.y = -Math.PI / 2; ws.add(ob.group);
   updates.push((dt, t) => ob.update(dt, t));
 
-  // Vee's nest: a wall dock behind the operator's chair where her micro-drones rest and recharge,
-  // with a landing pad she glides back to
-  const nestG = new THREE.Group(); nestG.position.set(0, 0, RZ1 - 0.04); nestG.rotation.y = Math.PI; ws.add(nestG);   // faces into the room
-  const NW = 3.2, NH = 2.0, NY = 1.95;
-  const hexC = mk(1024, 640), hg = hexC.getContext('2d'), hexTex = new THREE.CanvasTexture(hexC);
-  const HR = 17, hexCells = [];
-  for (let row = 0, y = HR; y < 640 + HR; row++, y += HR * 1.5) for (let x = (row % 2) * HR * 0.866, col = 0; x < 1024 + HR; x += HR * 1.732, col++) hexCells.push({ x, y, ph: Math.random() * 6.28 });
-  let hexAcc = 1, charge = 0;
-  function drawHex(t) {
-    hg.fillStyle = '#05080d'; hg.fillRect(0, 0, 1024, 640);
-    for (const c of hexCells) {
-      const sweep = Math.max(0, Math.sin(t * 1.2 - c.x * 0.008 + c.y * 0.003)), k = 0.12 + 0.55 * sweep * sweep + 0.12 * Math.sin(t * 2 + c.ph) + charge * 0.25;
-      hg.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; hg.lineTo(c.x + Math.cos(a) * (HR - 2), c.y + Math.sin(a) * (HR - 2)); } hg.closePath();
-      hg.fillStyle = `rgba(63,224,224,${Math.min(0.9, k * 0.45)})`; hg.fill();
-      hg.strokeStyle = `rgba(95,240,255,${Math.min(1, 0.25 + k * 0.6)})`; hg.lineWidth = 1.5; hg.stroke();
-    }
-    hg.fillStyle = 'rgba(5,8,13,0.75)'; rr(hg, 352, 560, 320, 56, 12); hg.fill();
-    hg.fillStyle = '#5ff0ff'; hg.font = '600 24px "IBM Plex Mono", monospace'; hg.textAlign = 'center'; hg.textBaseline = 'middle';
-    hg.fillText(charge > 0.3 ? 'VEE · DOCKED · CHARGING' : 'VEE · DOCK · READY', 512, 589); hg.textAlign = 'left'; hg.textBaseline = 'alphabetic';
-    hexTex.needsUpdate = true;
-  }
-  drawHex(0);
-  const hexPanel = new THREE.Mesh(new THREE.PlaneGeometry(NW, NH), new THREE.MeshBasicMaterial({ map: hexTex })); hexPanel.position.set(0, NY, 0.03); nestG.add(hexPanel);
-  [[0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {   // side posts; the rails over and under are shared with her manual, below
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
-  });
-  const nestLabel = stationLabel("VEE'S NEST", 'Nesting Station'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); nestG.add(nestLabel);
-  // parked drones resting in the cells
-  const parkU = { uTime: { value: 0 }, uDim: { value: 1 }, uGlow: { value: 0 }, uPx: { value: 800 }, uSize: { value: 0.012 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
-  const parkMat = new THREE.ShaderMaterial({ uniforms: parkU, vertexShader: droneVert, fragmentShader: droneFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-  const PN = 1400, pkPos = new Float32Array(PN * 3), pkRnd = new Float32Array(PN), pkDir = new Float32Array(PN * 3);
-  for (let i = 0; i < PN; i++) { pkPos[i * 3] = (Math.random() - 0.5) * (NW - 0.1); pkPos[i * 3 + 1] = NY + (Math.random() - 0.5) * (NH - 0.1); pkPos[i * 3 + 2] = 0.06; pkRnd[i] = Math.random(); pkDir[i * 3 + 2] = 1; }
-  const pkG = new THREE.BufferGeometry(); pkG.setAttribute('position', new THREE.BufferAttribute(pkPos, 3)); pkG.setAttribute('aRnd', new THREE.BufferAttribute(pkRnd, 1)); pkG.setAttribute('aDir', new THREE.BufferAttribute(pkDir, 3));
-  nestG.add(new THREE.Points(pkG, parkMat));
-  // the landing pad on the floor in front of the dock
-  const padPos = new THREE.Vector3(0, 0, RZ1 - 0.85);
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.06, 48), deskMat); pad.position.set(padPos.x, 0.03, padPos.z); ws.add(pad);
-  const padRings = [0.5, 0.64].map((r, i) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.015, 8, 64), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); m.rotation.x = Math.PI / 2; m.position.set(padPos.x, 0.07 + i * 0.005, padPos.z); ws.add(m); return m; });
-  const nestLight = new THREE.PointLight(0x5ff0ff, 0.7, 6, 2); nestLight.position.set(0, NY, RZ1 - 1.0); ws.add(nestLight);
-  // a stream of drones always flowing between the dock and Vee: half heading out, half coming home
-  const SN = 220, sPos = new Float32Array(SN * 3), sCol = new Float32Array(SN * 3), sData = [];
-  for (let i = 0; i < SN; i++) sData.push({ u: Math.random(), out: i % 2 === 0, from: new THREE.Vector3((Math.random() - 0.5) * (NW - 0.2), NY + (Math.random() - 0.5) * (NH - 0.2), RZ1 - 0.1), lift: 0.4 + Math.random() * 0.9, sp: 0.18 + Math.random() * 0.22, off: new THREE.Vector3((Math.random() - 0.5) * 0.5, Math.random() * 1.6, (Math.random() - 0.5) * 0.5) });
-  const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3)); sGeo.setAttribute('color', new THREE.BufferAttribute(sCol, 3));
-  const stream = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); stream.frustumCulled = false; ws.add(stream);
-  const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _m = new THREE.Vector3();
-  const dockSt = { id: 'dock', info: { title: "Vee's nest" }, exhibit: true, standOff: 3.5, pitch: 0.06 };
-  dockSt.center = new THREE.Vector3(0, NY, RZ1 - 0.1); dockSt.normal = new THREE.Vector3(0, 0, -1); dockSt.mesh = hexPanel;
-  hexPanel.userData.station = dockSt; hit.push(hexPanel); stations.push(dockSt);
-  // the dock is a switch: dock her (she glides onto her pad and rests, here and everywhere else) or wake her
-  dockSt.actVerb = () => veeDocked ? 'Wake Vee' : 'Dock Vee';
-  dockSt.act = () => {
-    const v = worldVee; setVeeDocked(!veeDocked);
-    if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
-    else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); if (!veeMove(v, 'stretch')) v.waveT = 2.4; }
-  };
-  // beside the nest, her user manual: a printed page on how to use her and how she works
-  {
-    const c = mk(1800, 1200), PW = 3.0, PH = NH, PX = NW / 2 + 0.12 + PW / 2;   // against the dock, sharing its frame
-    let g = c.getContext('2d');   // the helpers below draw on g; page 2 switches it to its own canvas
-    const INK = '#f1e6cf', SOFT = '#9aa6bd', ACC = '#5ff0ff', PAPER = '#05080d', RULE = 'rgba(95,240,255,0.22)';
-    const mono = (px, w = 600) => `${w} ${px}px "IBM Plex Mono", monospace`, sans = (px, w = 400) => `${w} ${px}px "IBM Plex Sans", sans-serif`, serif = px => `${px}px "Young Serif", Georgia, serif`;
-    const line = (x0, y, x1, w = 2, col = RULE) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
-    const fit = (text, x, y, maxW, font, px, min = 16) => { do g.font = font(px); while (g.measureText(text).width > maxW && --px > min); g.fillText(text, x, y); };
-    const section = (n, title, x, y, w) => { g.fillStyle = ACC; g.font = mono(26); g.fillText(n, x, y); g.fillStyle = INK; g.font = serif(36); g.fillText(title, x + 56, y + 2); line(x, y + 22, x + w, 2); };
-    // the panel: the dock's dark glass, with a faint hex field carried over from it
-    const panel = () => {
-    g.fillStyle = PAPER; g.fillRect(0, 0, 1800, 1200);
-    g.strokeStyle = 'rgba(95,240,255,0.05)'; g.lineWidth = 1.5;
-    for (let row = 0, y = 26; y < 1240; row++, y += 39) for (let x = (row % 2) * 22.5; x < 1830; x += 45) {
-      g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } g.closePath(); g.stroke();
-    }
-    const vg = g.createRadialGradient(900, 600, 300, 900, 600, 1100); vg.addColorStop(0, 'rgba(5,8,13,0.55)'); vg.addColorStop(1, 'rgba(5,8,13,0)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);   // calmer behind the text
-    };
-    panel();
-    // masthead
-    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
-    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
-    g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
-    g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
-    g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
-    g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what she says.', 60, 254);
-    line(60, 284, 1740, 2, 'rgba(95,240,255,0.55)');
-    const LX = 60, LW = 800, RX2 = 940, RW2 = 800;
-    // 1 quick start
-    section('01', 'Quick start', LX, 350, LW);
-    [['Ask', 'Walk up and press E, or tap Ask. Ask her anything.'],
-     ['Go', 'Say "take me to…" and she walks you there.'],
-     ['Tour', 'Press T and she leads a guided tour.'],
-     ['Rest', 'Dock her here to rest; wake her the same way.']].forEach(([k, v], i) => {
-      const y = 420 + i * 62;
-      g.fillStyle = ACC; g.beginPath(); g.arc(LX + 18, y - 9, 18, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#05080d'; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
-      g.fillStyle = INK; g.font = sans(26, 600); g.fillText(k, LX + 52, y);
-      g.fillStyle = SOFT; fit(v, LX + 140, y, LW - 140, f => sans(f), 25);
-    });
-    // 2 how she thinks: a little flow diagram
-    section('02', 'How she thinks', LX, 700, LW);
-    const boxes = [['YOUR QUESTION', 'with your floor and view'], ['LIBRARY', 'closest research passages'], ['MODEL', 'Mistral Small 3.1 · 24B'], ['REPLY + ACTION', 'walk · mood · point']];
-    const bw = 176, gap = (LW - bw * 4) / 3;
-    boxes.forEach(([t, d], i) => {
-      const x = LX + i * (bw + gap), y = 752;
-      g.fillStyle = i === 2 ? 'rgba(95,240,255,0.22)' : 'rgba(95,240,255,0.06)'; rr(g, x, y, bw, 118, 10); g.fill();
-      g.strokeStyle = i === 2 ? ACC : 'rgba(95,240,255,0.5)'; g.lineWidth = i === 2 ? 3 : 2; rr(g, x, y, bw, 118, 10); g.stroke();
-      g.fillStyle = i === 2 ? '#ffffff' : ACC; g.font = mono(17); g.textAlign = 'center'; g.fillText(t, x + bw / 2, y + 44);
-      g.fillStyle = i === 2 ? INK : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
-      if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = ACC; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
-    });
-    g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes her reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
-    // 3 specifications
-    section('03', 'Specifications', RX2, 350, RW2);
-    [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
-     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
-      const y = 420 + i * 58;
-      g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
-      g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
-      line(RX2, y + 20, RX2 + RW2, 1);
-    });
-    // 4 care and charging
-    section('04', 'Care & charging', RX2, 800, RW2);
-    [['Charging', 'Her nanobots rest and recharge in this dock.'],
-     ['Daily limit', 'After a very busy day she rests until 00:00 UTC.'],
-     ['Honesty', 'Answers only from her sources and credits each paper.'],
-     ["If she's unsure", 'She says so, and offers the contact details.']].forEach(([k, v], i) => {
-      const y = 864 + i * 46;
-      g.fillStyle = INK; g.font = sans(23, 600); g.fillText(k, RX2, y);
-      g.fillStyle = SOFT; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 23);
-    });
-    // footer
-    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
-    g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 1140);
-    g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
-    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); nestG.add(plaque);
-    // page 2, on the dock's other side: her technical description
-    const c2 = mk(1800, 1200), PX2 = -PX; g = c2.getContext('2d'); panel();
-    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
-    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
-    g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
-    g.fillStyle = INK; g.font = serif(84); g.fillText('How Vee works', 60, 210);
-    g.fillStyle = SOFT; g.font = sans(27);
-    wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
-    line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
-    [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
-     ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
-     ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
-     ['RETRIEVAL', 'RAG: ~1,000 steady-watch.com research passages in Vectorize; the closest join each question.'],
-     ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
-     ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
-     ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
-     ['COST', 'An answer cache, rate limits and a daily neuron budget keep her on the free tier.'],
-     ['QUALITY', 'An evaluation suite checks accuracy, honesty, navigation and brand voice.']].forEach(([k, v], i) => {
-      const y = 380 + i * 80;
-      g.fillStyle = 'rgba(95,240,255,0.06)'; rr(g, 50, y - 44, 1700, 66, 10); g.fill();
-      g.fillStyle = ACC; g.font = mono(22); g.fillText(k, 76, y);
-      g.fillStyle = INK; fit(v, 330, y, 1390, f => sans(f), 27, 18);
-    });
-    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
-    g.font = mono(20); g.fillStyle = SOFT; g.fillText('NOT TRAINED ON THE RESEARCH: SHE RETRIEVES IT · NO MEMORY BETWEEN VISITS', 60, 1140);
-    g.textAlign = 'right'; g.fillText('P. 2', 1740, 1140); g.textAlign = 'left';
-    const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
-    const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); nestG.add(page2);
-    // one frame around all three (page 2, dock, manual): long rails top and bottom and an end post each side; the dock's own posts divide them
-    const x0 = PX2 - PW / 2 - 0.12, x1 = PX + PW / 2 + 0.12;
-    for (const bx of [PX, PX2]) { const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(bx, NY, 0.02); nestG.add(back); }
-    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06], [0.12, NH, x1 - 0.06, 0], [0.12, NH, x0 + 0.06, 0]].forEach(([fw, fh, x, y]) => {
-      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
-    });
-    nestLabel.position.x = (x0 + x1) / 2;   // the title spans the whole station
-    const st = { id: 'howvee', info: { title: "Vee's user manual" }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
-    nestG.updateMatrixWorld(true); st.center = new THREE.Vector3().setFromMatrixPosition(plaque.matrixWorld); st.center.z -= 0.05;
-    plaque.userData.station = st; hit.push(plaque); stations.push(st);
-    const st2 = { id: 'veetech', info: { title: 'How Vee works' }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: page2, normal: new THREE.Vector3(0, 0, -1) };
-    st2.center = new THREE.Vector3().setFromMatrixPosition(page2.matrixWorld); st2.center.z -= 0.05;
-    page2.userData.station = st2; hit.push(page2); stations.push(st2);
-  }
-  let nested = false, explained = false;
-  updates.push((dt, t) => {
-    const v = worldVee; if (!v) return;
-    const docked = veeDocked && !tour;
-    v.resting = docked;
-    if (docked && !nested) { nested = true; v.bodyTarget = padPos.clone(); }
-    else if (!docked && nested) { nested = false; if (!tour) v.bodyTarget = null; }
-    // the first time you walk up to it, she explains the dock
-    if (near === dockSt && !explained && !tour && mode === 'walk' && !veeDocked) { explained = true; v.say('Welcome to my Nesting Station.', touchUI ? 'Tap it to dock me here. I rest until you wake me.' : 'Press E to dock me here. I rest until you wake me.', null, null); }
-    const home = Math.hypot(v.body.position.x - padPos.x, v.body.position.z - padPos.z) < 0.5;
-    charge += ((nested && home ? 1 : 0) - charge) * Math.min(1, dt * 1.5);
-    hexAcc += dt; if (hexAcc > (reduceMotion ? 0.5 : 0.12)) { hexAcc = 0; drawHex(t); }
-    parkU.uTime.value = t; parkU.uGlow.value = charge * 0.6;
-    parkU.uPx.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-    padRings.forEach((r, i) => { r.material.opacity = 0.35 + 0.35 * Math.sin(t * 2 + i) + charge * 0.3; });
-    _b.copy(v.body.position);
-    const m = reduceMotion ? 0.3 : 1, rate = 1 + charge * 1.8;
-    sData.forEach((d, i) => {
-      d.u += d.sp * rate * dt * m; if (d.u > 1) d.u -= 1;
-      const k = d.out ? d.u : 1 - d.u;                                    // 0 at the dock, 1 at Vee
-      _a.copy(d.from); const vb = _m.copy(_b).add(d.off);
-      const mx = (_a.x + vb.x) / 2, my = Math.max(_a.y, vb.y) + d.lift, mz = (_a.z + vb.z) / 2;   // a curved arc between them
-      const q = 1 - k;
-      sPos[i * 3] = q * q * _a.x + 2 * q * k * mx + k * k * vb.x; sPos[i * 3 + 1] = q * q * _a.y + 2 * q * k * my + k * k * vb.y; sPos[i * 3 + 2] = q * q * _a.z + 2 * q * k * mz + k * k * vb.z;
-      const f = Math.min(1, Math.sin(d.u * Math.PI) * (0.75 + 0.5 * charge)) * v.scale;
-      sCol[i * 3] = 0.56 * f; sCol[i * 3 + 1] = 0.97 * f; sCol[i * 3 + 2] = f;
-    });
-    sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
-  });
-
   // the door back to the hall, on the left wall
   const doorG = new THREE.Group(); doorG.position.set(-RX + 0.12, 0, 1.6); doorG.rotation.y = Math.PI / 2; ws.add(doorG);
   const DW = 1.4, DH = 2.6, ft = 0.15;
@@ -4710,6 +4737,7 @@ function veeDestination(id) {
   switch (id) {
     case 'kaizendoku': case 'handheld': case 'platform': case 'vault': case 'viper': case 'lotus': case 'oidc': return stand(P(id), id === 'platform' ? 4.6 : 4);
     case 'office': return kiosk && stand(kiosk.pt, 3.2);
+    case 'reception': { const r = hallActs.find(a => a.id === 'dock'); return r && stand(r, 4.6); }   // her reception, in front of the office
     case 'lobby': return plat && { exhibit: true, floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z, pitch: 0.05 };
     case 'double-slit': return SLIT_STOP;
     case 'cryostat': return CRYO_STOP;
@@ -5104,8 +5132,14 @@ function tick() {
         const dist = d.length(), facing = -d.normalize().dot(pt.normal);
         if (dist < best && facing > 0.3) { best = dist; near = pt; }
       }
+      for (const a of hallActs) {   // her dock at reception
+        if (a.floor !== player.floor) continue;
+        const d = a.center.clone().sub(camera.position); d.y = 0;
+        const dist = d.length(), facing = -d.normalize().dot(a.normal);
+        if (dist < Math.min(best, 4.2) && facing > 0.3) { best = dist; near = a; }
+      }
       // the first time you walk up to a display, she points at it and says what it is
-      if (vee && near && !near.mascot && !tour && mode === 'walk' && near !== vee.lastReact) {
+      if (vee && near && near.p && !near.mascot && !tour && mode === 'walk' && near !== vee.lastReact) {
         vee.lastReact = near;
         if (!vee.reacted.has(near.p.id)) {
           vee.reacted.add(near.p.id); vee.tourK = vee.tour.length - 1;
@@ -5119,6 +5153,7 @@ function tick() {
         if (d < VEE_TALK_REACH && (dx * fwd.x + dz * fwd.z) / (d || 1) > 0.35) near = vee.talk;
       }
       if (near && near.vee && mode === 'walk' && !tour) showIndicator(near, VEE_API ? 'Ask' : 'Talk', 'Vee', -0.9);
+      else if (near && near.act && mode === 'walk' && !tour) showIndicator(near, near.actVerb(), near.info.title, -1.4);
       else if (near && mode === 'walk' && !tour && !near.kiosk) {   // the kiosk's own sign is its entry, so no prompt there
         showIndicator(near, 'Enter', near.p.promptName || near.p.name, near.kiosk ? 0.6 : 0.5);
       } else promptEl.hidden = true;
@@ -5182,7 +5217,7 @@ Promise.all([
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
   for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
