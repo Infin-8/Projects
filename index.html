@@ -523,7 +523,7 @@ const ABOUT = {
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', "Vee's user manual", 'Beside her nest: how to use her, how she thinks, her specifications, and care and charging.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.'], ['dock', "Vee's nest", 'Behind you as you come in: where the nanobots that compile her image rest and recharge. Dock her here to rest her, and wake her when you want her back.'], ['howvee', "Vee's user manual", 'Beside her nest: how to use her, how she thinks, her specifications, and care and charging.'], ['veetech', 'How Vee works', "On the nest's other side: her technical description, from her body to the model and the research library."]],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -2512,16 +2512,16 @@ const VEE_MOVES = {
   cheer:   { dur: 1.8, pose: p => { const hop = Math.abs(Math.sin(p * Math.PI * 2)); return { a: [0.42, 1, 0.12], af: [0.25, 1, 0.2], b: [-0.42, 1, 0.12], bf: [-0.25, 1, 0.2], spine: [-0.14, 0, 0], head: -0.18, lift: 0.16 * hop, tuck: hop }; } },
   clap:    { dur: 1.5, pose: (p, t) => { const o = 0.3 + 0.3 * Math.abs(Math.sin(t * 9)); return { a: [0.3, -0.5, 0.8], af: [-o, 0.25, 0.7], b: [-0.3, -0.5, 0.8], bf: [o, 0.25, 0.7], spine: [0.08, 0, 0], head: -0.08, lift: 0.03 * Math.abs(Math.sin(t * 9)) }; } },
   twirl:   { dur: 1.5, pose: p => ({ a: [1, 0.15, 0], af: [1, 0.3, 0], b: [-1, 0.15, 0], bf: [-1, 0.3, 0], spin: ease3(p), lift: 0.1 * Math.sin(Math.PI * p), together: 1, head: -0.1 }) },
-  bow:     { dur: 2.2, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.2)); return { a: [0.15, -0.55, 0.65], af: [-0.75, 0.1, 0.4], b: [-0.2, -0.95, -0.35], bf: [0.45, -0.3, -0.55], spine: [1.0 * k, 0, 0], head: 0.35 * k, together: 1 }; } },
+  wave2:   { dur: 2.2, pose: (p, t) => { const sw = Math.sin(t * 9) * 0.5; return { a: [0.42, -0.8, 0.28], af: [0.12 + sw, 1, 0.3], b: [-0.42, -0.8, 0.28], bf: [-0.12 + sw, 1, 0.3], spine: [-0.06, 0, 0], head: -0.12, lift: 0.04 * Math.abs(Math.sin(t * 4.5)) }; } },   // both hands up, waving goodbye
   present: { dur: 2.0, pose: p => { const k = ease3(Math.min(1, p * 1.6)); return { a: [0.55 + 0.25 * k, 0.05 + 0.2 * k, 0.75 - 0.3 * k], af: [0.7 + 0.2 * k, 0.3 + 0.15 * k, 0.6 - 0.3 * k], b: [-0.6, -0.75, -0.05], bf: [0.75, -0.15, 0.25], spine: [0.1, -0.12 * k, 0.15 * k], head: -0.05 }; } },
   shrug:   { dur: 1.6, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.15)); return { a: [0.6, -0.65, 0.3], af: [0.55, 0.2 + 0.2 * k, 0.75], b: [-0.6, -0.65, 0.3], bf: [-0.55, 0.2 + 0.2 * k, 0.75], shoulders: 0.3 * k, spine: [0.05, 0, 0], tilt: 0.2 * k, head: 0.12 * k }; } },
   lean:    { dur: 2.6, pose: () => ({ a: [0.25, -0.9, -0.45], af: [-0.7, -0.15, -0.45], b: [-0.25, -0.9, -0.45], bf: [0.7, -0.15, -0.45], spine: [0.55, 0, 0], head: -0.1, tilt: -0.18 }) },
-  stretch: { dur: 2.4, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.1)); return { a: [0.18, 1, -0.05], af: [-0.25, 1, 0], b: [-0.18, 1, -0.05], bf: [0.25, 1, 0], spine: [-0.45 * k, 0.1 * Math.sin(p * 9), 0], head: -0.3 * k, lift: 0.06 * k, together: 1 }; } },
+  stretch: { dur: 2.6, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.1)), sway = Math.sin(p * Math.PI * 2) * k; return { a: [0.25, 1, 0.08], af: [-0.4, 1, 0.08], b: [-0.25, 1, 0.08], bf: [0.4, 1, 0.08], spine: [-0.06 * k, 0.28 * sway, 0], head: -0.06 * k, tilt: 0.22 * sway, lift: 0.06 * k, together: 1 }; } },   // a cute reach: hands meet overhead and she sways side to side
   land:    { dur: 0.8, pose: p => { const k = Math.sin(Math.PI * p); return { tuck: 0.7 * k, spine: [0.18 * k, 0, 0], head: 0.1 * k, lift: -0.06 * k }; } },
 };
 function veeMove(v, name) {
   if (!v || !v.rig || !VEE_MOVES[name] || v.away || reduceMotion) return false;
-  v.rig.move = { name, t: 0 }; v.waveT = 0; return true;
+  v.rig.move = { name, t: 0 }; v.waveT = 0; v.pointT = 0; return true;   // a move takes over from a wave or a point
 }
 const _wq = new THREE.Quaternion(), _wp = new THREE.Quaternion(), _wd = new THREE.Quaternion(), _wa = new THREE.Vector3();
 function turnBone(bone, axisLocal, angle, frameQ) {   // rotate a bone about an axis given in her frame
@@ -2608,6 +2608,12 @@ function updateVeeRig(v, dt) {
     if (M.a) { aimBone(R.B.armL, dir(M.a), k); aimBone(R.B.foreL, dir(M.af), k); }
     if (M.b) { aimBone(R.B.armR, dir(M.b), k); aimBone(R.B.foreR, dir(M.bf), k); }
     v.headG.rotation.x += (M.head || 0) * e; v.headG.rotation.z += (M.tilt || 0) * e;
+  }
+  // her wave, on the rigged body: elbow tucked near her side, forearm up, waving from the elbow (not the whole arm overhead)
+  if (v.waveT > 0 && !(v.pointT > 0 && v.pointTarget) && !M) {
+    const wk = Math.max(0, Math.min(1, Math.min(2.4 - v.waveT, v.waveT) * 2.5)), sw = Math.sin(performance.now() / 1000 * 9) * 0.5 * (reduceMotion ? 0.3 : 1);
+    const dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
+    aimBone(R.B.armL, dir([0.42, -0.8, 0.3]), wk); aimBone(R.B.foreL, dir([0.12 + sw, 1, 0.3]), wk);
   }
   pointHand(R.B.handL, R.pointK);
 }
@@ -4352,19 +4358,23 @@ function buildOfficeWorld(p) {
   };
   // beside the nest, her user manual: a printed page on how to use her and how she works
   {
-    const c = mk(1800, 1200), g = c.getContext('2d'), PW = 3.0, PH = NH, PX = NW / 2 + 0.12 + PW / 2;   // against the dock, sharing its frame
+    const c = mk(1800, 1200), PW = 3.0, PH = NH, PX = NW / 2 + 0.12 + PW / 2;   // against the dock, sharing its frame
+    let g = c.getContext('2d');   // the helpers below draw on g; page 2 switches it to its own canvas
     const INK = '#f1e6cf', SOFT = '#9aa6bd', ACC = '#5ff0ff', PAPER = '#05080d', RULE = 'rgba(95,240,255,0.22)';
     const mono = (px, w = 600) => `${w} ${px}px "IBM Plex Mono", monospace`, sans = (px, w = 400) => `${w} ${px}px "IBM Plex Sans", sans-serif`, serif = px => `${px}px "Young Serif", Georgia, serif`;
     const line = (x0, y, x1, w = 2, col = RULE) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); };
     const fit = (text, x, y, maxW, font, px, min = 16) => { do g.font = font(px); while (g.measureText(text).width > maxW && --px > min); g.fillText(text, x, y); };
     const section = (n, title, x, y, w) => { g.fillStyle = ACC; g.font = mono(26); g.fillText(n, x, y); g.fillStyle = INK; g.font = serif(36); g.fillText(title, x + 56, y + 2); line(x, y + 22, x + w, 2); };
     // the panel: the dock's dark glass, with a faint hex field carried over from it
+    const panel = () => {
     g.fillStyle = PAPER; g.fillRect(0, 0, 1800, 1200);
     g.strokeStyle = 'rgba(95,240,255,0.05)'; g.lineWidth = 1.5;
     for (let row = 0, y = 26; y < 1240; row++, y += 39) for (let x = (row % 2) * 22.5; x < 1830; x += 45) {
       g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; g.lineTo(x + Math.cos(a) * 24, y + Math.sin(a) * 24); } g.closePath(); g.stroke();
     }
     const vg = g.createRadialGradient(900, 600, 300, 900, 600, 1100); vg.addColorStop(0, 'rgba(5,8,13,0.55)'); vg.addColorStop(1, 'rgba(5,8,13,0)'); g.fillStyle = vg; g.fillRect(0, 0, 1800, 1200);   // calmer behind the text
+    };
+    panel();
     // masthead
     g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
     g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
@@ -4402,7 +4412,7 @@ function buildOfficeWorld(p) {
     // 3 specifications
     section('03', 'Specifications', RX2, 350, RW2);
     [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
-     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,600 particle nanobots']].forEach(([k, v], i) => {
+     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
       const y = 420 + i * 58;
       g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
       g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
@@ -4424,15 +4434,47 @@ function buildOfficeWorld(p) {
     g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
     const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); nestG.add(plaque);
-    // one frame around dock and manual: long rails top and bottom, and an end post (the dock's own right post divides them)
-    const x0 = -NW / 2 - 0.12, x1 = PX + PW / 2 + 0.12, back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(PX, NY, 0.02); nestG.add(back);
-    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06], [0.12, NH, x1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+    // page 2, on the dock's other side: her technical description
+    const c2 = mk(1800, 1200), PX2 = -PX; g = c2.getContext('2d'); panel();
+    g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
+    g.fillStyle = INK; g.font = serif(84); g.fillText('How Vee works', 60, 210);
+    g.fillStyle = SOFT; g.font = sans(27);
+    wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
+    line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
+    [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
+     ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
+     ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
+     ['RETRIEVAL', 'RAG: ~1,000 steady-watch.com research passages in Vectorize; the closest join each question.'],
+     ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
+     ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
+     ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
+     ['COST', 'An answer cache, rate limits and a daily neuron budget keep her on the free tier.'],
+     ['QUALITY', 'An evaluation suite checks accuracy, honesty, navigation and brand voice.']].forEach(([k, v], i) => {
+      const y = 380 + i * 80;
+      g.fillStyle = 'rgba(95,240,255,0.06)'; rr(g, 50, y - 44, 1700, 66, 10); g.fill();
+      g.fillStyle = ACC; g.font = mono(22); g.fillText(k, 76, y);
+      g.fillStyle = INK; fit(v, 330, y, 1390, f => sans(f), 27, 18);
+    });
+    line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('NOT TRAINED ON THE RESEARCH: SHE RETRIEVES IT · NO MEMORY BETWEEN VISITS', 60, 1140);
+    g.textAlign = 'right'; g.fillText('P. 2', 1740, 1140); g.textAlign = 'left';
+    const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
+    const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); nestG.add(page2);
+    // one frame around all three (page 2, dock, manual): long rails top and bottom and an end post each side; the dock's own posts divide them
+    const x0 = PX2 - PW / 2 - 0.12, x1 = PX + PW / 2 + 0.12;
+    for (const bx of [PX, PX2]) { const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(bx, NY, 0.02); nestG.add(back); }
+    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06], [0.12, NH, x1 - 0.06, 0], [0.12, NH, x0 + 0.06, 0]].forEach(([fw, fh, x, y]) => {
       const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); nestG.add(f);
     });
     nestLabel.position.x = (x0 + x1) / 2;   // the title spans the whole station
     const st = { id: 'howvee', info: { title: "Vee's user manual" }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: plaque, normal: new THREE.Vector3(0, 0, -1) };
     nestG.updateMatrixWorld(true); st.center = new THREE.Vector3().setFromMatrixPosition(plaque.matrixWorld); st.center.z -= 0.05;
     plaque.userData.station = st; hit.push(plaque); stations.push(st);
+    const st2 = { id: 'veetech', info: { title: 'How Vee works' }, exhibit: true, standOff: 3.2, pitch: 0.06, mesh: page2, normal: new THREE.Vector3(0, 0, -1) };
+    st2.center = new THREE.Vector3().setFromMatrixPosition(page2.matrixWorld); st2.center.z -= 0.05;
+    page2.userData.station = st2; hit.push(page2); stations.push(st2);
   }
   let nested = false, explained = false;
   updates.push((dt, t) => {
@@ -4866,7 +4908,7 @@ function startTour(customStops, stayAfter) {
 function nextStop() {
   if (!tour) return;
   tour.i++;
-  if (tour.i >= tour.stops.length) { const stay = tour.stayAfter; veeMove(tourGuide(), 'bow'); endTour(); if (!stay) returnToStart(); else if (vee) vee.say('That\'s the foundation.', 'Every product in this building draws on it.', null, null); return; }
+  if (tour.i >= tour.stops.length) { const stay = tour.stayAfter; veeMove(tourGuide(), 'wave2'); endTour(); if (!stay) returnToStart(); else if (vee) vee.say('That\'s the foundation.', 'Every product in this building draws on it.', null, null); return; }
   const s = tour.stops[tour.i], g = tourGuide();
   tour.arrived = false; tour.t = 0; tour.auto = true;
   // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
