@@ -2580,12 +2580,12 @@ function updateVeeRig(v, dt) {
     const k = waving ? 0 : ease(Math.max(away(dU, up), away(dF, fo)));
     if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
   }
-  // her current move: its pose this frame, and how far it's eased in (e)
+  // her current move: its pose this frame, and how far it's eased in (e: half a second in, a little less out, so moves are soft)
   let M = null, e = 0;
   if (R.move) {
     const mv = VEE_MOVES[R.move.name]; R.move.t += dt; const p = R.move.t / mv.dur;
     if (p >= 1) { R.move = R.next ? { name: R.next, t: 0 } : null; R.next = null; }
-    else { M = mv.pose(p, R.move.t); e = ease3(Math.min(1, R.move.t / 0.25)) * ease3(Math.min(1, (mv.dur - R.move.t) / 0.3)); }
+    else { M = mv.pose(p, R.move.t); e = ease3(Math.min(1, R.move.t / 0.5)) * ease3(Math.min(1, (mv.dur - R.move.t) / 0.45)); }
   }
   R.rigG.position.y = M && M.lift ? M.lift * e : 0;
   R.rigG.rotation.y = M && M.spin ? M.spin * Math.PI * 2 : 0;
