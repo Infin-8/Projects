@@ -813,6 +813,9 @@ const FLOORS = [
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and STEADYWATCH™ OIDC.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
+// L4's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
+// frame, then the office door at the end (world x; the wall faces north, so your right is -x)
+const OFFICE_DOOR_X = -5.13;
 
 /* ---------- Live quantum entropy ----------
    Real random bytes from the STEADYWATCH™ PLATFORM's QRNG API (api.steady-watch.com), drawn from IBM
@@ -1893,7 +1896,7 @@ floorSign(L3.g, 'STEADYWATCH™ PLATFORM', 'Platform Wing', 0, 6.3, L3.z1 - 0.06
    The top floor: the office's glass door (see buildKiosk), a timeline of the builder's career along
    the west wall, the skills wall to the north, and a starry skylight over the atrium. */
 const L4 = FLOORS[FI.l4];
-floorSign(L4.g, 'LEVEL 4', "The Builder's Office", 0, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
+floorSign(L4.g, 'LEVEL 4', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
 {
   // the skylight: the Hurwitz dot field from the steady-watch.com header, on the ceiling over the atrium.
   // A centre dot and 336 dots (VIPER™'s count) in a sunflower spiral, periwinkle at the centre to violet at
@@ -2074,7 +2077,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
-  add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, 0, 0.4);
+  add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
   return segs;
 })();
 {
@@ -2856,7 +2859,7 @@ function updateVee(v, dt, t) {
    In Mario 64, paintings lead to worlds and doors lead to rooms: displays here are products, and this
    door, on the top floor, leads to the person behind them. It swings open with light spilling out as you step through.
    (Internally it keeps the name "kiosk" so the tour, Vee and the About button stay wired to it.) */
-const DOOR = { x: 0, z: FLOORS[FI.l4].z1 - 0.14, w: 1.5, h: 2.75 };   // in the south wall of L4
+const DOOR = { x: OFFICE_DOOR_X, z: FLOORS[FI.l4].z1 - 0.14, w: 1.5, h: 2.75 };   // in the south wall of L4, at the end of Vee's station
 let kiosk = null;
 // A glass door: a tinted glass leaf with etched lettering in a slim steel frame, a long pull handle,
 // and the lit room beyond glowing through the glass. Hinged on its left edge; setOpen(0…1) swings it.
@@ -2923,15 +2926,15 @@ function buildKiosk() {
 }
 
 /* ---------- Vee's reception ----------
-   In front of the builder's office on L4: her Nesting Station on the south wall either side of the office door
-   (the dock with her user manual on one side, her technical description on the other) and a reception desk in
-   front, with her landing pad behind it. Docked, she rests there on L4 and stays out of sight elsewhere. */
+   In front of the builder's office on L4: her Nesting Station on the south wall leading up to the office door (the
+   dock, her user manual and her technical description in one frame) and a reception desk in front of the dock,
+   with her landing pad behind it. Docked, she rests there on L4 and stays out of sight elsewhere. */
 const hallActs = [];   // things in the hall you can walk up to and act on (press E): her dock
-const RC = { dockX: 2.75, techX: -2.75 };   // the dock's and the technical page's centres along the wall (nest frame: + is to your right as you face the door)
+const RC = { dockX: -4.18, techX: 2.16 };   // the dock's and the technical page's centres along the wall (nest frame: + is to your right as you face the door)
 function buildReception() {
   const L4 = FLOORS[FI.l4];
-  // her Nesting Station on the south wall, either side of the office door: the dock (where her micro-drones rest and
-  // recharge) and her user manual on one side, her technical description on the other, under one gold rail
+  // her Nesting Station on the south wall, ending at the office door: the dock (where her micro-drones rest and
+  // recharge), her user manual and her technical description, side by side in one gold frame
   const nestG = new THREE.Group(); nestG.position.set(0, 0, L4.z1 - 0.04); nestG.rotation.y = Math.PI; L4.g.add(nestG);   // faces into the floor
   const dockG = new THREE.Group(); dockG.position.x = RC.dockX; nestG.add(dockG);   // the dock's own frame of reference
   const deskMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.35 });
@@ -3066,7 +3069,7 @@ function buildReception() {
     const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); dockG.add(plaque);
     // page 2, on the dock's other side: her technical description
-    const c2 = mk(1800, 1200), PX2 = RC.techX - RC.dockX; g = c2.getContext('2d'); panel();   // page 2 hangs across the office door
+    const c2 = mk(1800, 1200), PX2 = RC.techX - RC.dockX; g = c2.getContext('2d'); panel();   // page 2, beside the manual
     g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
     g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
     g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
@@ -3094,10 +3097,10 @@ function buildReception() {
     const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
     const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); dockG.add(page2);
     // one gold rail across the top of all three, passing over the office door; bottom rails and posts frame each side
-    const x0 = PX2 - PW / 2 - 0.12, x1 = PX + PW / 2 + 0.12, xt1 = PX2 + PW / 2 + 0.12, xd0 = -NW / 2 - 0.12;
+    const x0 = -NW / 2 - 0.12, x1 = PX2 + PW / 2 + 0.12;   // dock, manual and page 2 side by side: one frame round all three
     for (const bx of [PX, PX2]) { const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(bx, NY, 0.02); dockG.add(back); }
-    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - xd0, 0.12, (xd0 + x1) / 2, -NH / 2 - 0.06], [xt1 - x0, 0.12, (x0 + xt1) / 2, -NH / 2 - 0.06],
-     [0.12, NH, x1 - 0.06, 0], [0.12, NH, x0 + 0.06, 0], [0.12, NH, xt1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
+    [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06],
+     [0.12, NH, PX + PW / 2 + 0.06, 0], [0.12, NH, x1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
       const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); dockG.add(f);
     });
     nestLabel.position.x = 0;   // over the dock
