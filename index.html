@@ -2470,7 +2470,8 @@ function attachVeeRig(v) {
   root.updateMatrixWorld(true);
   const bone = n => { let b = null; root.traverse(o => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
   const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), legR: bone('RightLeg'),
-    upLegL: bone('LeftUpLeg'), legL: bone('LeftLeg'), footL: bone('LeftFoot'), upLegR: bone('RightUpLeg'), footR: bone('RightFoot') };
+    upLegL: bone('LeftUpLeg'), legL: bone('LeftLeg'), footL: bone('LeftFoot'), upLegR: bone('RightUpLeg'), footR: bone('RightFoot'),
+    spine: [bone('Spine'), bone('Spine1'), bone('Spine2')], shL: bone('LeftShoulder'), shR: bone('RightShoulder') };
   // her height, measured on the skeleton: the mesh is authored in centimetres under a 0.01 armature
   rigG.scale.setScalar(VEE_HEIGHT / B.top.getWorldPosition(new THREE.Vector3()).y); rigG.updateMatrixWorld(true);
   // the drones, on the body below her head
@@ -2497,10 +2498,38 @@ function attachVeeRig(v) {
   const idle = mixer.clipAction(clip('idle')), walk = null;   // she floats, so only the idle clip; her legs are posed in code
   idle.play(); mixer.update(Math.random() * 3);   // not all in step
   const W = new THREE.Vector3(), rest = (x, y) => new THREE.Vector3(x, y, 0).normalize();
-  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
+  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), move: null, fast: 0, fidgetT: 25 + Math.random() * 20, lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
     // her built limbs at rest, in her own frame: a gesture is how far they've moved from these
     rest: { upR: rest(0.045, -0.27), foreR: rest(0.015, -0.24), upL: rest(-0.045, -0.27), foreL: rest(-0.015, -0.24), shin: rest(0, -1) }, W };
 }
+
+/* ---------- Her moves ----------
+   Full-body moves on the rigged body, like her wave: each is a pose over time, eased in and out. Arm directions are
+   in her own frame (x: toward the side she waves with, y: up, z: forward); spine is [bend forward, bend sideways,
+   twist] in radians; lift is metres off her float; spin is turns; tuck draws her knees up. Pointing always wins. */
+const ease3 = x => x * x * (3 - 2 * x);
+const VEE_MOVES = {
+  cheer:   { dur: 1.8, pose: p => { const hop = Math.abs(Math.sin(p * Math.PI * 2)); return { a: [0.42, 1, 0.12], af: [0.25, 1, 0.2], b: [-0.42, 1, 0.12], bf: [-0.25, 1, 0.2], spine: [-0.14, 0, 0], head: -0.18, lift: 0.16 * hop, tuck: hop }; } },
+  clap:    { dur: 1.5, pose: (p, t) => { const o = 0.3 + 0.3 * Math.abs(Math.sin(t * 9)); return { a: [0.3, -0.5, 0.8], af: [-o, 0.25, 0.7], b: [-0.3, -0.5, 0.8], bf: [o, 0.25, 0.7], spine: [0.08, 0, 0], head: -0.08, lift: 0.03 * Math.abs(Math.sin(t * 9)) }; } },
+  twirl:   { dur: 1.5, pose: p => ({ a: [1, 0.15, 0], af: [1, 0.3, 0], b: [-1, 0.15, 0], bf: [-1, 0.3, 0], spin: ease3(p), lift: 0.1 * Math.sin(Math.PI * p), together: 1, head: -0.1 }) },
+  bow:     { dur: 2.2, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.2)); return { a: [0.15, -0.55, 0.65], af: [-0.75, 0.1, 0.4], b: [-0.2, -0.95, -0.35], bf: [0.45, -0.3, -0.55], spine: [1.0 * k, 0, 0], head: 0.35 * k, together: 1 }; } },
+  present: { dur: 2.0, pose: p => { const k = ease3(Math.min(1, p * 1.6)); return { a: [0.55 + 0.25 * k, 0.05 + 0.2 * k, 0.75 - 0.3 * k], af: [0.7 + 0.2 * k, 0.3 + 0.15 * k, 0.6 - 0.3 * k], b: [-0.6, -0.75, -0.05], bf: [0.75, -0.15, 0.25], spine: [0.1, -0.12 * k, 0.15 * k], head: -0.05 }; } },
+  shrug:   { dur: 1.6, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.15)); return { a: [0.6, -0.65, 0.3], af: [0.55, 0.2 + 0.2 * k, 0.75], b: [-0.6, -0.65, 0.3], bf: [-0.55, 0.2 + 0.2 * k, 0.75], shoulders: 0.3 * k, spine: [0.05, 0, 0], tilt: 0.2 * k, head: 0.12 * k }; } },
+  lean:    { dur: 2.6, pose: () => ({ a: [0.25, -0.9, -0.45], af: [-0.7, -0.15, -0.45], b: [-0.25, -0.9, -0.45], bf: [0.7, -0.15, -0.45], spine: [0.55, 0, 0], head: -0.1, tilt: -0.18 }) },
+  stretch: { dur: 2.4, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.1)); return { a: [0.18, 1, -0.05], af: [-0.25, 1, 0], b: [-0.18, 1, -0.05], bf: [0.25, 1, 0], spine: [-0.45 * k, 0.1 * Math.sin(p * 9), 0], head: -0.3 * k, lift: 0.06 * k, together: 1 }; } },
+  land:    { dur: 0.8, pose: p => { const k = Math.sin(Math.PI * p); return { tuck: 0.7 * k, spine: [0.18 * k, 0, 0], head: 0.1 * k, lift: -0.06 * k }; } },
+};
+function veeMove(v, name) {
+  if (!v || !v.rig || !VEE_MOVES[name] || v.away || reduceMotion) return false;
+  v.rig.move = { name, t: 0 }; v.waveT = 0; return true;
+}
+const _wq = new THREE.Quaternion(), _wp = new THREE.Quaternion(), _wd = new THREE.Quaternion(), _wa = new THREE.Vector3();
+function turnBone(bone, axisLocal, angle, frameQ) {   // rotate a bone about an axis given in her frame
+  if (!bone || Math.abs(angle) < 1e-4) return;
+  _wa.copy(axisLocal).applyQuaternion(frameQ); bone.getWorldQuaternion(_wq); bone.parent.getWorldQuaternion(_wp).invert();
+  _wd.setFromAxisAngle(_wa, angle); bone.quaternion.copy(_wp.multiply(_wd.multiply(_wq))); bone.updateMatrixWorld(true);
+}
+const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 // a bone runs toward its child, along whichever local axis the rig uses (this one's arms run along -X): aim that axis
 const _rq = new THREE.Quaternion(), _rp = new THREE.Quaternion(), _rax = new THREE.Vector3(), _rd = new THREE.Vector3();
 function aimBone(bone, dirWorld, k) {
@@ -2540,21 +2569,46 @@ function updateVeeRig(v, dt) {
     const k = ease(Math.max(away(dU, up), away(dF, fo)));
     if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
   }
+  // her current move: its pose this frame, and how far it's eased in (e)
+  let M = null, e = 0;
+  if (R.move) {
+    const mv = VEE_MOVES[R.move.name]; R.move.t += dt; const p = R.move.t / mv.dur;
+    if (p >= 1) R.move = null;
+    else { M = mv.pose(p, R.move.t); e = ease3(Math.min(1, R.move.t / 0.25)) * ease3(Math.min(1, (mv.dur - R.move.t) / 0.3)); }
+  }
+  R.rigG.position.y = M && M.lift ? M.lift * e : 0;
+  R.rigG.rotation.y = M && M.spin ? M.spin * Math.PI * 2 : 0;
+  R.rigG.updateMatrixWorld(true);
+  // a landing, when a fast flight comes to a stop; and now and then, while idle and unhurried, a stretch or a twirl
+  const spd = R.vel.length(); R.fast = spd > 2.4 ? 1 : R.fast * Math.exp(-dt * 1.5);
+  if (!R.move && R.fast > 0.3 && spd < 0.4) { R.fast = 0; veeMove(v, 'land'); }
+  R.fidgetT -= dt;
+  if (R.fidgetT < 0) { R.fidgetT = 35 + Math.random() * 30; if (!R.move && !tour && !v.asking && (!v.text || v.doneT > 8)) veeMove(v, Math.random() < 0.5 ? 'stretch' : 'twirl'); }   // only when she isn't talking or guiding
   // legs: her velocity in her own frame swings them the other way (they trail), on a spring so they overshoot and settle
   const vl = _rb.copy(R.vel).applyQuaternion(_rfq), m = reduceMotion ? 0.3 : 1;
   const tx = Math.max(-0.7, Math.min(0.7, -vl.x * 0.2)), tz = Math.max(-0.8, Math.min(0.8, -vl.z * 0.2)), tt = performance.now() / 1000;
   R.swayV.x += (tx + Math.sin(tt * 1.1) * 0.04 * m - R.sway.x) * 28 * dt; R.swayV.y += (tz + Math.sin(tt * 0.8 + 1) * 0.05 * m - R.sway.y) * 28 * dt;
   R.swayV.multiplyScalar(Math.exp(-3.2 * dt)); R.sway.addScaledVector(R.swayV, dt);
-  const figQ = v.fig.getWorldQuaternion(new THREE.Quaternion());
+  const figQ = R.rigG.getWorldQuaternion(new THREE.Quaternion());   // her frame, turning with any spin
   const pop = Math.max(0, v.knee.rotation.x);   // her wave's knee pop, on her right leg
   for (const [up, low, foot, sx, extra] of [[R.B.upLegL, R.B.legL, R.B.footL, 1, 0], [R.B.upLegR, R.B.legR, R.B.footR, -1, pop]]) {
-    const thigh = new THREE.Vector3(0.05 * sx + R.sway.x, -1, -0.1 + R.sway.y).normalize().applyQuaternion(figQ);        // hanging, a little behind
-    const shin = new THREE.Vector3(0.03 * sx + R.sway.x * 1.4, -1, -0.38 - extra * 1.1 + R.sway.y * 1.4).normalize().applyQuaternion(figQ);   // knees softly bent
+    const tuck = M && M.tuck ? M.tuck * e : 0, apart = 1 - (M && M.together ? M.together * e : 0);
+    const thigh = new THREE.Vector3(0.05 * sx * apart + R.sway.x, -1 + tuck * 0.55, -0.1 + R.sway.y + tuck * 0.8).normalize().applyQuaternion(figQ);        // hanging, a little behind
+    const shin = new THREE.Vector3(0.03 * sx * apart + R.sway.x * 1.4, -1, -0.38 - extra * 1.1 + R.sway.y * 1.4 - tuck * 0.4).normalize().applyQuaternion(figQ);   // knees softly bent
     aimBone(up, thigh, 1); aimBone(low, shin, 1);
     aimBone(foot, new THREE.Vector3(0, -1, -0.55 + R.sway.y).normalize().applyQuaternion(figQ), 1);   // toes pointed down
   }
   // and when she points (with the arm on her built right, the rig's left), her hand makes a proper point
   R.pointK += ((v.pointT > 0 && v.pointTarget ? 1 : 0) - R.pointK) * Math.min(1, dt * 6);
+  // the move's upper body: spine, shoulders, arms (not while she's pointing) and a nod or tilt of her head
+  if (M) {
+    if (M.spine) R.B.spine.forEach(sb => { turnBone(sb, AX, M.spine[0] * e / 3, figQ); turnBone(sb, AZ, -M.spine[1] * e / 3, figQ); turnBone(sb, AY, M.spine[2] * e / 3, figQ); });
+    if (M.shoulders) { turnBone(R.B.shL, AZ, M.shoulders * e, figQ); turnBone(R.B.shR, AZ, -M.shoulders * e, figQ); }
+    const k = e * (1 - R.pointK), dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
+    if (M.a) { aimBone(R.B.armL, dir(M.a), k); aimBone(R.B.foreL, dir(M.af), k); }
+    if (M.b) { aimBone(R.B.armR, dir(M.b), k); aimBone(R.B.foreR, dir(M.bf), k); }
+    v.headG.rotation.x += (M.head || 0) * e; v.headG.rotation.z += (M.tilt || 0) * e;
+  }
   pointHand(R.B.handL, R.pointK);
 }
 // A pulse of light where Vee points: a ring spreading on the floor and a fading beam
@@ -2598,6 +2652,9 @@ const VEE_MOODS = {
 function setVeeMood(v, mood, secs) {
   if (!v) return; const M = VEE_MOODS[mood] ? mood : 'neutral';
   v.mood = M; v.moodT = secs;
+  // on her rigged body, moods come with a full-body move; otherwise her wave, as before
+  const move = { excited: 'cheer', happy: ['clap', 'twirl', null][Math.floor(Math.random() * 3)], apologetic: 'shrug', curious: 'lean' }[M];
+  if (move && !v.pointT && veeMove(v, move)) return;
   if (VEE_MOODS[M].pose === 'wave' && !v.pointT) v.waveT = 1.6;
 }
 let veeLevel = () => 0;   // how loud her voice is right now (0…1), for lip sync; set up with her voice
@@ -2920,7 +2977,7 @@ function buildMascot() {
   vee.sayExplored = () => {
     const u = unseenWorlds(), n = WORLD_IDS.length - u.length;
     vee.tourK = vee.tour.length - 1; vee.tourT = 0;
-    if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); return; }
+    if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); veeMove(vee, 'cheer'); return; }
     const next = u[0], tgt = paintings.find(q => q.p.id === next);
     const onFloor = tgt && tgt.floor === player.floor, where = tgt && !onFloor ? ` Take the lift to ${FLOORS[tgt.floor].tag}.` : '';
     vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L4." : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
@@ -4291,7 +4348,7 @@ function buildOfficeWorld(p) {
   dockSt.act = () => {
     const v = worldVee; setVeeDocked(!veeDocked);
     if (veeDocked) v.say('Docking. Resting here now.', "I'll stay out of your way until you wake me here, or start a tour.", null, null);
-    else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); v.waveT = 2.4; }
+    else { v.say("I'm back online.", "I'll follow you again. Dock me here any time.", null, null); if (!veeMove(v, 'stretch')) v.waveT = 2.4; }
   };
   // beside the nest, her user manual: a printed page on how to use her and how she works
   {
@@ -4798,6 +4855,7 @@ function startTour(customStops, stayAfter) {
   for (const g of [vee, world && world.vee]) if (g) g.asking = false;
   if (veeDocked) setVeeDocked(false);   // a tour needs its guide: she wakes
   const g = tourGuide(); if (!g) return;
+  veeMove(g, 'present');   // a sweep of the arm: here's the hall
   const stops = customStops || (world ? world.vee.tourStops : hallTourStops());
   if (!stops || !stops.length) return;
   tour = { stops, i: -1, t: 0, auto: true, arrived: false, stayAfter: !!stayAfter };
@@ -4808,7 +4866,7 @@ function startTour(customStops, stayAfter) {
 function nextStop() {
   if (!tour) return;
   tour.i++;
-  if (tour.i >= tour.stops.length) { const stay = tour.stayAfter; endTour(); if (!stay) returnToStart(); else if (vee) vee.say('That\'s the foundation.', 'Every product in this building draws on it.', null, null); return; }
+  if (tour.i >= tour.stops.length) { const stay = tour.stayAfter; veeMove(tourGuide(), 'bow'); endTour(); if (!stay) returnToStart(); else if (vee) vee.say('That\'s the foundation.', 'Every product in this building draws on it.', null, null); return; }
   const s = tour.stops[tour.i], g = tourGuide();
   tour.arrived = false; tour.t = 0; tour.auto = true;
   // stand a step further back than a normal walk-up, except at raised screens in the app worlds (the website screen is right behind you there)
