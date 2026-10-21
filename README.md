@@ -20,6 +20,8 @@
       <br><br>
       Team up directly in iMessages and solve a Sudoku board together or race against the clock in solo time-attack! Every multiplayer match is fully supported by Apple Game Center, so your wins, best-time, and progress are posted on Game Center leaderboards and backed by Game Center achievements. Share and compare with all your friends!
       <br><br>
+      Prefer a solo challenge? Kudosu tasks you with spotting the duplicate number before time runs out.
+      <br><br>
       KaizenDoku logs your mindful minutes directly to Apple Health, turning your daily Sudoku puzzle solving skill into a measurable wellness practice.
       <br><br>
       Every multiplayer and time-attack board is generated from IBM Quantum hardware entropy via the STEADYWATCH™ Platform (QES-256).
