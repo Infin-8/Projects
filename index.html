@@ -188,6 +188,14 @@ body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 .ask-log .a b { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: #5ff0ff; margin-right: 6px; }
 .ask-log .a.wait { color: var(--muted); font-style: italic; }
 .ask-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* when she offers to pass a question to Nathaniel: one email field */
+.ask-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; background: rgba(95, 240, 255, .05); }
+.ask-lead[hidden] { display: none; }
+.ask-lead span { flex: 1 0 100%; font: 13px var(--body); color: var(--parchment); }
+.ask-lead input[type=email] { flex: 1; min-width: 0; font: 15px var(--body); color: var(--parchment); background: rgba(8, 10, 18, .8); border: 1px solid rgba(95, 240, 255, .45); border-radius: 3px; padding: 8px 10px; }
+.ask-lead button { font: 600 12px var(--mono); letter-spacing: .04em; color: #05080d; background: #5ff0ff; border: 0; border-radius: 3px; padding: 9px 12px; cursor: pointer; }
+.ask-lead small { flex: 1 0 100%; font-size: 11px; color: #8e99b0; }
+.ask-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .ask-chips:empty { display: none; }
 .ask-chips button { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: #c8fbff; background: transparent; border: 1px solid rgba(95, 240, 255, .45); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
 .ask-chips button:hover, .ask-chips button:focus-visible { border-color: #5ff0ff; color: #5ff0ff; outline: none; }
@@ -420,6 +428,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
   <div class="ask-chips" role="group" aria-label="Suggested questions"></div>
   <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" hidden aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
+  <form class="ask-lead" hidden autocomplete="on"><span>Want Nathaniel to get back to you?</span><input type="email" name="email" required placeholder="you@company.com" aria-label="Your email for Nathaniel"><input class="ask-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button type="submit">Send to Nathaniel</button><small>Only Nathaniel sees it, to reply to you.</small></form>
   <p class="ask-live" aria-live="polite"></p>
 </section>
 <div class="hud" id="tourBar" hidden role="status" aria-live="polite"><span id="tourText"></span><button type="button" id="tourNext">Next ▸</button><button type="button" id="tourEnd">End tour</button></div>
@@ -4876,6 +4885,20 @@ function askFollow() {
   g.bodyTarget = p; g.asking = true;
   if (!askState.busy && !g.sticky && g.text && g.reveal >= g.total && g.doneT > 6 + g.total / 30) askHint(g);   // an answer has faded: back to the hint
 }
+// "Send to Nathaniel": the visitor's email and question go to the vee-worker's /lead (read on its /leads page)
+const askLead = askEl.querySelector('.ask-lead');
+askLead.addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = askLead.querySelector('button'), email = askLead.email.value.trim(), g = askGuide(); btn.disabled = true;
+  try {
+    const r = await fetch(VEE_API.replace(/\/ask$/, '/lead'), { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, website: askLead.website.value, question: askLead.dataset.q || '', note: askLead.dataset.q || '', page: `Quantum Hall · ${askWhere()}` }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error === 'email' ? "That email doesn't look right." : "I couldn't send that just now.");
+    askLead.hidden = true; askLead.reset();
+    if (g) { g.say('Sent to Nathaniel.', `He'll reply to ${email}.`, null, null); setVeeMood(g, 'happy', 5); }
+  } catch (err) { btn.disabled = false; if (g) { g.say(err.message, 'Try again?', null, null); setVeeMood(g, 'apologetic', 4); } }
+});
 async function askSend(q) {
   q = String(q || '').trim().slice(0, 400);
   if (!q || askState.busy) return;
@@ -4885,14 +4908,15 @@ async function askSend(q) {
   stopVoice(); unlockAudio();
   const g = askGuide();
   if (g) { g.say('Let me think…', q.length > 56 ? q.slice(0, 55) + '…' : q, null, null); setVeeMood(g, 'thinking', 30); }
-  let answer, go = null, mood = 'apologetic', point = null;
+  let answer, go = null, mood = 'apologetic', point = null, handoff = false;
+  askLead.hidden = true;
   const seenIds = visit.d.seen.filter(id => WORLD_NAMES[id]);
   try {
     const r = await fetch(VEE_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       question: q, history: askState.history.slice(-6), floor: askWhere(), looking: askLooking(),
       seen: seenIds.map(id => WORLD_NAMES[id]), unseen: unseenWorlds().map(id => WORLD_NAMES[id]), live: askLiveData() }) });
     const j = await r.json().catch(() => ({}));
-    answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null; mood = j.mood || 'neutral'; point = j.point || null;
+    answer = j.answer || "I can't reach my voice right now. Try again in a moment?"; go = j.go || null; mood = j.mood || 'neutral'; point = j.point || null; handoff = r.ok && !!j.handoff;
     if (r.ok) askState.history.push({ role: 'user', content: q }, { role: 'assistant', content: answer });
   } catch (e) { answer = "I can't reach my voice right now. Try again in a moment?"; }
   askLive.textContent = 'Vee: ' + answer;
@@ -4905,6 +4929,7 @@ async function askSend(q) {
   }
   askState.busy = false; askForm.querySelector('button').disabled = false;
   askChips.querySelectorAll('button').forEach(b => { b.disabled = false; });
+  if (handoff) { askLead.hidden = false; askLead.dataset.q = q; askLead.querySelector('button').disabled = false; }   // pricing, a demo, a pilot…: offer to pass it to Nathaniel
   if (go) { veeTakeTo(go); return; }   // she's taking you there
   if (!touchUI) askInput.focus();
 }
