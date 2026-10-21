@@ -3884,6 +3884,7 @@ function buildPlatformWorld() {
   function station(id, angleDeg, build, opts = {}) {
     const a = THREE.MathUtils.degToRad(angleDeg), r = opts.r ?? R;
     const g = new THREE.Group(); g.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r);
+    if (opts.at) g.position.set(opts.at[0], 0, opts.at[1]);   // a spot along the key (see the bit stream below)
     g.lookAt(0, 0, 0);   // local +z faces the middle of the world
     ws.add(g); g.updateMatrixWorld(true);   // so builders can read world positions
     if (!opts.noPedestal) {
@@ -3891,7 +3892,7 @@ function buildPlatformWorld() {
       const edge = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.025, 8, 96), new THREE.MeshBasicMaterial({ color: 0x3fe0e0 })); edge.rotation.x = Math.PI / 2; edge.position.y = 0.4; g.add(edge);
     }
     const info = PLATFORM_STATIONS.find(s => s.id === id);
-    const label = stationLabel(opts.eyebrow || 'QCAP STACK', info.title); label.position.set(0, opts.labelY ?? 4.6, 0); g.add(label);
+    const label = stationLabel(opts.eyebrow || 'QCAP STACK', info.title); label.position.set(0, opts.labelY ?? 4.6, (opts.labelY ?? 4.6) < 2 ? 1.15 : 0); g.add(label);   // a low label stands in front of its model
     const inner = new THREE.Group(); g.add(inner); build(inner, g);
     const center = g.position.clone(); center.y = 1.6;
     const normal = new THREE.Vector3(-g.position.x, 0, -g.position.z).normalize();
@@ -3903,13 +3904,17 @@ function buildPlatformWorld() {
 
   // 1. IBM Quantum: the cryostat hanging from a gantry
   let chipWorld = new THREE.Vector3();
+  // The stations line up along the back so the bit stream draws a key, seen from the entrance: a bow looped round
+  // the cryostat, a shaft running right, teeth dipping down to Cloudflare, the Pi and the Enclave, and the QES-256
+  // key at its tip. SHAFT_Y is the shaft's height; KEY_Z how far back it runs. Labels on the teeth sit low, out of its outline.
+  const SHAFT_Y = 4.6, KEY_Z = -5;
   const qs = station('quantum', -55, inner => {
     for (const x of [-1.7, 1.7]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 5.6, 0.16), pedMat); post.position.set(x, 3.2, 0); inner.add(post); }
     const beam = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.18, 0.18), gold); beam.position.set(0, 6.0, 0); inner.add(beam);
     const c = makeCryostat(); c.group.position.y = 5.9; c.group.scale.setScalar(0.92); inner.add(c.group);
     updates.push((dt, t) => pulseStages(c.pulses, t));
     inner.updateMatrixWorld(true); chipWorld = c.group.localToWorld(new THREE.Vector3(0, c.chipY, 0));
-  }, { labelY: 6.8, eyebrow: 'ENTROPY SOURCE' });
+  }, { labelY: 7.3, eyebrow: 'ENTROPY SOURCE', at: [-8.0, KEY_Z] });
 
   // 2. Cloudflare: a wireframe globe of edge locations
   let cfWorld;
@@ -3924,7 +3929,7 @@ function buildPlatformWorld() {
     const l = new THREE.PointLight(0xf38020, 0.8, 6, 2); l.position.y = 2.5; inner.add(l);
     updates.push(dt => { spin.rotation.y += dt * 0.35; orbit.rotation.z += dt * 0.5; });
     inner.updateMatrixWorld(true); cfWorld = inner.localToWorld(new THREE.Vector3(0, 2.5, 0));
-  }, { eyebrow: 'EDGE NETWORK' });
+  }, { eyebrow: 'EDGE NETWORK', at: [-3.9, KEY_Z - 1], labelY: 0.95 });
 
   // 3. Raspberry Pi: the board, tilted toward the visitor
   let piWorld;
@@ -3947,7 +3952,7 @@ function buildPlatformWorld() {
     const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.3, 12), pedMat); stand.position.y = 1.05; inner.add(stand);
     updates.push((dt, t) => { l2.visible = Math.sin(t * 9) + Math.sin(t * 13.7) > 0.4; });
     inner.updateMatrixWorld(true); piWorld = board.localToWorld(new THREE.Vector3(-0.35, 0.3, 0.1));
-  }, { eyebrow: 'SERVICES' });
+  }, { eyebrow: 'SERVICES', at: [1.0, KEY_Z - 1], labelY: 0.95 });
 
   // 4. Secure Enclave: a phone asking to approve a sign-in, and the enclave chip
   let enWorld;
@@ -3981,7 +3986,7 @@ function buildPlatformWorld() {
       chip.rotation.y += dt * 0.6; chip.position.y = 1.55 + Math.sin(t * 1.4) * 0.06; glowM.opacity = 0.35 + 0.3 * Math.sin(t * 2.4);
     });
     inner.updateMatrixWorld(true); enWorld = chip.localToWorld(new THREE.Vector3(0, 0.1, 0));
-  }, { eyebrow: 'ON DEVICE' });
+  }, { eyebrow: 'ON DEVICE', at: [5.0, KEY_Z - 1], labelY: 0.95 });
 
   // 5. The key, floating over the middle: 32 bytes around a slowly turning band
   const keyBytes = new Uint8Array(32); crypto.getRandomValues(keyBytes);
@@ -3994,25 +3999,35 @@ function buildPlatformWorld() {
     for (const y of [3.66, 4.14]) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.012, 6, 128), gold); r.rotation.x = Math.PI / 2; r.position.y = y; inner.add(r); }
     const sub = textSprite([['QES-256 · 32 BYTES · ILLUSTRATION', '600 30px "IBM Plex Mono", monospace', '#8e99b0']], 1024, 70, 3.2); sub.position.y = 3.3; inner.add(sub);
     updates.push(dt => { band.rotation.y += dt * 0.25; });
-  }, { r: 0.001, noPedestal: true, labelY: 5.55, eyebrow: 'THE RESULT', normal: new THREE.Vector3(0, 0, 1), standOff: 5 });
-  keySt.center.set(0, 3.9, 0);
-  const keyWorld = new THREE.Vector3(0, 3.9, 0);
+  }, { at: [9.4, KEY_Z], noPedestal: true, labelY: 6.25, eyebrow: 'THE RESULT', standOff: 5.5 });
+  keySt.group.children.forEach(o => { if (o !== keySt.group.children[0]) o.position.y += SHAFT_Y - 3.9; });   // up to the shaft's height (the label stays put)
+  keySt.center.set(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
+  const keyWorld = new THREE.Vector3(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
 
-  // the bit stream: cryostat → Cloudflare → Pi → enclave → key
-  const path = new THREE.CatmullRomCurve3([
-    chipWorld, chipWorld.clone().add(new THREE.Vector3(0, -0.6, 0)),
-    cfWorld.clone().add(new THREE.Vector3(0, -1.4, 0)), cfWorld,
-    piWorld, enWorld, enWorld.clone().add(new THREE.Vector3(-1.5, 1.6, 2)), keyWorld], false, 'catmullrom', 0.35);
-  ws.add(new THREE.Mesh(new THREE.TubeGeometry(path, 300, 0.018, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.35 })));
+  // the bit stream draws a key: it leaves the cryostat's chip, loops once round the cryostat (the bow), runs right
+  // along the shaft, drops in square notches to Cloudflare, the Pi and the Enclave (the teeth), and ends in the key
+  const qp = qs.group.position, BOW_R = 1.9, bowC = new THREE.Vector3(qp.x, SHAFT_Y, qp.z);
+  const along = new THREE.Vector3().subVectors(keyWorld, bowC).setY(0).normalize(), up = new THREE.Vector3(0, 1, 0);
+  const pts = [chipWorld.clone()];
+  for (let deg = -90; deg <= 360; deg += 15) { const t = THREE.MathUtils.degToRad(deg); pts.push(bowC.clone().addScaledVector(along, Math.cos(t) * BOW_R).addScaledVector(up, Math.sin(t) * BOW_R)); }
+  const shaftAt = p => { const k = new THREE.Vector3().subVectors(p, bowC).dot(along); return bowC.clone().addScaledVector(along, k).setY(SHAFT_Y); };
+  for (const A of [cfWorld, piWorld, enWorld]) {   // a notch: along the shaft, straight down to the station, across, and back up
+    const W = 0.65, top = shaftAt(A), low = new THREE.Vector3(top.x, A.y, top.z).lerp(A, 0.85);
+    pts.push(top.clone().addScaledVector(along, -W - 0.5), top.clone().addScaledVector(along, -W), low.clone().addScaledVector(along, -W),
+      low.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W + 0.5));
+  }
+  pts.push(keyWorld.clone().addScaledVector(along, -1.6), keyWorld);
+  const path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  ws.add(new THREE.Mesh(new THREE.TubeGeometry(path, 900, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
   const bitMats = [0, 1].map(b => new THREE.SpriteMaterial({ map: bitTex(String(b)), transparent: true, depthWrite: false }));
   const bits = [];
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 170; i++) {   // the path is long: more bits, so the key reads as a line of them
     const b = new THREE.Sprite(bitMats[Math.random() < 0.5 ? 0 : 1]); b.scale.setScalar(0.24);
-    b.userData.u = i / 90; ws.add(b); bits.push(b);
+    b.userData.u = i / 170; ws.add(b); bits.push(b);
   }
   updates.push(dt => {
     for (const b of bits) {
-      b.userData.u = (b.userData.u + dt * (reduceMotion ? 0.01 : 0.035)) % 1;
+      b.userData.u = (b.userData.u + dt * (reduceMotion ? 0.006 : 0.02)) % 1;
       b.position.copy(path.getPointAt(b.userData.u));
       if (b.userData.u < 0.004) b.material = bitMats[Math.random() < 0.5 ? 0 : 1];   // a fresh measurement
     }
