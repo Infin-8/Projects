@@ -474,8 +474,8 @@ const PROJECTS = [
   },
   {
     id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Atomic Clock Multi-Tool', wing: 'Apps',
-    desc: 'Five instruments in one app, from an NTP-synced atomic clock to Face ID-approved sign-ins.',
-    modules: [['ATOMIC','Clock synced to atomic time standards via NTP'],['HARMONIC','Real-time frequency spectrum and tuner'],['QUANTUM','Face ID-gated key generator bound to the Secure Enclave, seeded from platform quantum entropy'],['VAULT','Quantum-seeded credential storage'],['APPROVE','Biometric OIDC authorization']],
+    desc: 'Five instruments in one app, from an NTP-synced atomic clock to sign-ins approved with your biometric key.',
+    modules: [['ATOMIC','Clock synced to atomic time standards via NTP'],['HARMONIC','Real-time frequency spectrum and tuner'],['QUANTUM','Face ID-gated key generator bound to the Secure Enclave, seeded from platform quantum entropy'],['VAULT','Quantum-seeded credential storage'],['APPROVE','Biometric OIDC authorization: match the number, approve with Face ID or Touch ID']],
     stack: 'NTP · Face ID · Secure Enclave · OIDC',
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
     theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
@@ -485,7 +485,7 @@ const PROJECTS = [
   {
     id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
     desc: 'Quantum-derived randomness and security as a service. Every product produces 32-byte QES-256 keys, each tied to a verifiable IBM Quantum job ID.',
-    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with Face ID in STEADYWATCH™ HANDHELD'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with a biometric key (Face ID or Touch ID) in STEADYWATCH™ HANDHELD'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
     links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
@@ -691,10 +691,10 @@ const WING_PROJECTS = [
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
   { id: 'oidc', name: 'STEADYWATCH™ OIDC', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Biometric identity provider',
-    desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved with Face ID in STEADYWATCH™ HANDHELD. Runs on a Raspberry Pi, with no per-seat fee.',
+    desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved in STEADYWATCH™ HANDHELD with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
-      ['FACE ID APPROVAL', 'Sign-ins are approved with Face ID in STEADYWATCH™ HANDHELD.'],
+      ['BIOMETRIC KEY', 'A Secure Enclave signature unlocked by Face ID or Touch ID, with number matching and QR approval.'],
       ['RADIUS BRIDGE', 'Translates a RADIUS Access-Request into OIDC. Live on UDP 1812.'],
       ['MULTI-TENANT', 'Full isolation per organization, with unlimited tenants in one deployment.'],
       ['SELF-HOSTED', 'Docker Compose, 7 containers, on a Raspberry Pi 5 (8GB) or any Linux VM.']],
@@ -1103,8 +1103,8 @@ function oidcSculpture() {
     const at = { lap: new THREE.Vector3(-1.6, 1.55, 0), pi: new THREE.Vector3(0, 1.25, 0), ph: new THREE.Vector3(1.6, 1.6, 0) };
     const STEPS = [
       ['1 · The device asks the OIDC server for a code', 'lap', 'pi'],
-      ['2 · You enter the code in STEADYWATCH™ HANDHELD', 'ph', 'pi'],
-      ['3 · Face ID approves the sign-in', 'ph', 'ph'],
+      ['2 · Scan the QR or enter the code in STEADYWATCH™ HANDHELD', 'ph', 'pi'],
+      ['3 · Match the number and approve with your biometric key', 'ph', 'ph'],
       ['4 · The device polls and receives its JWT', 'pi', 'lap']];
     const capC = mk(1536, 90), cg = capC.getContext('2d'), capTex = new THREE.CanvasTexture(capC);
     const cap = new THREE.Sprite(new THREE.SpriteMaterial({ map: capTex, transparent: true, depthWrite: false })); cap.scale.set(4.6, 0.27, 1); cap.position.y = 2.75; g.add(cap);
@@ -3331,13 +3331,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   } else if (p.kind === 'oidc') {
     lines = [
       [`Welcome to ${p.name}.`, 'Watch a sign-in play out in front of you.', 'core'],
-      ['Device flow, Face ID, RADIUS and tenants.', 'The big screens cover each one.', 'hero'],
+      ['Device flow, biometric key, RADIUS and tenants.', 'The big screens cover each one.', 'hero'],
       ['The live demo is on your right.', 'Walk up and press E to try it.', 'site'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
-      ['core', 'A live sign-in', 'Device to OIDC server to phone, approved with Face ID, then a JWT.'],
-      ['hero', 'The platform', 'Device flow, Face ID approval, RADIUS bridge, multi-tenant, self-hosted.'],
+      ['core', 'A live sign-in', 'Device to OIDC server to phone, approved with a biometric key, then a JWT.'],
+      ['hero', 'The platform', 'Device flow, biometric-key approval, RADIUS bridge, multi-tenant, self-hosted.'],
       ['site', 'The live demo', 'Press E to run a real device-flow sign-in.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
   } else {
@@ -3783,7 +3783,7 @@ const PLATFORM_STATIONS = [
   { id: 'quantum', title: 'IBM Quantum', text: 'Random bits come from measuring qubits on IBM Quantum hardware. Each batch is tied to a verifiable IBM Quantum job ID.' },
   { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform, serving the API and the live demos.' },
   { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
-  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ HANDHELD keeps keys bound to the Secure Enclave and approves sign-ins with Face ID.' },
+  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ HANDHELD keeps keys bound to the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID).' },
   { id: 'key', title: 'QES-256 key', text: 'Every product surface produces 32-byte QES-256 keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
   { id: 'shqkd', title: 'SHQKD', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
