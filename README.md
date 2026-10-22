@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://infin-8.github.io/Projects/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum Hall lobby: the Quantum V^ banner hangs over the freestanding STEADYWATCH™ PLATFORM display, with the glass lift to the right, a glowing light path down the middle and Vee, the holographic guide"></a>
+  <a href="https://hall.steady-watch.com/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum Hall lobby: the Quantum V^ banner hangs over the freestanding STEADYWATCH™ PLATFORM display, with the glass lift to the right, a glowing light path down the middle and Vee, the holographic guide"></a>
 </p>
 
 <p align="center">
-  <a href="https://infin-8.github.io/Projects/"><strong>Walk the gallery →</strong></a><br>
+  <a href="https://hall.steady-watch.com/"><strong>Walk the gallery →</strong></a><br>
   <sub>Five floors around an atrium, from the cryostat lab to the builder's office. Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
 </p>
 
