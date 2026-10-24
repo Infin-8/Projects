@@ -495,7 +495,7 @@ const PROJECTS = [
   {
     id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
     desc: 'Quantum-derived randomness and security as a service. Every product produces 32-byte QES-256 keys, each tied to a verifiable IBM Quantum job ID.',
-    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with a biometric key (Face ID or Touch ID) in STEADYWATCH™ HANDHELD'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with a biometric key (Face ID or Touch ID) in STEADYWATCH™ HANDHELD'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
     links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
@@ -526,7 +526,7 @@ const ABOUT = {
     ['Languages', 'Swift · SwiftUI · Python · JavaScript · HTML/CSS'],
     ['Mobile', 'iOS · watchOS · React Native · Expo · CoreMotion · HealthKit · WatchConnectivity · LocalAuthentication · CryptoKit · Secure Enclave'],
     ['Backend', 'Python · Flask · Node.js · Express · Socket.IO · REST API design · JSON · SQLite'],
-    ['Quantum computing', 'Qiskit · IBM Quantum hardware · AerSimulator · GHZ circuits · QKD protocols · Mermin inequality'],
+    ['Quantum computing', 'Qiskit · IBM Quantum hardware · AerSimulator · GHZ circuits · QES Key Exchange · Mermin inequality'],
     ['Cryptography', 'P256 ECDSA · SHA-256 · Post-quantum encryption · Secure Enclave key management · Biometric key derivation'],
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
@@ -583,7 +583,7 @@ function drawPlatform(c, img) {
   g.fillText('STEADYWATCH™', 560, 150);
   g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('PLATFORM · EaaS', 562, 194);
   g.font = '600 20px "IBM Plex Mono", monospace'; g.fillStyle = '#e6e6ff';
-  ['Q-RNG', 'OIDC', 'SHQKD', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
+  ['Q-RNG', 'OIDC', 'QES-KX', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
   g.fillStyle = '#8ea2ff'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('32-byte key (illustration)', 562, 470);
   g.fillStyle = '#e6e6ff'; g.font = '20px "IBM Plex Mono", monospace';
   for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
@@ -3300,7 +3300,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
     lines = [
       [`Welcome to ${p.name}.`, 'Follow the bits from the cryostat to the key.', 'quantum'],
       ['Each station has details.', 'Walk up to one and press E, or tap it.', null],
-      ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.', 'shqkd'],
+      ['Turn around for QES-KX.', 'The hybrid key exchange stands behind you.', 'qes-kx'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
@@ -3309,7 +3309,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['pi', 'Raspberry Pi', 'Runs the Q-RNG API and the OIDC identity provider.'],
       ['enclave', 'Apple Secure Enclave', 'On iPhone, keys stay bound to the Secure Enclave.'],
       ['key', 'QES-256', 'A 32-byte key, linked to an IBM Quantum job ID.'],
-      ['shqkd', 'SHQKD', 'X25519 and ML-KEM-768, combined with HKDF.'],
+      ['qes-kx', 'QES-KX', 'X25519 and ML-KEM-768, combined with HKDF.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
     lines = [
@@ -3784,7 +3784,7 @@ promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (wo
 /* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
    cryostat flow through Cloudflare and the Raspberry Pi to the Secure Enclave
-   and end in a 32-byte key; the SHQKD exchange stands behind the entrance.
+   and end in a 32-byte key; the QES-KX exchange stands behind the entrance.
    Built when you step in, freed when you leave. */
 let world = null;
 let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
@@ -3795,7 +3795,7 @@ const PLATFORM_STATIONS = [
   { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
   { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ HANDHELD keeps keys bound to the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID).' },
   { id: 'key', title: 'QES-256 key', text: 'Every product surface produces 32-byte QES-256 keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
-  { id: 'shqkd', title: 'SHQKD', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
+  { id: 'qes-kx', title: 'QES-KX', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
 
 function textSprite(lines, w, h, scaleW) {
@@ -4043,8 +4043,8 @@ function buildPlatformWorld() {
     }
   });
 
-  // 6. SHQKD, behind the entrance: two devices and a relay that only sees public values
-  station('shqkd', 180, inner => {
+  // 6. QES-KX, behind the entrance: two devices and a relay that only sees public values
+  station('qes-kx', 180, inner => {
     const X = 2.2;
     const dev = (x, label) => {
       const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.35, 32), pedMat); ped.position.set(x, 0.175, 0); inner.add(ped);

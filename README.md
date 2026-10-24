@@ -76,7 +76,7 @@
       <strong>OIDC</strong><br>
       Biometric identity provider. RFC 8628 device flow with Face ID approval via STEADYWATCH™ Handheld.
       <br><br>
-      <strong>SHQKD</strong><br>
+      <strong>QES-KX</strong><br>
       Zero-trust hybrid key exchange — X25519 + ML-KEM-768 (NIST FIPS 203), combined via HKDF. The relay server never sees the derived key.
       <br><br>
       <strong>QCAP STACK</strong><br>
