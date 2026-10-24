@@ -7,7 +7,7 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, STEADYWATCH™ HANDHELD, the STEADYWATCH™ PLATFORM and its VAULT™, VIPER™ and LOTUS™ entropy pools and STEADYWATCH™ OIDC.">
+<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD harmonic tuner, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda sign-in approval, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
 <meta property="og:description" content="Five floors around an atrium, from a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://hall.steady-watch.com/assets/gallery-preview.png">
@@ -470,7 +470,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PROJECTS = [
   {
     id: 'kaizendoku', name: 'KaizenDoku', tagline: 'Sudoku. With Friends.', wing: 'Apps',
-    desc: 'Sudoku for solo play, head-to-head with a friend, or Kudosu: spot the duplicate before time runs out. Co-op matches run inside iMessage, and time-attack mode tracks your solo best times. Results post to Game Center leaderboards and achievements, and mindful minutes log to Apple Health. Multiplayer and time-attack boards are generated from IBM Quantum hardware entropy through the STEADYWATCH™ PLATFORM (QES-256).',
+    desc: 'Sudoku for solo play, head-to-head with a friend, or Kudosu: spot the duplicate before time runs out. Co-op matches run inside iMessage, and time-attack mode tracks your solo best times. Results post to Game Center leaderboards and achievements, and mindful minutes log to Apple Health. Multiplayer and time-attack boards are generated from IBM Quantum hardware entropy through the Quantum V^ Platform (QES-256).',
     modules: [['CO-OP','Matches played inside iMessage'],['TIME ATTACK','Solo best times'],['KUDOSU','Spot the duplicate before time runs out'],['GAME CENTER','Leaderboards and achievements'],['HEALTH','Mindful minutes logged']],
     stack: 'iMessage · Game Center · Apple Health · QES-256 boards',
     links: [['App Store','https://apps.apple.com/us/app/kaizendoku/id6748037311'],['kaizendoku.com','https://kaizendoku.com']],
@@ -483,22 +483,22 @@ const PROJECTS = [
     floor: 'l2', pos: [3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
-    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Atomic Clock Multi-Tool', wing: 'Apps',
-    desc: 'Five instruments in one app, from an NTP-synced atomic clock to sign-ins approved with your biometric key.',
-    modules: [['ATOMIC','Clock synced to atomic time standards via NTP'],['HARMONIC','Real-time frequency spectrum and tuner'],['QUANTUM','Face ID-gated key generator bound to the Secure Enclave, seeded from platform quantum entropy'],['VAULT','Quantum-seeded credential storage'],['APPROVE','Biometric OIDC authorization: match the number, approve with Face ID or Touch ID']],
-    stack: 'NTP · Face ID · Secure Enclave · OIDC',
+    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Harmonic Tuner', wing: 'Apps',
+    desc: 'A live harmonic tuner and steadiness practice tool for iPhone and Apple Watch. Play or sing, and every harmonic of your note becomes a wave band that stands still when you\'re in tune.',
+    modules: [['HARMONIC BANDS','Each harmonic of your note is a wave band: the bands drift while you\'re off pitch and stand still in tune'],['ORB NEEDLE','How far flat or sharp you are'],['STEADINESS RING','How steadily you hold the note over a 1, 3 or 8 second window, with a counter that times the hold'],['CHORDS','The notes sounding, the chord they make and the song\'s key'],['A4 TUNING','Set A4 from 415 to 446 Hz, with the Digital Crown on Apple Watch']],
+    stack: 'iPhone · Apple Watch · Swift · SwiftUI',
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
     theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
-    shots: [1, 2, 3, 4, 5, 6, 7].map(n => `assets/shots/hh-${n}.jpg`),
+    shots: [4, 5, 3].map(n => `assets/shots/hh-${n}.jpg`),
     floor: 'l2', pos: [-3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
-    id: 'platform', name: 'STEADYWATCH™ PLATFORM', tagline: 'Entropy as a Service', wing: 'Platform',
-    desc: 'Quantum-derived randomness and security as a service. Every product produces 32-byte QES-256 keys, each tied to a verifiable IBM Quantum job ID.',
-    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['OIDC','Biometric identity provider (RFC 8628 device flow), approved with a biometric key (Face ID or Touch ID) in STEADYWATCH™ HANDHELD'],['SHQKD','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
-    stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · RFC 8628 · Cloudflare · Raspberry Pi',
-    links: [['steady-watch.com','https://steady-watch.com'],['Q-RNG demo','https://steady-watch.com/qrng.html'],['OIDC demo','https://steady-watch.com/oidc.html'],['Live status','https://steady-watch.com/status.html']],
-    theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/steadywatch-icon.png',
+    id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
+    desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.',
+    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · Cloudflare · Raspberry Pi',
+    links: [['Quantum V^','https://quantum-v.nathaniel-a-vazquez.workers.dev/'],['Q-RNG demo','https://quantum-v.nathaniel-a-vazquez.workers.dev/qrng'],['QES-256','https://quantum-v.nathaniel-a-vazquez.workers.dev/qes-rng'],['Live status','https://quantum-v.nathaniel-a-vazquez.workers.dev/status']],
+    theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/quantumv-logo.png',
     floor: 'l1', stand: true, pos: [0, 3.4, -0.2], rotY: 0, size: [6.4, 4.4]   // freestanding, front and centre in the lobby
   }
 ];
@@ -511,14 +511,14 @@ const ABOUT = {
   desc: 'Software engineer with a foundation in semiconductor manufacturing, enterprise operations and hands-on education, now building at the intersection of quantum computing and applied cryptography. Comfortable across the full stack, from low-level hardware and sensor data to backend APIs and polished mobile UI.',
   sectionTitle: 'Experience',
   modules: [
-    ['Quantum V^ LLC', 'Founder, November 2025 to present. Building the STEADYWATCH™ platform, its apps and the entropy pools.'],
+    ['Quantum V^ LLC', 'Founder, November 2025 to present. Building the Quantum V^ Platform, its apps and the entropy pools.'],
     ['Persevere NOW', 'Senior Software Developer & Teaching Assistant, 2022 to 2025. Taught cohorts of 20 students.'],
     ['Express Scripts', 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team, 2012 to 2018. Led a team of about 20.'],
     ['Freescale Semiconductor', 'Process Engineer, Test Wafer Distribution, 2005 to 2011. Semiconductor fabrication.']
   ],
   stack: 'Swift · SwiftUI · Python · JavaScript · React Native · Flask · Node.js · Qiskit · CryptoKit',
   roles: [
-    { co: 'Quantum V^ LLC', title: 'Founder', years: 'NOV 2025 – NOW', line: 'Building the STEADYWATCH™ platform, its apps and the VAULT™, VIPER™ and LOTUS™ entropy pools.' },
+    { co: 'Quantum V^ LLC', title: 'Founder', years: 'NOV 2025 – NOW', line: 'Building the Quantum V^ Platform, its apps and the VAULT™, VIPER™ and LOTUS™ entropy pools.' },
     { co: 'Persevere NOW', title: 'Senior Software Developer & Teaching Assistant', years: '2022 – 2025', line: 'Taught software engineering to cohorts of 20 students.' },
     { co: 'Express Scripts', title: 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team', years: '2012 – 2018', line: 'Led a team of about 20 licensed professionals.' },
     { co: 'Freescale Semiconductor', title: 'Process Engineer, Test Wafer Distribution', years: '2005 – 2011', line: 'Microprocessor fabrication: CVD, diffusion, EPI and photolithography.' }],
@@ -526,13 +526,13 @@ const ABOUT = {
     ['Languages', 'Swift · SwiftUI · Python · JavaScript · HTML/CSS'],
     ['Mobile', 'iOS · watchOS · React Native · Expo · CoreMotion · HealthKit · WatchConnectivity · LocalAuthentication · CryptoKit · Secure Enclave'],
     ['Backend', 'Python · Flask · Node.js · Express · Socket.IO · REST API design · JSON · SQLite'],
-    ['Quantum computing', 'Qiskit · IBM Quantum hardware · AerSimulator · GHZ circuits · QKD protocols · Mermin inequality'],
+    ['Quantum computing', 'Qiskit · IBM Quantum hardware · AerSimulator · GHZ circuits · QES Key Exchange · Mermin inequality'],
     ['Cryptography', 'P256 ECDSA · SHA-256 · Post-quantum encryption · Secure Enclave key management · Biometric key derivation'],
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.2', logo: 'assets/kaizendoku-icon.png' }],
-  contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · kaizendoku.com']],
+  contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · recluda.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
@@ -570,7 +570,7 @@ function drawPlatform(c, img) {
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
   // stars
   for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(230,230,255,${(i * 37 % 100) / 140})`; g.fillRect((i * 263) % W, (i * 151) % H, 2, 2); }
-  // the STEADYWATCH icon, hung inside the painting
+  // the Quantum V^ logo, hung inside the painting
   if (img) {
     g.save(); rr(g, 50, 144, 470, 470, 40); g.shadowColor = '#000'; g.shadowBlur = 40; g.fillStyle = '#000'; g.fill(); g.restore();
     g.save(); rr(g, 50, 144, 470, 470, 40); g.clip(); g.drawImage(img, 50, 144, 470, 470); g.restore();
@@ -579,11 +579,11 @@ function drawPlatform(c, img) {
   // text block
   g.textAlign = 'left'; g.fillStyle = '#e6e6ff';
   // shrink the title until it fits the right column (560 → 984, inside the frame)
-  let ts = 50; do { g.font = `${ts}px "Young Serif", Georgia, serif`; } while (g.measureText('STEADYWATCH™').width > 424 && --ts > 20);
-  g.fillText('STEADYWATCH™', 560, 150);
+  let ts = 50; do { g.font = `${ts}px "Young Serif", Georgia, serif`; } while (g.measureText('Quantum V^').width > 424 && --ts > 20);
+  g.fillText('Quantum V^', 560, 150);
   g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('PLATFORM · EaaS', 562, 194);
   g.font = '600 20px "IBM Plex Mono", monospace'; g.fillStyle = '#e6e6ff';
-  ['Q-RNG', 'OIDC', 'SHQKD', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
+  ['Q-RNG', 'QES-256', 'QES-KX', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
   g.fillStyle = '#8ea2ff'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('32-byte key (illustration)', 562, 470);
   g.fillStyle = '#e6e6ff'; g.font = '20px "IBM Plex Mono", monospace';
   for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
@@ -667,26 +667,26 @@ function poolArtCanvas(p, name, color, color2, size = 1024) {
 }
 function oidcArtCanvas(size = 1024) {
   const c = mk(size, size), g = c.getContext('2d');
-  const bg = g.createLinearGradient(0, 0, 0, size); bg.addColorStop(0, '#0b1426'); bg.addColorStop(1, '#05070b');
+  const bg = g.createLinearGradient(0, 0, 0, size); bg.addColorStop(0, '#062026'); bg.addColorStop(1, '#05070b');
   g.fillStyle = bg; g.fillRect(0, 0, size, size);
   const k = size / 1024;
   g.fillStyle = '#0d0f14'; rr(g, 362 * k, 130 * k, 300 * k, 560 * k, 46 * k); g.fill(); g.strokeStyle = '#3a4357'; g.lineWidth = 6 * k; rr(g, 362 * k, 130 * k, 300 * k, 560 * k, 46 * k); g.stroke();
-  g.strokeStyle = '#8ea2ff'; g.lineWidth = 10 * k; g.lineCap = 'round';
+  g.strokeStyle = '#2dd4bf'; g.lineWidth = 10 * k; g.lineCap = 'round';
   const fx = 512 * k, fy = 300 * k, fs = 70 * k;
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.beginPath(); g.moveTo(fx + sx * fs, fy + sy * (fs - 30 * k)); g.lineTo(fx + sx * fs, fy + sy * fs); g.lineTo(fx + sx * (fs - 30 * k), fy + sy * fs); g.stroke(); });
   g.lineWidth = 7 * k; g.beginPath(); g.arc(fx, fy + 14 * k, 28 * k, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
   g.fillStyle = '#e6e6ff'; g.textAlign = 'center'; g.font = `${34 * k}px "Young Serif", Georgia, serif`; g.fillText('Approve sign-in?', fx, 450 * k);
-  g.fillStyle = '#8ea2ff'; rr(g, 412 * k, 560 * k, 200 * k, 64 * k, 32 * k); g.fill();
+  g.fillStyle = '#2dd4bf'; rr(g, 412 * k, 560 * k, 200 * k, 64 * k, 32 * k); g.fill();
   g.fillStyle = '#05070b'; g.font = `600 ${26 * k}px "IBM Plex Mono", monospace`; g.fillText('Approve', fx, 601 * k);
-  g.fillStyle = '#f1e6cf'; g.font = `${78 * k}px "Young Serif", Georgia, serif`; g.fillText('OIDC', fx, 860 * k);
-  g.fillStyle = '#8ea2ff'; g.font = `600 ${30 * k}px "IBM Plex Mono", monospace`; g.fillText('BIOMETRIC IDENTITY · RFC 8628', fx, 920 * k);
+  g.fillStyle = '#f1e6cf'; g.font = `${78 * k}px "Young Serif", Georgia, serif`; g.fillText('Recluda', fx, 860 * k);
+  g.fillStyle = '#2dd4bf'; g.font = `600 ${30 * k}px "IBM Plex Mono", monospace`; g.fillText('SIGN-IN APPROVAL · RFC 8628', fx, 920 * k);
   return c;
 }
 const POOLS = [
-  { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game.html' },
-  { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336.html' },
-  { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432.html' }];
-// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, STEADYWATCH™ OIDC on the far wall
+  { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game' },
+  { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336' },
+  { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432' }];
+// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, Recluda on the far wall
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
     id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
@@ -694,14 +694,14 @@ const WING_PROJECTS = [
     desc: `A quantum-harvested entropy pool. Its ${24 * (P.prime + 1)} nodes are exactly the Hurwitz quaternions of norm ${P.prime}: one shell of the F4 lattice, the Hurwitz order.`,
     modules: poolModules(P.prime),
     stack: 'IBM Quantum entropy · Hurwitz quaternions · F4 lattice',
-    links: [[`Open ${P.name}`, `https://steady-watch.com/${P.page}`], ['steady-watch.com', 'https://steady-watch.com']],
-    site: { url: `https://steady-watch.com/${P.page}`, label: 'steady-watch.com', addr: `https://steady-watch.com/${P.page}`, shot: `assets/site-${P.id}.jpg`,
-      heading: 'Live pool', cardText: 'The screen on your right opens the live pool on steady-watch.com.' },
+    links: [[`Open ${P.name}`, `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`], ['Quantum V^', 'https://quantum-v.nathaniel-a-vazquez.workers.dev/']],
+    site: { url: `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`, label: 'Quantum V^', addr: `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`, shot: `assets/site-${P.id}.jpg`,
+      heading: 'Live pool', cardText: 'The screen on your right opens the live pool on the Quantum V^ site.' },
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
-  { id: 'oidc', name: 'STEADYWATCH™ OIDC', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Biometric identity provider',
-    desc: 'A self-hosted biometric identity provider and Cisco DUO replacement. Sign-ins use the RFC 8628 device flow and are approved in STEADYWATCH™ HANDHELD with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
+  { id: 'oidc', name: 'Recluda', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Sign-in approval with your biometric key',
+    desc: 'A self-hosted biometric identity provider. Sign-ins use the RFC 8628 device flow and are approved in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
       ['BIOMETRIC KEY', 'A Secure Enclave signature unlocked by Face ID or Touch ID, with number matching and QR approval.'],
@@ -709,10 +709,10 @@ const WING_PROJECTS = [
       ['MULTI-TENANT', 'Full isolation per organization, with unlimited tenants in one deployment.'],
       ['SELF-HOSTED', 'Docker Compose, 7 containers, on a Raspberry Pi 5 (8GB) or any Linux VM.']],
     stack: 'RFC 8628 · OpenID Connect · JWT · RADIUS · Docker · Raspberry Pi',
-    links: [['Try the live demo', 'https://steady-watch.com/oidc.html'], ['steady-watch.com', 'https://steady-watch.com']],
-    site: { url: 'https://steady-watch.com/oidc.html', label: 'steady-watch.com', addr: 'https://steady-watch.com/oidc.html', shot: 'assets/site-oidc.jpg',
-      heading: 'Live demo', cardText: 'The screen on your right opens the live device-flow demo on steady-watch.com.' },
-    theme: { bg: '#0a0f24', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: null,
+    links: [['recluda.com', 'https://recluda.com']],
+    site: { url: 'https://recluda.com', label: 'recluda.com', addr: 'https://recluda.com', shot: 'assets/site-recluda.jpg',
+      heading: 'recluda.com', cardText: 'The screen on your right opens recluda.com.' },
+    theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: null,
     floor: 'l3', pos: [0, 3.1, -10.92], rotY: 0, size: [3.3, 3.3] }];
 for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
 DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
@@ -820,7 +820,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD, both on the App Store.'] },
-  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and STEADYWATCH™ OIDC.'] },
+  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and Recluda.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 // L4's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
@@ -828,7 +828,7 @@ const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 const OFFICE_DOOR_X = -5.13;
 
 /* ---------- Live quantum entropy ----------
-   Real random bytes from the STEADYWATCH™ PLATFORM's QRNG API (api.steady-watch.com), drawn from IBM
+   Real random bytes from the Quantum V^ Platform's QRNG API (api.steady-watch.com), drawn from IBM
    Quantum hardware. One small shared pool, refilled 128 bytes at a time only when it runs low: at most
    every 20 s, and only while the page is visible. If the API can't be reached, bits quietly fall back to
    the browser's crypto randomness and qrngLive() turns false, so nothing claims to be live when it isn't. */
@@ -884,7 +884,7 @@ const colMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6,
 // A pool's shell as a 3D object: every node a glowing point, nearest neighbours joined, turning slowly in 4D
 /* UnifiedQubitStyling: Perlin noise + ECHO bilateral shadowing + Tesla 3-6-9 harmonics.
    Copied unchanged from STEADYWATCH-QUANTUM-DEMO/js/unified-qubit-styling.js, the same styling
-   VAULT™, VIPER™ and LOTUS™ use on steady-watch.com. */
+   VAULT™, VIPER™ and LOTUS™ use on the Quantum V^ site. */
 class UnifiedQubitStyling {
     constructor() {
         this.noiseState = {
@@ -1100,12 +1100,12 @@ function oidcSculpture() {
     pi.add(placed(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.2), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.8, roughness: 0.3 })), -0.1, 0.065, 0));
     const piLed = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0x3dff7a })); piLed.position.set(0.28, 0.07, 0.18); pi.add(piLed);
     const piTag = textSprite([['OIDC SERVER · RASPBERRY PI', '600 30px "IBM Plex Mono", monospace', '#c9d2e3']], 768, 70, 1.6); piTag.position.set(0, 0.32, 0.2); pi.add(piTag);
-    // the phone with STEADYWATCH™ HANDHELD
+    // the phone with Recluda
     const ph = new THREE.Group(); ph.position.set(1.6, 1.0, 0); g.add(ph);
     ph.add(placed(new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.05), dark), 0, 0.55, 0));
     const phTex = screenTex((x, w, h) => { const a = oidcArtCanvas(512); x.fillStyle = '#05070b'; x.fillRect(0, 0, w, h); x.drawImage(a, 0, 0, 512, 380, 0, 0, w, h * 0.74); }, 256, 512);
     const phScr = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.92), new THREE.MeshBasicMaterial({ map: phTex })); phScr.position.set(0, 0.55, 0.027); ph.add(phScr);
-    const faceM = new THREE.MeshBasicMaterial({ color: 0x8ea2ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+    const faceM = new THREE.MeshBasicMaterial({ color: 0x2dd4bf, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
     const face = new THREE.Mesh(new THREE.RingGeometry(0.11, 0.135, 32), faceM); face.position.set(0, 0.78, 0.03); ph.add(face);
     // the token / request travelling between them, and a caption for each step
     const pkt = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: 0xc8d4ff })); g.add(pkt);
@@ -1113,7 +1113,7 @@ function oidcSculpture() {
     const at = { lap: new THREE.Vector3(-1.6, 1.55, 0), pi: new THREE.Vector3(0, 1.25, 0), ph: new THREE.Vector3(1.6, 1.6, 0) };
     const STEPS = [
       ['1 · The device asks the OIDC server for a code', 'lap', 'pi'],
-      ['2 · Scan the QR or enter the code in STEADYWATCH™ HANDHELD', 'ph', 'pi'],
+      ['2 · Scan the QR or enter the code in Recluda', 'ph', 'pi'],
       ['3 · Match the number and approve with your biometric key', 'ph', 'ph'],
       ['4 · The device polls and receives its JWT', 'pi', 'lap']];
     const capC = mk(1536, 90), cg = capC.getContext('2d'), capTex = new THREE.CanvasTexture(capC);
@@ -1307,7 +1307,7 @@ const liftCab = new THREE.Group(); liftCab.position.set(LIFT.x, 0, LIFT.z); scen
 }
 
 /* ---------- L1 · Lobby ----------
-   You arrive through the glass entrance doors. Straight ahead stands the STEADYWATCH™ PLATFORM
+   You arrive through the glass entrance doors. Straight ahead stands the Quantum V^ Platform
    display, with the "Quantum V^" banner hanging above it and the atrium opening up behind. */
 const L1 = FLOORS[FI.l1];
 const COLS_Z = [8, 2.5];
@@ -1409,8 +1409,8 @@ for (const HERE of FLOORS) {
   p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
   p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('QUANTUM HALL', 56, 92);
   p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Floor guide', 56, 172);
-  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · STEADYWATCH™ OIDC'],
-    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'STEADYWATCH™ PLATFORM'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
+  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · Recluda'],
+    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
   rows.forEach(([tag, name, sub], i) => {
     const y = 270 + i * 150, here = tag === HERE.tag;
     p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
@@ -1567,7 +1567,7 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
 [
   { eyebrow: '1 · COLD', title: 'Colder than deep space', body: 'A dilution refrigerator cools a quantum chip to about 10 mK, a hundredth of a degree above absolute zero, so its qubits can hold quantum states.' },
   { eyebrow: '2 · MEASURE', title: 'Random by physics', body: 'Qubits on IBM Quantum hardware are measured, and each outcome, 0 or 1, is random. Each batch of bits is tied to a verifiable IBM Quantum job ID.' },
-  { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'The STEADYWATCH™ PLATFORM turns those bits into 32-byte QES-256 keys, each linked back to its IBM Quantum job ID.' }
+  { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'The Quantum V^ Platform turns those bits into 32-byte QES-256 keys, each linked back to its IBM Quantum job ID.' }
 ].forEach((d, i) => infoPanel(B1.g, d, -4.4 + i * 4.4, 2.5, B1.z0 + 0.06, 0));
 /* ---------- The data wall ----------
    Six screens on the west wall, behind the cryostat as you step out of the lift: what the live
@@ -1696,7 +1696,7 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
     });
     p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Pool of 512 bytes, refilled at 20%. Falls back to Math.random() if offline.', 44, 526);
     small(p, coarseUI ? 'TAP TO OPEN THE LIBRARY' : 'CLICK TO OPEN THE LIBRARY', 44, 586, '#5ff0ff');
-  }, 'https://steady-watch.com/qes-rng');
+  }, 'https://quantum-v.nathaniel-a-vazquez.workers.dev/qes-rng');
   let lastLive = -1, lastJob = 0, attSeen = null;
   buildingUpdates.push((dt, t) => {
     if (!B1.g.visible) return;
@@ -1736,7 +1736,7 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
         a ? `FINGERPRINT ${String(a.master_fingerprint).slice(0, 16)}… · NOT REVERSIBLE TO KEY MATERIAL` : 'FINGERPRINT · SHA-256 OF THE POOL'],
       ['HKDF stream', 'Output is expanded from the master pool with HKDF-Expand, keyed by a counter that only counts up, so it never repeats, even across restarts.',
         QRNG.meta ? `COUNTER ${QRNG.meta.counter} · LIVE` : 'COUNTER · MONOTONIC'],
-      ['Served by the API', 'The STEADYWATCH™ QRNG service hands it out as bytes, numbers or UUIDs, with an attestation of where the pool came from.',
+      ['Served by the API', 'The Quantum V^ QRNG service hands it out as bytes, numbers or UUIDs, with an attestation of where the pool came from.',
         '/qrng/bytes · /int · /float · /uuid · /batch · /attestation'],
       ['Client pools', 'Each app keeps its own pool and drains it instantly, refilling in the background. QES-256 holds 512 bytes, refills at 20% and falls back to Math.random() offline.',
         'THIS PAGE: 128-BYTE TOP-UPS · SEE THE RACK →']];
@@ -1883,11 +1883,11 @@ function buildAppKiosks() {
 }
 
 /* ---------- L3 · Platform Wing ----------
-   VAULT™, VIPER™, LOTUS™ and STEADYWATCH™ OIDC around the walls; all three pools nested in
+   VAULT™, VIPER™, LOTUS™ and Recluda around the walls; all three pools nested in
    the atrium, floating over the open floors below, each turning in 4D, where the entropy
    column from B1 ends. A wall panel gives the exact math behind the three shells. */
 const L3 = FLOORS[FI.l3];
-floorSign(L3.g, 'STEADYWATCH™ PLATFORM', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Math.PI);
+floorSign(L3.g, 'Quantum V^ Platform', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Math.PI);
 {
   const nest = POOLS.map((P, i) => { const o = makeShellObject(P.prime, P.color, P.color2, 0.75 + i * 0.5, 0.07 + i * 0.012, i === 0); o.group.position.set(ATRIUM.x, L3.y + 3.0, ATRIUM.z); scene.add(o.group); return o; });   // always drawn: you see it at the top of the column from any floor
   const nl = stationLabel('THREE ENTROPY POOLS', '144 · 336 · 432'); nl.scale.multiplyScalar(0.62); nl.position.set(ATRIUM.x, 5.3, ATRIUM.z); L3.g.add(nl);
@@ -1908,7 +1908,7 @@ floorSign(L3.g, 'STEADYWATCH™ PLATFORM', 'Platform Wing', 0, 6.3, L3.z1 - 0.06
 const L4 = FLOORS[FI.l4];
 floorSign(L4.g, 'LEVEL 4', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
 {
-  // the skylight: the Hurwitz dot field from the steady-watch.com header, on the ceiling over the atrium.
+  // the skylight: the Hurwitz dot field from the old steady-watch.com header, on the ceiling over the atrium.
   // A centre dot and 336 dots (VIPER™'s count) in a sunflower spiral, periwinkle at the centre to violet at
   // the rim; each pulses on a 2 s cycle, 0.04 s after the one before, so a wave of light ripples outward.
   // The glow fades toward the rim and is brighter on one side, as in the header.
@@ -2073,8 +2073,8 @@ void main() {
 }
 
 /* ---------- Light paths ----------
-   Glowing walkways on every floor: on L1 the main runner from the entrance to the STEADYWATCH™
-   PLATFORM display and a branch to the lift; on every other floor, out of the lift to each display.
+   Glowing walkways on every floor: on L1 the main runner from the entrance to the Quantum V^
+   Platform display and a branch to the lift; on every other floor, out of the lift to each display.
    Photons flow along the floor of every path toward where it leads. */
 const PATH_W = { main: 3.0, branch: 1.1 };
 const LIGHT_PATHS = (() => {
@@ -3056,7 +3056,7 @@ function buildReception() {
     // 3 specifications
     section('03', 'Specifications', RX2, 350, RW2);
     [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
-     ['Library', '~1,000 steady-watch.com research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
+     ['Library', '~1,000 Quantum V^ research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
       const y = 420 + i * 58;
       g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
       g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
@@ -3090,7 +3090,7 @@ function buildReception() {
     [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
      ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
      ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
-     ['RETRIEVAL', 'RAG: ~1,000 steady-watch.com research passages in Vectorize; the closest join each question.'],
+     ['RETRIEVAL', 'RAG: ~1,000 Quantum V^ research passages in Vectorize; the closest join each question.'],
      ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
      ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
      ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
@@ -3173,7 +3173,7 @@ function updateKiosk(dt, t) {
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
 const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about'];
-const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'STEADYWATCH™ PLATFORM', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'STEADYWATCH™ OIDC', about: "the builder's office" };
+const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'Quantum V^ Platform', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'Recluda', about: "the builder's office" };
 const visit = (() => {
   let d = { seen: [], visits: 0, last: 0 };
   try { const r = JSON.parse(localStorage.getItem(VISIT_KEY)); if (r && Array.isArray(r.seen)) d = Object.assign(d, r); } catch (e) {}
@@ -3205,7 +3205,7 @@ function buildMascot() {
   // the lines play on their own while you stand near her; pressing E (or tapping her) always leads to About
   vee.tour = [
     ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Every display is a product, and every floor is a section.', null],
-    ['Straight ahead: STEADYWATCH™ PLATFORM.', 'Walk up to a display and step inside.', plat ? plat.center : null],
+    ['Straight ahead: the Quantum V^ Platform.', 'Walk up to a display and step inside.', plat ? plat.center : null],
     ['The glass lift goes everywhere.', 'Apps on L2, the Platform Wing on L3, the Cryostat Lab below.', liftAt],
     ['Want a guided tour?', "Press T. The builder's office is on L4.", null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
@@ -3223,7 +3223,7 @@ function buildMascot() {
     const F = FLOORS[i], at = (x, y, z) => new THREE.Vector3(x, F.y + y, z), lines = [];
     if (i === FI.l1) lines.push(['Welcome to the Quantum Hall.', 'Every display is a product, and every floor is a section.', null],
       ['Behind you: the double slit.', "Each photon lands at a random spot. That's where it all starts.", at(0, SLIT.y, SLIT.z)],
-      ['Straight ahead: STEADYWATCH™ PLATFORM.', 'Walk up to a display and step inside.', plat ? plat.center : null]);
+      ['Straight ahead: the Quantum V^ Platform.', 'Walk up to a display and step inside.', plat ? plat.center : null]);
     else if (F.hello) lines.push([...F.hello, i === FI.b1 ? CRYO_STOP.center : null]);
     if (i === FI.l3) lines.push(['That column of light comes from B1.', 'It ends here, in the three entropy pools.', at(ATRIUM.x, 3, ATRIUM.z)]);
     if (i === FI.l2) lines.push(['Tap a phone to open the App Store.', 'Each one shows its app\'s real screenshots.', null]);
@@ -3300,7 +3300,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
     lines = [
       [`Welcome to ${p.name}.`, 'Follow the bits from the cryostat to the key.', 'quantum'],
       ['Each station has details.', 'Walk up to one and press E, or tap it.', null],
-      ['Turn around for SHQKD.', 'The hybrid key exchange stands behind you.', 'shqkd'],
+      ['Turn around for QES-KX.', 'The hybrid key exchange stands behind you.', 'qes-kx'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
@@ -3309,7 +3309,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['pi', 'Raspberry Pi', 'Runs the Q-RNG API and the OIDC identity provider.'],
       ['enclave', 'Apple Secure Enclave', 'On iPhone, keys stay bound to the Secure Enclave.'],
       ['key', 'QES-256', 'A 32-byte key, linked to an IBM Quantum job ID.'],
-      ['shqkd', 'SHQKD', 'X25519 and ML-KEM-768, combined with HKDF.'],
+      ['qes-kx', 'QES-KX', 'X25519 and ML-KEM-768, combined with HKDF.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
     lines = [
@@ -3336,13 +3336,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
     stops = [
       ['core', `The ${p.name} shell`, `${24 * (p.prime + 1)} nodes, joined to their nearest neighbours, turning in 4D.`],
       ['hero', 'The numbers', `Prime ${p.prime}, ${24 * (p.prime + 1)} nodes, and their integer and half-integer families.`],
-      ['site', 'The live pool', 'Press E to open it on steady-watch.com.'],
+      ['site', 'The live pool', 'Press E to open it on the Quantum V^ site.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
   } else if (p.kind === 'oidc') {
     lines = [
       [`Welcome to ${p.name}.`, 'Watch a sign-in play out in front of you.', 'core'],
       ['Device flow, biometric key, RADIUS and tenants.', 'The big screens cover each one.', 'hero'],
-      ['The live demo is on your right.', 'Walk up and press E to try it.', 'site'],
+      ['recluda.com is on your right.', 'Walk up and press E to open it.', 'site'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
@@ -3781,10 +3781,10 @@ function showIndicator(target, verb, name, lift) {
 }
 promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near); } });
 
-/* ---------- Platform world (inside the STEADYWATCH Platform painting) ----------
+/* ---------- Platform world (inside the Quantum V^ Platform painting) ----------
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
    cryostat flow through Cloudflare and the Raspberry Pi to the Secure Enclave
-   and end in a 32-byte key; the SHQKD exchange stands behind the entrance.
+   and end in a 32-byte key; the QES-KX exchange stands behind the entrance.
    Built when you step in, freed when you leave. */
 let world = null;
 let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
@@ -3793,9 +3793,9 @@ const PLATFORM_STATIONS = [
   { id: 'quantum', title: 'IBM Quantum', text: 'Random bits come from measuring qubits on IBM Quantum hardware. Each batch is tied to a verifiable IBM Quantum job ID.' },
   { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform, serving the API and the live demos.' },
   { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
-  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, STEADYWATCH™ HANDHELD keeps keys bound to the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID).' },
-  { id: 'key', title: 'QES-256 key', text: 'Every product surface produces 32-byte QES-256 keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
-  { id: 'shqkd', title: 'SHQKD', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
+  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, iPad or Mac, Recluda keeps its approval key in the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID).' },
+  { id: 'key', title: 'QES-256 key', text: 'QES-256 turns the entropy into 32-byte keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
+  { id: 'qes-kx', title: 'QES-KX', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
 
 function textSprite(lines, w, h, scaleW) {
@@ -4043,8 +4043,8 @@ function buildPlatformWorld() {
     }
   });
 
-  // 6. SHQKD, behind the entrance: two devices and a relay that only sees public values
-  station('shqkd', 180, inner => {
+  // 6. QES-KX, behind the entrance: two devices and a relay that only sees public values
+  station('qes-kx', 180, inner => {
     const X = 2.2;
     const dev = (x, label) => {
       const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.35, 32), pedMat); ped.position.set(x, 0.175, 0); inner.add(ped);
@@ -4723,7 +4723,7 @@ const VEE_API = 'https://vee-worker.nathaniel-a-vazquez.workers.dev/ask';   // t
 const askEl = document.getElementById('askVee'), askLive = askEl.querySelector('.ask-live'), askInput = document.getElementById('askInput'), askForm = askEl.querySelector('.ask-form');
 const askState = { history: [], busy: false };
 const askChips = askEl.querySelector('.ask-chips');
-['What is VIPER™?', 'Who built this?', 'What is the double slit?', 'What does STEADYWATCH™ PLATFORM do?', 'What is KaizenDoku?', 'How do I get in touch?'].forEach(q => {
+['What is VIPER™?', 'Who built this?', 'What is the double slit?', 'What does the Quantum V^ Platform do?', 'What is KaizenDoku?', 'How do I get in touch?'].forEach(q => {
   const b = document.createElement('button'); b.type = 'button'; b.textContent = q; b.addEventListener('click', () => askSend(q)); askChips.appendChild(b);
 });
 // with the on-screen keyboard up, keep the field just above it (the visual viewport shrinks to what's left)
@@ -5255,11 +5255,13 @@ const fontsReady = document.fonts && document.fonts.ready ? Promise.race([docume
 const LOGOS = {};
 const loadLogo = f => new Promise(res => { const i = new Image(); i.onload = () => { LOGOS[f] = i; res(); }; i.onerror = () => res(); i.src = f; });
 Promise.all([
-  fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'),
+  fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'), loadLogo('assets/quantumv-logo.png'), loadLogo('assets/recluda-icon.png'),
   document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
-  for (const P of WING_PROJECTS) { const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
+  for (const P of WING_PROJECTS) {
+    if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
+    const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
   buildPaintings(); buildKiosk(); buildReception(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
