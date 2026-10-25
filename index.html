@@ -7,7 +7,7 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD harmonic tuner, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda sign-in approval, and Vee, the holographic guide.">
+<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD harmonic tuner, Recluda (coming soon), the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda VPN, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
 <meta property="og:description" content="Five floors around an atrium, from a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://hall.steady-watch.com/assets/gallery-preview.png">
@@ -493,6 +493,18 @@ const PROJECTS = [
     floor: 'l2', pos: [-3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
+    // a teaser: Recluda isn't on the App Store yet, so no phone kiosk; its world has recluda.com and its screens
+    id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Apps', teaser: true,
+    desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data, no per-seat fee. Coming soon to the App Store.',
+    modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone: no code to type, no QR to scan'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
+    stack: 'Secure Enclave · Face ID · OpenID Connect · RADIUS · APNs',
+    links: [['recluda.com','https://recluda.com']],
+    theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: 'assets/recluda-icon.png',
+    site: { url: 'https://recluda.com', label: 'recluda.com', shot: 'assets/site-recluda.jpg' },
+    shots: [1, 2, 3, 4, 5, 6].map(n => `assets/shots/rc-${n}.jpg`),
+    floor: 'l2', pos: [-7.92, 3.2, 1.5], rotY: Math.PI / 2, size: [3.2, 3.2]
+  },
+  {
     id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
     desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.',
     modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
@@ -598,7 +610,26 @@ function wrapText(g, text, x, y, maxW, lh) {
   }
   g.fillText(line, x, y); return y + lh;
 }
-const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, platform: drawPlatform };
+function drawRecludaTeaser(c, img) {
+  const g = c.getContext('2d'), w = c.width, h = c.height;
+  const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#062026'); bg.addColorStop(1, '#03080b');
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const glow = g.createRadialGradient(w / 2, h * 0.38, 20, w / 2, h * 0.38, w * 0.42);
+  glow.addColorStop(0, 'rgba(45,212,191,0.28)'); glow.addColorStop(1, 'rgba(45,212,191,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, w, h);
+  if (img) { g.save(); rr(g, w * 0.32, h * 0.17, w * 0.36, w * 0.36, w * 0.08); g.clip(); g.drawImage(img, w * 0.32, h * 0.17, w * 0.36, w * 0.36); g.restore(); }
+  g.textAlign = 'center';
+  g.fillStyle = '#ffffff'; g.font = `600 ${w * 0.11}px -apple-system, "SF Pro Rounded", "IBM Plex Sans", sans-serif`; g.fillText('Recluda', w / 2, h * 0.7);
+  g.fillStyle = 'rgba(230,251,247,0.7)'; g.font = `${w * 0.045}px "IBM Plex Sans", sans-serif`; g.fillText('Keep your data.', w / 2, h * 0.78);
+  g.fillStyle = '#2dd4bf'; g.font = `600 ${w * 0.03}px "IBM Plex Mono", monospace`; g.fillText('IPHONE · IPAD · MAC', w / 2, h * 0.86);
+  // the ribbon across the top-right corner
+  g.save(); g.translate(w * 0.78, h * 0.18); g.rotate(Math.PI / 4);
+  g.fillStyle = '#2dd4bf'; g.fillRect(-w * 0.4, -h * 0.045, w * 0.8, h * 0.09);
+  g.fillStyle = '#03080b'; g.font = `700 ${w * 0.04}px "IBM Plex Mono", monospace`; g.fillText('COMING SOON', 0, h * 0.014);
+  g.restore();
+  g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+}
+const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, recluda: drawRecludaTeaser, platform: drawPlatform };
 /* ---------- The Platform Wing: VAULT™, VIPER™, LOTUS™ (entropy pools) and OIDC ----------
    Each pool's nodes are exactly the Hurwitz quaternions of norm p (prime p = 5, 13, 17):
    integer quaternions (a, b, c, d) and half-integer ones (all four coordinates odd/2) with
@@ -678,7 +709,7 @@ function oidcArtCanvas(size = 1024) {
   g.fillStyle = '#e6e6ff'; g.textAlign = 'center'; g.font = `${34 * k}px "Young Serif", Georgia, serif`; g.fillText('Approve sign-in?', fx, 450 * k);
   g.fillStyle = '#2dd4bf'; rr(g, 412 * k, 560 * k, 200 * k, 64 * k, 32 * k); g.fill();
   g.fillStyle = '#05070b'; g.font = `600 ${26 * k}px "IBM Plex Mono", monospace`; g.fillText('Approve', fx, 601 * k);
-  g.fillStyle = '#f1e6cf'; g.font = `${78 * k}px "Young Serif", Georgia, serif`; g.fillText('Recluda', fx, 860 * k);
+  g.fillStyle = '#f1e6cf'; g.font = `${78 * k}px "Young Serif", Georgia, serif`; g.fillText('Recluda VPN', fx, 860 * k);
   g.fillStyle = '#2dd4bf'; g.font = `600 ${30 * k}px "IBM Plex Mono", monospace`; g.fillText('SIGN-IN APPROVAL · RFC 8628', fx, 920 * k);
   return c;
 }
@@ -686,7 +717,7 @@ const POOLS = [
   { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game' },
   { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336' },
   { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432' }];
-// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, Recluda on the far wall
+// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, Recluda VPN on the far wall
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
     id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
@@ -700,8 +731,8 @@ const WING_PROJECTS = [
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
-  { id: 'oidc', name: 'Recluda', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'Sign-in approval with your biometric key',
-    desc: 'A self-hosted biometric identity provider. Sign-ins use the RFC 8628 device flow and are approved in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
+  { id: 'oidc', name: 'Recluda VPN', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'VPN and sign-in approval with your biometric key',
+    desc: 'The server behind Recluda: a self-hosted identity provider for VPN logins and sign-ins. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
       ['BIOMETRIC KEY', 'A Secure Enclave signature unlocked by Face ID or Touch ID, with number matching and QR approval.'],
@@ -819,8 +850,8 @@ const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the ea
 const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
-  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD, both on the App Store.'] },
-  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and Recluda.'] },
+  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
+  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and Recluda VPN.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 // L4's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
@@ -1409,8 +1440,8 @@ for (const HERE of FLOORS) {
   p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
   p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('QUANTUM HALL', 56, 92);
   p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Floor guide', 56, 172);
-  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · Recluda'],
-    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
+  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · Recluda VPN'],
+    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD · Recluda'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
   rows.forEach(([tag, name, sub], i) => {
     const y = 270 + i * 150, here = tag === HERE.tag;
     p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
@@ -1824,10 +1855,11 @@ const POOL_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(POOL_
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
 /* ---------- L2 · Apps ----------
-   The two apps face you as you step out of the lift; empty frames wait for the next ones. */
+   The two apps face you as you step out of the lift; Recluda, coming soon, is on the left wall, and an
+   empty frame waits for the next one. */
 const L2 = FLOORS[FI.l2];
 floorSign(L2.g, 'LEVEL 2', 'Apps', 0, 6.2, L2.z1 - 0.06, Math.PI);
-for (const z of [1.5, -6.5]) {
+for (const z of [-6.5]) {
   const g = new THREE.Group(); g.position.set(L2.x0 + 0.08, 3.2, z); g.rotation.y = Math.PI / 2; L2.g.add(g);
   const S = 3.2, c = mk(512, 512), x = c.getContext('2d');
   x.fillStyle = '#0b0f18'; x.fillRect(0, 0, 512, 512);
@@ -1883,7 +1915,7 @@ function buildAppKiosks() {
 }
 
 /* ---------- L3 · Platform Wing ----------
-   VAULT™, VIPER™, LOTUS™ and Recluda around the walls; all three pools nested in
+   VAULT™, VIPER™, LOTUS™ and Recluda VPN around the walls; all three pools nested in
    the atrium, floating over the open floors below, each turning in 4D, where the entropy
    column from B1 ends. A wall panel gives the exact math behind the three shells. */
 const L3 = FLOORS[FI.l3];
@@ -2084,7 +2116,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l1, 0, L1.z1 - 0.6, 0, plat.pos[2] + 3.4, PATH_W.main);
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
-  add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
+  add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
   add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
@@ -3172,8 +3204,8 @@ function updateKiosk(dt, t) {
 
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
-const WORLD_IDS = ['kaizendoku', 'handheld', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about'];
-const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', platform: 'Quantum V^ Platform', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'Recluda', about: "the builder's office" };
+const WORLD_IDS = ['kaizendoku', 'handheld', 'recluda', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about'];
+const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', recluda: 'Recluda', platform: 'Quantum V^ Platform', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'Recluda VPN', about: "the builder's office" };
 const visit = (() => {
   let d = { seen: [], visits: 0, last: 0 };
   try { const r = JSON.parse(localStorage.getItem(VISIT_KEY)); if (r && Array.isArray(r.seen)) d = Object.assign(d, r); } catch (e) {}
@@ -3277,7 +3309,7 @@ function hallTourStops() {
   stops.push({ ...SLIT_STOP, standOff: 5.4, line: 'The entrance: a double slit.', sub: 'Each photon lands at a random spot. That randomness is where it all starts.' });
   if (plat) stops.push({ floor: plat.floor, center: plat.center, normal: plat.normal, standOff: 4.6, pitch: 0.18, line: plat.p.name, sub: `${plat.p.tagline}. Step inside to explore it.` });
   stops.push({ ...CRYO_STOP, line: 'B1 · The Cryostat Lab.', sub: 'Cooled to about 10 mK. The light rises from its chip.' });
-  for (const id of ['kaizendoku', 'handheld']) {
+  for (const id of ['kaizendoku', 'handheld', 'recluda']) {
     const pt = P(id); if (!pt) continue;
     stops.push({ floor: pt.floor, center: pt.center, normal: pt.normal, standOff: 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
@@ -3354,13 +3386,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
              ['The features are up on the big screens.', 'Click one and I’ll walk you over.', 'hero']];
     if (S('store')) lines.push(['Want the app?', 'The App Store screen is on your right.', 'store']);
-    if (S('shots')) lines.push(['See it in action.', 'App Store screenshots are on your left.', 'shots']);
+    if (S('shots')) lines.push(['See it in action.', p.teaser ? 'Screens from the app are on your left.' : 'App Store screenshots are on your left.', 'shots']);
     lines.push(['Want a guided tour?', 'Press T, or tap Tour.', null]);
     lines.push(['Ready to head back?', 'The exit display is past the screenshots.', 'portal']);
     stops = [
       ['site', p.site ? p.site.label : 'Website', 'The website. Walk up and press E to open it.'],
       ['hero', 'The features', 'Each big screen is one feature; the middle one is the overview.'],
-      ['shots', 'Screenshots', 'Straight from the App Store listing.'],
+      ['shots', 'Screenshots', p.teaser ? 'Screens from the app, coming soon to the App Store.' : 'Straight from the App Store listing.'],
       ['store', 'Get the app', 'Scan the QR code, or press E to open the App Store.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   }
@@ -4267,7 +4299,7 @@ function buildProductWorld(p) {
     });
     const plinth = new THREE.Mesh(new THREE.BoxGeometry(nS * gap + 0.4, 0.06, 0.8), pedMat); plinth.position.y = 0.03; sh.add(plinth);
     const edge = new THREE.Mesh(new THREE.BoxGeometry(nS * gap + 0.4, 0.02, 0.02), accentMat); edge.position.set(0, 0.07, 0.41); sh.add(edge);
-    const lab = stationLabel('APP STORE', 'Screenshots', p.theme.accent, p.theme.brand); lab.position.set(0, 1.75 + PH2 / 2 + 0.75, 0); sh.add(lab);
+    const lab = stationLabel(p.teaser ? 'COMING SOON' : 'APP STORE', 'Screenshots', p.theme.accent, p.theme.brand); lab.position.set(0, 1.75 + PH2 / 2 + 0.75, 0); sh.add(lab);
     const shL = new THREE.PointLight(0xffffff, 0.5, 8, 2); shL.position.set(0, 2.6, 2.2); sh.add(shL);
     addStation(sh, { id: 'shots', info: { title: 'Screenshots' }, exhibit: true, standOff: 4.6, pitch: 0.06, nearDist: 6 }, 1.75);
   }
@@ -4640,7 +4672,7 @@ function renderWorldPanel(pt) {
       ${p.extra ? `<h3 class="wp-sub">At the desk</h3>
       <ul class="wp-stations">${p.extra.map(([id, t, d]) => `<li><button class="st" type="button" data-st="${id}"><b>${esc(t)}</b><span>${esc(d)}</span></button></li>`).join('')}</ul>` : ''}
       ${p.shots ? `<h3 class="wp-sub">Screenshots</h3>
-      <ul class="wp-stations"><li><button class="st" type="button" data-st="shots"><b>App Store screenshots</b><span>On your left: ${p.shots.length} screens from the App Store listing.</span></button></li></ul>` : ''}
+      <ul class="wp-stations"><li><button class="st" type="button" data-st="shots"><b>${p.teaser ? 'Screenshots' : 'App Store screenshots'}</b><span>On your left: ${p.shots.length} screens ${p.teaser ? 'from the app, coming soon' : 'from the App Store listing'}.</span></button></li></ul>` : ''}
       ${p.links.some(([l]) => l === 'App Store') ? `<h3 class="wp-sub">App Store</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="store"><b>Download ${esc(p.name)}</b><span>On the screen to your right, with a QR code to scan on your iPhone. Walk up and press E, or tap it, to open the App Store.</span></button></li></ul>` : ''}`}
       <div class="wp-stack">${esc(p.stack)}</div>
@@ -4763,7 +4795,7 @@ function veeDestination(id) {
   const P = pid => paintings.find(p => p.p.id === pid), stand = (pt, standOff = 4) => pt && { exhibit: true, floor: pt.floor, center: pt.center, normal: pt.normal, standOff, pitch: 0.15 };
   const plat = P('platform');
   switch (id) {
-    case 'kaizendoku': case 'handheld': case 'platform': case 'vault': case 'viper': case 'lotus': case 'oidc': return stand(P(id), id === 'platform' ? 4.6 : 4);
+    case 'kaizendoku': case 'handheld': case 'recluda': case 'platform': case 'vault': case 'viper': case 'lotus': case 'oidc': return stand(P(id), id === 'platform' ? 4.6 : 4);
     case 'office': return kiosk && stand(kiosk.pt, 3.2);
     case 'reception': { const r = hallActs.find(a => a.id === 'dock'); return r && stand(r, 4.6); }   // her reception, in front of the office
     case 'lobby': return plat && { exhibit: true, floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z, pitch: 0.05 };
