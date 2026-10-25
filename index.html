@@ -559,7 +559,7 @@ const ABOUT = {
   stack: 'Swift · SwiftUI · Python · JavaScript · React Native · Flask · Node.js · Qiskit · CryptoKit',
   roles: [
     { co: 'Quantum V^ LLC', title: 'Founder', years: 'NOV 2025 – NOW', line: 'Building the Quantum V^ Platform, its apps and the VAULT™, VIPER™ and LOTUS™ entropy pools.' },
-    { co: 'American Manufacturing & Embroidery', short: 'American Manufacturing', title: 'CNC Operator', years: 'APR – SEP 2026', line: 'Precision cutting on CO2 laser, pneumatic die and 5-axis rotary systems.' },
+    { co: 'American Manufacturing & Embroidery', short: 'American Manufacturing', noTimeline: true, title: 'CNC Operator', years: 'APR – SEP 2026', line: 'Precision cutting on CO2 laser, pneumatic die and 5-axis rotary systems.' },
     { co: 'Persevere NOW', title: 'Senior Software Developer & Teaching Assistant', years: '2022 – 2025', line: 'Taught software engineering to cohorts of 20 students.' },
     { co: 'Express Scripts', title: 'Lead Pharmacy Technician, DOD Overseas & Expatriate Team', years: '2012 – 2018', line: 'Led a team of about 20 licensed professionals.' },
     { co: 'Freescale Semiconductor', title: 'Process Engineer, Test Wafer Distribution', years: '2005 – 2011', line: 'Microprocessor fabrication: CVD, diffusion, EPI and photolithography.' }],
@@ -572,7 +572,7 @@ const ABOUT = {
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
-    { name: 'KaizenDoku', version: 'App Store v2.4.0', logo: 'assets/kaizendoku-icon.png' }],
+    { name: 'KaizenDoku', version: 'App Store v2.4.2', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · recluda.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
@@ -2022,8 +2022,8 @@ floorSign(L4.g, 'LEVEL 4', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 
     });
   }
   const skyRing = new THREE.Mesh(new THREE.TorusGeometry(ATRIUM.r + 0.3, 0.025, 6, 96), new THREE.MeshBasicMaterial({ color: 0x8094ed, transparent: true, opacity: 0.7 }));   // periwinkle, to frame the dot field skyRing.rotation.x = Math.PI / 2; skyRing.position.set(ATRIUM.x, L4.h - 0.04, ATRIUM.z); L4.g.add(skyRing);
-  // the career timeline, oldest on the left
-  const roles = [...ABOUT.roles].reverse(), c = mk(2048, 520), g = c.getContext('2d');
+  // the career timeline, oldest on the left (roles marked noTimeline show only on the office desk)
+  const roles = ABOUT.roles.filter(r => !r.noTimeline).reverse(), c = mk(2048, 520), g = c.getContext('2d');
   g.fillStyle = '#0b1220'; g.fillRect(0, 0, 2048, 520); g.strokeStyle = 'rgba(63,224,224,0.55)'; g.lineWidth = 3; g.strokeRect(12, 12, 2024, 496);
   g.textAlign = 'left'; g.fillStyle = '#5ff0ff'; g.font = '600 28px "IBM Plex Mono", monospace'; g.fillText('THE BUILDER · TIMELINE', 60, 76);
   const many = roles.length > 4, lx0 = many ? 290 : 140, lx1 = many ? 1758 : 1908, ly = 220, nameW = many ? 330 : 420, lineW = many ? 330 : 400;   // five or more: every label centred under its dot
