@@ -2026,18 +2026,18 @@ floorSign(L4.g, 'LEVEL 4', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 
   const roles = [...ABOUT.roles].reverse(), c = mk(2048, 520), g = c.getContext('2d');
   g.fillStyle = '#0b1220'; g.fillRect(0, 0, 2048, 520); g.strokeStyle = 'rgba(63,224,224,0.55)'; g.lineWidth = 3; g.strokeRect(12, 12, 2024, 496);
   g.textAlign = 'left'; g.fillStyle = '#5ff0ff'; g.font = '600 28px "IBM Plex Mono", monospace'; g.fillText('THE BUILDER · TIMELINE', 60, 76);
-  const lx0 = 140, lx1 = 1908, ly = 220;
+  const many = roles.length > 4, lx0 = many ? 290 : 140, lx1 = many ? 1758 : 1908, ly = 220, nameW = many ? 330 : 420, lineW = many ? 330 : 400;   // five or more: every label centred under its dot
   const lgr = g.createLinearGradient(lx0, 0, lx1, 0); lgr.addColorStop(0, 'rgba(63,224,224,0.25)'); lgr.addColorStop(1, '#5ff0ff');
   g.fillStyle = lgr; g.fillRect(lx0, ly - 2, lx1 - lx0, 4);
   roles.forEach((r, i) => {
     const x = lx0 + (lx1 - lx0) * (i / (roles.length - 1)), last = i === roles.length - 1;
     g.fillStyle = last ? '#5ff0ff' : '#0b1220'; g.strokeStyle = '#5ff0ff'; g.lineWidth = 4; g.beginPath(); g.arc(x, ly, last ? 16 : 12, 0, Math.PI * 2); g.fill(); g.stroke();
-    g.textAlign = i === 0 ? 'left' : last ? 'right' : 'center'; const tx = i === 0 ? x - 16 : last ? x + 16 : x;
+    g.textAlign = many ? 'center' : i === 0 ? 'left' : last ? 'right' : 'center'; const tx = many ? x : i === 0 ? x - 16 : last ? x + 16 : x;
     g.fillStyle = '#5ff0ff'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText(r.years, tx, ly - 40);
-    g.fillStyle = '#f1e6cf'; let px = 36; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.short || r.co).width > 420 && --px > 22); g.fillText(r.short || r.co, tx, ly + 66);   // the timeline uses the short name where there is one
+    g.fillStyle = '#f1e6cf'; let px = 36; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.short || r.co).width > nameW && --px > 22); g.fillText(r.short || r.co, tx, ly + 66);   // the timeline uses the short name where there is one
     g.fillStyle = '#c9d2e3'; g.font = '24px "IBM Plex Sans", sans-serif';
     const words = r.title.split(' '); let line = '', y = ly + 110;
-    for (const w of words) { const test = line ? line + ' ' + w : w; if (g.measureText(test).width > 400 && line) { g.fillText(line, tx, y); line = w; y += 32; } else line = test; }
+    for (const w of words) { const test = line ? line + ' ' + w : w; if (g.measureText(test).width > lineW && line) { g.fillText(line, tx, y); line = w; y += 32; } else line = test; }
     g.fillText(line, tx, y);
   });
   const W = 9.2, tl = new THREE.Mesh(new THREE.PlaneGeometry(W, W * 520 / 2048), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
