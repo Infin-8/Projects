@@ -222,6 +222,22 @@ body.in-world #askVee { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
 .ask-note { margin: 0; font-size: 10.5px; color: var(--muted); }
 body.touring #askVee { display: none !important; }
 /* the office's operator terminal: green on black, like its screen */
+/* the lobby's Ask Vee QR codes, opened large */
+#qrView { position: fixed; inset: 0; z-index: 7; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(3, 6, 12, .8); }
+#qrView[hidden] { display: none; }
+#qrView .qr-frame { position: relative; width: min(440px, 100%); max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 26px 24px 22px; text-align: center; background: #0b1220; border: 1px solid #5ff0ff; border-radius: 14px; box-shadow: 0 16px 60px rgba(0,0,0,.6), 0 0 30px rgba(95,240,255,.2); }
+#qrView .qr-close { position: absolute; top: 10px; right: 10px; background: none; border: 0; color: #8e99b0; font-size: 18px; cursor: pointer; padding: 6px 8px; border-radius: 6px; }
+#qrView .qr-close:hover, #qrView .qr-close:focus-visible { color: var(--parchment); outline: 1px solid #5ff0ff; }
+#qrView .qr-eye { margin: 0; font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: #5ff0ff; }
+#qrView .qr-q { margin: 0; font: 400 24px/1.25 var(--display); color: var(--parchment); text-wrap: balance; }
+#qrView .qr-code { width: min(280px, 70vw); height: auto; aspect-ratio: 1; background: #fff; border-radius: 10px; padding: 12px; }
+#qrView .qr-hint { margin: 0; font: 13px var(--body); color: #c9d2e3; }
+#qrView .qr-url { margin: 0; font: 12px var(--mono); color: #8e99b0; overflow-wrap: anywhere; user-select: all; }
+#qrView .qr-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+#qrView .qr-open, #qrView .qr-copy { font: 600 13px var(--mono); letter-spacing: .04em; border-radius: 8px; padding: 10px 16px; cursor: pointer; text-decoration: none; }
+#qrView .qr-open { background: #5ff0ff; color: #05080d; border: 1px solid #5ff0ff; }
+#qrView .qr-copy { background: transparent; color: #5ff0ff; border: 1px solid #5ff0ff; }
+#qrView a:focus-visible, #qrView button:focus-visible { outline: 2px solid var(--parchment); outline-offset: 2px; }
 #terminal { position: fixed; inset: 0; z-index: 7; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(0, 6, 3, .78); }
 #terminal .term-frame { position: relative; width: min(1100px, 100%); height: min(780px, 100%); display: flex; flex-direction: column; background: #000a04; border: 1px solid #00ff66; border-radius: 6px; box-shadow: 0 0 40px rgba(0, 255, 102, .25), inset 0 0 60px rgba(0, 255, 102, .06); overflow: hidden; }
 #terminal .term-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 255, 102, .035) 0 1px, transparent 1px 3px); }
@@ -436,6 +452,17 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div id="stick" hidden><i></i></div>
 <div id="flash"></div>
 <section id="room" hidden aria-modal="true" role="dialog"></section>
+<section id="qrView" hidden role="dialog" aria-modal="true" aria-label="Ask Vee QR code">
+  <div class="qr-frame">
+    <button type="button" class="qr-close" id="qrClose" aria-label="Close">✕</button>
+    <p class="qr-eye" id="qrSite"></p>
+    <h3 class="qr-q" id="qrQ"></h3>
+    <canvas class="qr-code" id="qrCode" width="600" height="600" aria-label="QR code"></canvas>
+    <p class="qr-hint">Scan with your phone's camera. Vee opens on that site, already answering.</p>
+    <p class="qr-url" id="qrUrl"></p>
+    <div class="qr-acts"><a class="qr-open" id="qrOpen" href="#" target="_blank" rel="noopener">Open link ↗</a><button type="button" class="qr-copy" id="qrCopy">Copy link</button></div>
+  </div>
+</section>
 <section id="terminal" hidden role="dialog" aria-modal="true" aria-label="Operator terminal">
   <div class="term-frame">
     <div class="term-bar"><span class="term-title">QUANTUM V^ · OPERATOR TERMINAL</span><button type="button" id="termBack" hidden>◂ Menu</button><button type="button" id="termClose">✕ Close</button></div>
@@ -3197,6 +3224,70 @@ function buildReception() {
     L4.blocks.push({ x0: DXw - DR - 0.1, x1: DXw + DR + 0.1, z0: DZ - 0.2, z1: DZ + DR * 0.55 + 0.25 });   // you walk around it
   }
 }
+
+/* ---------- Take Vee with you ----------
+   On the lobby's west wall, between the columns: three QR codes, one per site that has Vee's chat. Each opens that
+   site with Vee already answering a question (the widget's ?ask= links). Walk up to one and press E (or tap) to open
+   it large, with the link, Open and Copy. */
+const ASK_VEE_LINKS = [
+  { site: 'recluda.com', product: 'Recluda', q: 'How does Face ID approval work?', url: 'https://recluda.com/?ask=How+does+Face+ID+approval+work%3F' },
+  { site: 'steady-watch.com', product: 'STEADYWATCH™ HANDHELD', q: 'What is STEADYWATCH™ HANDHELD?', url: 'https://steady-watch.com/?ask=What+is+STEADYWATCH+HANDHELD%3F' },
+  { site: 'Quantum V^', product: 'Quantum V^', q: 'What is QES-256?', url: 'https://quantum-v.nathaniel-a-vazquez.workers.dev/?ask=What+is+QES-256%3F' },
+];
+function drawQr(g, url, x, y, size) {   // dark modules on white, with a quiet zone, so phones read it
+  const q = qrcode(0, 'M'); q.addData(url); q.make();
+  const n = q.getModuleCount(), cell = Math.floor(size / (n + 8)), w = cell * (n + 8), ox = x + (size - w) / 2, oy = y + (size - w) / 2;
+  g.fillStyle = '#ffffff'; g.fillRect(ox, oy, w, w); g.fillStyle = '#0b1220';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect(ox + (c + 4) * cell, oy + (r + 4) * cell, cell, cell);
+}
+const qrView = document.getElementById('qrView'), qrCode = document.getElementById('qrCode');
+function openQr(item) {
+  mode = 'inside'; near = null; promptEl.hidden = true;
+  document.getElementById('qrSite').textContent = `Vee on ${item.site}`;
+  document.getElementById('qrQ').textContent = item.q;
+  document.getElementById('qrUrl').textContent = item.url;
+  document.getElementById('qrOpen').href = item.url;
+  const g = qrCode.getContext('2d'); g.clearRect(0, 0, 600, 600); drawQr(g, item.url, 0, 0, 600);
+  qrView.hidden = false; document.getElementById('qrOpen').focus();
+}
+function closeQr() { if (qrView.hidden) return; qrView.hidden = true; mode = 'walk'; canvas.focus(); }
+document.getElementById('qrClose').addEventListener('click', closeQr);
+qrView.addEventListener('click', e => { if (e.target === qrView) closeQr(); });   // a click outside the card closes it
+document.getElementById('qrOpen').addEventListener('click', () => setTimeout(closeQr, 50));
+document.getElementById('qrCopy').addEventListener('click', async e => {
+  const b = e.currentTarget, url = document.getElementById('qrUrl').textContent;
+  try { await navigator.clipboard.writeText(url); b.textContent = 'Copied'; }
+  catch (err) { const r = document.createRange(); r.selectNodeContents(document.getElementById('qrUrl')); getSelection().removeAllRanges(); getSelection().addRange(r); b.textContent = 'Selected'; }
+  setTimeout(() => { b.textContent = 'Copy link'; }, 1500);
+});
+function buildAskVeeWall() {
+  const L1 = FLOORS[FI.l1], PW = 4.4, PH = 2.5, CZ = 5.25, CY = 2.45, X = L1.x0 + 0.1;   // between the west columns (z 2.5 and 8)
+  const c = mk(2200, 1250), g = c.getContext('2d');
+  g.fillStyle = '#0b1220'; g.fillRect(0, 0, 2200, 1250);
+  g.strokeStyle = 'rgba(95,240,255,.55)'; g.lineWidth = 4; g.strokeRect(14, 14, 2172, 1222);
+  g.textAlign = 'center'; g.fillStyle = '#5ff0ff'; g.font = '600 34px "IBM Plex Mono", monospace'; g.fillText('ASK VEE ANYWHERE', 1100, 98);
+  g.fillStyle = '#f1e6cf'; g.font = '84px "Young Serif", Georgia, serif'; g.fillText('Take Vee with you', 1100, 196);
+  g.fillStyle = '#c9d2e3'; g.font = '34px "IBM Plex Sans", sans-serif'; g.fillText('Scan a code and Vee opens on that site, already answering.', 1100, 252);
+  const T = 560, gap = 120, x0 = (2200 - (T * 3 + gap * 2)) / 2;
+  ASK_VEE_LINKS.forEach((it, i) => {
+    const x = x0 + i * (T + gap);
+    g.fillStyle = '#5ff0ff'; g.font = '600 32px "IBM Plex Mono", monospace'; g.fillText(it.site.toUpperCase(), x + T / 2, 330);
+    drawQr(g, it.url, x, 356, T);
+    g.fillStyle = '#f1e6cf'; let px = 38; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(it.q).width > T + 60 && --px > 24); g.fillText(it.q, x + T / 2, 976);
+    g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('PRESS E TO OPEN', x + T / 2, 1030);
+  });
+  g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('OR ASK HER RIGHT HERE · SHE ANSWERS FROM QUANTUM V^ RESEARCH', 1100, 1170);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); panel.position.set(X, CY, CZ); panel.rotation.y = Math.PI / 2; L1.g.add(panel);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, PH + 0.14, PW + 0.14), gold); fr.position.set(L1.x0 + 0.03, CY, CZ); L1.g.add(fr);
+  const glow = new THREE.PointLight(0x5ff0ff, 0.5, 6, 2); glow.position.set(X + 1.6, CY, CZ); L1.g.add(glow);
+  // each code is something to walk up to: its centre on the wall, facing into the lobby
+  ASK_VEE_LINKS.forEach((it, i) => {
+    const lx = (x0 + i * (T + gap) + T / 2) / 2200 * PW - PW / 2;   // the tile's centre across the panel
+    hallActs.push({ id: 'askvee-' + i, floor: FI.l1, info: { title: `Vee on ${it.site}` }, center: new THREE.Vector3(X, L1.y + CY, CZ - lx), normal: new THREE.Vector3(1, 0, 0),
+      standOff: 2.6, pitch: 0.05, actVerb: () => 'Open', act: () => openQr(it) });
+  });
+}
 function updateKiosk(dt, t) {
   if (!kiosk) return;
   kiosk.sillM.opacity = 0.45 + 0.12 * Math.sin(t * 1.3) * (reduceMotion ? 0 : 1);   // a warm glow under the door
@@ -3318,6 +3409,8 @@ function hallTourStops() {
   const rcp = hallActs.find(a => a.id === 'dock');
   if (rcp) stops.push({ floor: FI.l4, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. Dock me here to rest me.' });
   if (kiosk) stops.push({ floor: FI.l4, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
+  { const t = hallActs.filter(a => /^askvee-/.test(a.id)); if (t.length) stops.push({ floor: FI.l1, center: t[1].center.clone(), normal: t[1].normal.clone(), standOff: 4.2, pitch: 0.04,
+    line: 'Take me with you.', sub: 'Scan a code and I open on that site, already answering. Press E at one to open it large.' }); }   // the QR wall on the west side
   if (plat) stops.push({ floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z - 1.3, pitch: 0.05, home: true,
     line: "That's the Quantum Hall.", sub: 'Take the lift to any floor, or step into a display.' });
   return stops;
@@ -3430,6 +3523,7 @@ let auto = null, anim = null, near = null, ride = null;
 addEventListener('keydown', e => {
   if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.key === 'Escape') closeAsk(); return; }
   if (mode === 'inside') {
+    if (!qrView.hidden) { if (e.key === 'Escape') closeQr(); return; }
     if (!terminal.hidden) {
       if (e.key === 'Escape') { if (termMenu.hidden) showTermMenu(); else closeTerminal(); }
       else if (!termMenu.hidden && ['1', '2', '3'].includes(e.key)) termChoose(['resume', 'kz', 'contact'][+e.key - 1]);
@@ -5295,7 +5389,7 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
