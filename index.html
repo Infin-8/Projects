@@ -5338,7 +5338,7 @@ async function micSend() {
   const rec = askRec.rec, type = (rec && rec.mimeType) || 'audio/webm'; askRec.rec = null; askMic.classList.remove('rec');
   if (askRec.stream) askRec.stream.getTracks().forEach(t => t.stop()); askRec.stream = null;
   const blob = new Blob(askRec.chunks, { type }), g = askGuide();
-  if (blob.size < 2000) { if (g) askHint(g); return; }   // a tap, not a question
+  if (blob.size < 2000) { if (g) askQuiet(g); return; }   // a tap, not a question
   if (g) { g.say('One moment…', 'Turning your words into text.', null, null); }
   try {
     const r = await fetch(VEE_API.replace(/\/ask$/, '/listen'), { method: 'POST', headers: { 'Content-Type': type.split(';')[0] }, body: blob });
@@ -5356,11 +5356,11 @@ function openAsk() {
   if (!VEE_API || !g || g.away || tour) return false;
   askEl.hidden = false; promptEl.hidden = true;
   if (g.tourK !== undefined && g.tour) g.tourK = g.tour.length - 1;   // her intro is done: you're talking now
-  askHint(g); g.waveT = 1.4;
+  askQuiet(g); g.waveT = 1.4;
   if (!touchUI) setTimeout(() => askInput.focus(), 0);   // on a phone the keyboard waits until you tap the field
   return true;
 }
-function askHint(g) { g.say('Ask me anything.', 'About the products, the builder or the hall.', null, null); g.sticky = true; }   // stays up while the prompt is open
+function askQuiet(g) { g.sticky = false; if (g.text) { g.reveal = g.total; g.doneT = 1e3; } }   // the chat opens clear: no prompt in her bubble, only her answers
 function closeAsk(keepVoice) { if (keepVoice !== true) stopVoice(); micUp(); askEl.hidden = true; askInput.blur(); canvas.focus(); const g = askGuide(); if (g) { g.asking = false; if (!tour) g.bodyTarget = null; } }
 // while you're asking, she stands close and a little to your left, so her answers are easy to read
 function askFollow() {
@@ -5372,7 +5372,6 @@ function askFollow() {
   const p = new THREE.Vector3(camera.position.x + fx * ahead + fz * side, 0, camera.position.z + fz * ahead - fx * side);
   if (g.bounds) g.bounds(p);
   g.bodyTarget = p; g.asking = true;
-  if (!askState.busy && !g.sticky && g.text && g.reveal >= g.total && g.doneT > 6 + g.total / 30) askHint(g);   // an answer has faded: back to the hint
 }
 // "Send to Nathaniel": the visitor's email and question go to the vee-worker's /lead (read on its /leads page)
 const askLead = askEl.querySelector('.ask-lead');
