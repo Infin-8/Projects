@@ -510,13 +510,13 @@ const PROJECTS = [
     floor: 'l2', pos: [3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
-    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Harmonic Tuner', wing: 'Apps',
-    desc: 'A live harmonic tuner and steadiness practice tool for iPhone and Apple Watch. Play or sing, and every harmonic of your note becomes a wave band that stands still when you\'re in tune.',
-    modules: [['HARMONIC BANDS','Each harmonic of your note is a wave band: the bands drift while you\'re off pitch and stand still in tune'],['ORB NEEDLE','How far flat or sharp you are'],['STEADINESS RING','How steadily you hold the note over a 1, 3 or 8 second window, with a counter that times the hold'],['CHORDS','The notes sounding, the chord they make and the song\'s key'],['A4 TUNING','Set A4 from 415 to 446 Hz, with the Digital Crown on Apple Watch']],
+    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Practice Panel', wing: 'Apps',
+    desc: 'A practice panel for musicians on iPhone and Apple Watch: tune, play along with your tracks, record yourself and keep time. Tracks are analysed on the iPhone for their key, chords, tempo and bars, and nothing leaves the device.',
+    modules: [['TRACK','Play along with your music: its chord now and next, A·B loops, slow it down without changing the pitch, or change the key'],['REC','Record a take after a count-in on the beat; it becomes a track you can loop'],['CHORDS','Chord pairings on the circle of fifths, each in its own colours, played in time'],['TEMPO','A metronome on atomic time that listens to your timing'],['NOTE','Every harmonic of your note as a wave band that stands still in tune'],['APPLE WATCH','A tuner and haptic metronome on your wrist, and a remote for TRACK and REC']],
     stack: 'iPhone · Apple Watch · Swift · SwiftUI',
     links: [['App Store','https://apps.apple.com/us/app/steadywatch-handheld/id6755752518'],['steady-watch.com','https://steady-watch.com']],
     theme: { bg: '#00304d', fg: '#d9f2ee', accent: '#3fe0e0' }, logo: 'assets/steadywatch-icon.png', site: { url: 'https://steady-watch.com', label: 'steady-watch.com', shot: 'assets/site-steadywatch.jpg' },
-    shots: [4, 5, 3].map(n => `assets/shots/hh-${n}.jpg`),
+    shots: ['track', 'chords', 'tempo', 'rec', 'note'].map(n => `assets/shots/hh2-${n}.jpg`),
     floor: 'l2', pos: [-3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
@@ -571,7 +571,7 @@ const ABOUT = {
     ['Cryptography', 'P256 ECDSA · SHA-256 · Post-quantum encryption · Secure Enclave key management · Biometric key derivation'],
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
-    { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v1.0.15', logo: 'assets/steadywatch-icon.png' },
+    { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v2.0.0', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.4.2', logo: 'assets/kaizendoku-icon.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · recluda.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
