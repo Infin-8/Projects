@@ -3026,6 +3026,23 @@ function buildKiosk() {
    In front of the builder's office on L4: her Nesting Station on the south wall leading up to the office door (the
    dock, her user manual and her technical description in one frame) and a reception desk in front of the dock,
    with her landing pad behind it. Docked, she rests there on L4 and stays out of sight elsewhere. */
+/* Vee's world: a loading program for Vee, entered from the plate in front of her reception desk (see buildVeeWorld).
+   Its stations follow a question through how she thinks; the wording matches her 'How Vee works' panel. */
+const VEE_WORLD = {
+  id: 'vee', kind: 'vee', name: "Vee's world", tagline: 'How I think, compiled around you', wing: 'Reception', noBadge: true, sectionTitle: 'How I think',
+  desc: "A loading program for Vee. Her nanobots compile this space around you, then a path follows a question from left to right: what you ask, what she knows, what she looks up, the model that writes the answer, the rules it keeps, and how the answer comes back to you.",
+  modules: [
+    ['Your question', 'You type it, or hold to talk and Whisper turns your voice into text. I also know your floor, what you are looking at, what you have explored and our last few turns.'],
+    ['My facts', 'A persona and facts synced from this gallery. Only the sections your question touches come along, with live QRNG data when your page sends it.'],
+    ['The library', 'About 1,000 Quantum V^ research passages in Vectorize. Your question becomes a vector, and only the closest passages join in.'],
+    ['The model', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI writes the answer, served at the edge.'],
+    ['Guardrails', "Only my sources. I credit each paper, say when I don't know, never quote prices and resist prompt injection. An evaluation suite checks me."],
+    ['My answer', 'Tags in my reply become motion: a mood, a gesture, a walk to an exhibit. Common answers are cached, so repeats cost nothing.']],
+  stack: 'Mistral Small 3.1 · Cloudflare Workers AI · Vectorize · Whisper · Aura · Three.js',
+  links: [],
+  theme: { accent: '#5ff0ff', bg: '#05080d', fg: '#e6f8fb' }
+};
+let veeWorldPt = null;   // the loading plate, as an enterable target (made with the reception)
 const hallActs = [];   // things in the hall you can walk up to and act on (press E): her dock
 const RC = { dockX: -4.18, techX: 2.16 };   // the dock's and the technical page's centres along the wall (nest frame: + is to your right as you face the door)
 function buildReception() {
@@ -3251,6 +3268,63 @@ function buildReception() {
     name.position.set(0, 0.62, DR + 0.012); desk.add(name);   // on the front, facing the atrium
     L4.blocks.push({ x0: DXw - DR - 0.1, x1: DXw + DR + 0.1, z0: DZ - 0.2, z1: DZ + DR * 0.55 + 0.25 });   // you walk around it
   }
+  // Vee's world: a loading plate in the floor in front of her desk. Walk up and press E (or tap it) to load it;
+  // she zips into the plate ahead of you and the view dives in after her. The dock above stays Dock / Wake.
+  {
+    const PX = -RC.dockX, PZ = L4.z1 - 3.7, PR = 0.95;
+    const pc = mk(512, 512), pg = pc.getContext('2d'), plateTex = new THREE.CanvasTexture(pc);
+    const cells = [];
+    for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) { const cx = 256 + (x + (y & 1) * 0.5) * 40, cy = 256 + y * 34.6; if (Math.hypot(cx - 256, cy - 256) < 222) cells.push({ cx, cy, d: Math.hypot(cx - 256, cy - 256), ph: Math.random() * 6.28 }); }
+    let boost = 0;
+    function drawPlate(t) {
+      pg.clearRect(0, 0, 512, 512);
+      for (const c of cells) {
+        const wave = Math.max(0, Math.sin(t * 2.2 - c.d * 0.035)), k = 0.15 + 0.6 * wave * wave + 0.1 * Math.sin(t * 3 + c.ph) + boost * 0.8;
+        pg.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; pg.lineTo(c.cx + Math.cos(a) * 18, c.cy + Math.sin(a) * 18); } pg.closePath();
+        pg.fillStyle = `rgba(63,224,224,${Math.min(0.85, k * 0.42)})`; pg.fill();
+        pg.strokeStyle = `rgba(143,247,255,${Math.min(1, 0.3 + k * 0.6)})`; pg.lineWidth = 2; pg.stroke();
+      }
+      pg.save(); pg.translate(256, 256); pg.rotate(Math.PI / 6);   // upright for you as you walk up (the plate itself is turned)
+      pg.fillStyle = 'rgba(5,8,13,0.8)'; rr(pg, -110, -30, 220, 60, 12); pg.fill();
+      pg.fillStyle = '#5ff0ff'; pg.font = '600 26px "IBM Plex Mono", monospace'; pg.textAlign = 'center'; pg.textBaseline = 'middle';
+      pg.fillText('VEE · WORLD', 0, 0); pg.restore(); pg.textAlign = 'left'; pg.textBaseline = 'alphabetic';
+      plateTex.needsUpdate = true;
+    }
+    drawPlate(0);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(PR, 6), new THREE.MeshBasicMaterial({ map: plateTex, transparent: true, depthWrite: false }));
+    disc.rotation.x = -Math.PI / 2; disc.rotation.z = Math.PI / 6 + Math.PI; disc.position.set(PX, 0.012, PZ); L4.g.add(disc);
+    const rim = new THREE.Mesh(new THREE.RingGeometry(PR, PR + 0.045, 6), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+    rim.rotation.x = -Math.PI / 2; rim.rotation.z = Math.PI / 6; rim.position.set(PX, 0.015, PZ); L4.g.add(rim);
+    // motes rising off the plate, like a program waiting to load
+    const MN = 90, mPos = new Float32Array(MN * 3), mData = [];
+    for (let i = 0; i < MN; i++) mData.push({ a: Math.random() * 6.28, r: Math.random() * PR * 0.85, u: Math.random(), sp: 0.12 + Math.random() * 0.18 });
+    const mGeo = new THREE.BufferGeometry(); mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+    const motesM = new THREE.PointsMaterial({ color: 0x8ff7ff, size: 0.045, map: dotTex(), transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending });
+    const motes = new THREE.Points(mGeo, motesM); motes.frustumCulled = false; L4.g.add(motes);
+    const plateLabel = stationLabel('VEE · WORLD', 'Loading plate'); plateLabel.scale.multiplyScalar(0.34); plateLabel.position.set(PX, 1.45, PZ - 0.2); L4.g.add(plateLabel);
+    const plateSt = { id: 'veeworld', info: { title: "Vee's world" }, floor: FI.l4, standOff: 2.8, pitch: -0.35, actLift: 1.15 };
+    plateSt.center = new THREE.Vector3(PX, L4.y + 0.05, PZ); plateSt.normal = new THREE.Vector3(0, 0, -1); plateSt.mesh = disc;
+    plateSt.actVerb = () => "Load Vee's world";
+    plateSt.act = () => { if (veeWorldPt) enter(veeWorldPt); };
+    hallActs.push(plateSt);
+    veeWorldPt = { p: VEE_WORLD, floor: FI.l4, center: new THREE.Vector3(PX, L4.y + 0.06, PZ), normal: new THREE.Vector3(0, 0.94, -0.34).normalize(),
+                   uniforms: { uHit: { value: new THREE.Vector2(0.5, 0.5) }, uGlow: { value: 0 } }, amp: 0, setOpen: k => { boost = k; } };
+    let plateAcc = 1, plateTold = false;
+    buildingUpdates.push((dt, t) => {
+      if (world || !L4.g.visible) return;
+      if (mode !== 'entering') boost = Math.max(0, boost - dt * 1.5);
+      plateAcc += dt; if (plateAcc > (reduceMotion ? 0.5 : 0.08)) { plateAcc = 0; drawPlate(t); }
+      rim.material.opacity = 0.55 + 0.3 * Math.sin(t * 2) + boost * 0.4;
+      const m = reduceMotion ? 0.2 : 1;
+      mData.forEach((d, i) => {
+        d.u += d.sp * dt * m * (1 + boost * 3); if (d.u > 1) { d.u -= 1; d.a = Math.random() * 6.28; d.r = Math.random() * PR * 0.85; }
+        mPos[i * 3] = PX + Math.cos(d.a + d.u) * d.r; mPos[i * 3 + 1] = 0.05 + d.u * 2.0; mPos[i * 3 + 2] = PZ + Math.sin(d.a + d.u) * d.r;
+      });
+      mGeo.attributes.position.needsUpdate = true;
+      // the first time you walk up to it, she says what it is
+      if (near === plateSt && !plateTold && !tour && mode === 'walk' && vee && !veeDocked) { plateTold = true; vee.say('My world loads from here.', touchUI ? "Tap the plate and I'll compile it around you." : "Press E and I'll compile it around you.", null, null); }
+    });
+  }
 }
 
 /* ---------- Take Vee with you ----------
@@ -3323,8 +3397,8 @@ function updateKiosk(dt, t) {
 
 // What this visitor has seen, kept in their own browser only
 const VISIT_KEY = 'quantum-hall-visit';
-const WORLD_IDS = ['kaizendoku', 'handheld', 'recluda', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about'];
-const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', recluda: 'Recluda', platform: 'Quantum V^ Platform', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'Recluda VPN', about: "the builder's office" };
+const WORLD_IDS = ['kaizendoku', 'handheld', 'recluda', 'platform', 'vault', 'viper', 'lotus', 'oidc', 'about', 'vee'];
+const WORLD_NAMES = { kaizendoku: 'KaizenDoku', handheld: 'STEADYWATCH™ HANDHELD', recluda: 'Recluda', platform: 'Quantum V^ Platform', vault: 'VAULT™', viper: 'VIPER™', lotus: 'LOTUS™', oidc: 'Recluda VPN', about: "the builder's office", vee: "Vee's world" };
 const visit = (() => {
   let d = { seen: [], visits: 0, last: 0 };
   try { const r = JSON.parse(localStorage.getItem(VISIT_KEY)); if (r && Array.isArray(r.seen)) d = Object.assign(d, r); } catch (e) {}
@@ -3401,7 +3475,7 @@ function buildMascot() {
     if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); veeMove(vee, 'cheer'); return; }
     const next = u[0], tgt = paintings.find(q => q.p.id === next);
     const onFloor = tgt && tgt.floor === player.floor, where = tgt && !onFloor ? ` Take the lift to ${FLOORS[tgt.floor].tag}.` : '';
-    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L4." : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
+    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L4." : next === 'vee' ? 'Next up: my world. It loads from the plate at my reception, on L4.' : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
   };
   vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
   renderExplored();
@@ -3435,7 +3509,7 @@ function hallTourStops() {
   stops.push({ ...wingStop, line: 'L3 · The Platform Wing.', sub: 'The column of light from the lab ends here, in three entropy pools.' });
   stops.push({ floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05, line: 'L4 · The builder.', sub: 'From semiconductor fabrication in 2005 to quantum software today.' });
   const rcp = hallActs.find(a => a.id === 'dock');
-  if (rcp) stops.push({ floor: FI.l4, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. Dock me here to rest me.' });
+  if (rcp) stops.push({ floor: FI.l4, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. The plate in front of my desk loads my world.' });
   if (kiosk) stops.push({ floor: FI.l4, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
   { const t = hallActs.filter(a => /^askvee-/.test(a.id)); if (t.length) stops.push({ floor: FI.l1, center: t[1].center.clone(), normal: t[1].normal.clone(), standOff: 4.2, pitch: 0.04,
     line: 'Take me with you.', sub: 'Scan a code and I open on that site, already answering. Press E at one to open it large.' }); }   // the QR wall on the west side
@@ -3479,6 +3553,22 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
       ['dock', 'My Nesting Station', 'The thousands of nanobots that compile my image rest and recharge here.'],
       ['portal', "That's the office.", 'The door takes you back to the hall.']];
+  } else if (p.kind === 'vee') {
+    lines = [
+      ['Welcome to my world.', 'My nanobots just compiled it around you.', null],
+      ['This is how I think.', 'Follow a question along the path, from left to right.', 'm0'],
+      ['The library holds about 1,000 passages.', 'Only the closest ones join each answer.', 'm2'],
+      ['Ask me something here.', 'Then watch it travel the path, station by station.', null],
+      ['Want a guided tour?', 'Press T, or tap Tour.', null],
+      ['Ready to head back?', 'The exit display is behind you.', 'portal']];
+    stops = [
+      ['m0', 'Your question', 'Typed or spoken, it starts here.'],
+      ['m1', 'My facts', 'Only the sections your question touches.'],
+      ['m2', 'The library', 'About 1,000 passages; the closest join in.'],
+      ['m3', 'The model', 'Mistral Small 3.1 writes the answer.'],
+      ['m4', 'Guardrails', "Only my sources, credited, and honest when I don't know."],
+      ['m5', 'My answer', 'Words, a mood, and sometimes a walk somewhere.'],
+      ['portal', "That's how I think.", 'The exit display takes you back to my reception.']];
   } else if (p.kind === 'pool') {
     lines = [
       [`Welcome to ${p.name}.`, `An entropy pool of ${24 * (p.prime + 1)} nodes, right in front of you.`, 'core'],
@@ -3526,7 +3616,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   if (visit.d.seen.includes(p.id)) lines[0] = [`Welcome back to ${p.id === 'about' ? "the builder's office" : p.name}.`, lines[0][1], lines[0][2]];
   let k = 0;
   const say = () => v.say(lines[k][0], lines[k][1], `${k + 1} / ${lines.length}`, lines[k][2] ? at(lines[k][2]) : null);
-  say();
+  if (p.kind !== 'vee') say();   // in her own world she speaks once she has compiled (buildVeeWorld calls v.restore)
   v.restore = say;
   v.tourStops = stops.filter(([id]) => S(id)).map(([id, line, sub]) => {
     const s = S(id);
@@ -3535,7 +3625,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
     center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
   v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
-  updates.push((dt, t) => { v.away = veeDocked; /* docked, she's resting at her reception on L4 */ updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
+  updates.push((dt, t) => { v.away = p.kind === 'vee' ? !v.compiled : veeDocked; /* docked, she's resting at her reception on L4; in her own world, she's away until it has compiled */ updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
   return v;
 }
 
@@ -3635,10 +3725,13 @@ function clickAt(x, y) {
   if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.site ? 9 : st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const here = paintings.filter(p => p.floor === player.floor || p.mascot), links = hallLinks.filter(l => l.floor === player.floor);
   const veeHit = vee && !vee.away && vee.scale > 0.5 ? [vee.hitM] : [];
-  const hit = ray.intersectObjects([...veeHit, ...here.map(p => p.mesh), ...links.map(l => l.mesh), liftCab.userData.shaft])[0];
+  const acts = hallActs.filter(a => a.floor === player.floor && a.mesh && a.act && a.id === 'veeworld');   // the loading plate in front of her desk
+  const hit = ray.intersectObjects([...veeHit, ...here.map(p => p.mesh), ...links.map(l => l.mesh), ...acts.map(a => a.mesh), liftCab.userData.shaft])[0];
   if (!hit) return;
   if (vee && hit.object === vee.hitM) { if (!openAsk()) vee.talk.next(); return; }   // tap Vee to talk, on any floor
   if (hit.object === liftCab.userData.shaft) { walkTo(liftStop()); return; }
+  const ac = acts.find(a => a.mesh === hit.object);
+  if (ac) { if (hit.distance < 6) ac.act(); else walkTo(ac); return; }   // tap the plate to load her world
   const lk = links.find(l => l.mesh === hit.object);
   if (lk) { if (hit.distance < 6) openSite(typeof lk.url === 'function' ? lk.url() : lk.url); else walkTo(lk.stop); return; }   // the App Store phones   // tap the lift to step into it
   const pt = here.find(p => p.mesh === hit.object);
@@ -4543,6 +4636,245 @@ function buildProductWorld(p) {
   };
 }
 
+/* ---------- Vee's world ----------
+   A loading program for Vee, entered from the plate in front of her reception desk on L4. It starts as a dark void
+   with a seed of light; her nanobots stream out and compile the space around you in order (the hex floor, the
+   path, each station, then Vee herself, gathering beside you). The path then follows a question through how she
+   thinks, left to right, one station per step, each with a screen and an emblem. Ask her something here and a
+   pulse runs the path, lighting each station as the question passes. Built when you step in, freed when you leave. */
+function veeScreenCanvas(i, n, title, text) {
+  const c = mk(1024, 640), g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, 0, 640); bg.addColorStop(0, '#08131a'); bg.addColorStop(1, '#04080c');
+  g.fillStyle = bg; g.fillRect(0, 0, 1024, 640);
+  g.strokeStyle = 'rgba(95,240,255,0.07)'; g.lineWidth = 1.5;   // faint hex weave
+  for (let y = 0, row = 0; y < 680; y += 34.6, row++) for (let x = (row & 1) * 20; x < 1064; x += 40) {
+    g.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; g.lineTo(x + Math.cos(a) * 18, y + Math.sin(a) * 18); } g.closePath(); g.stroke();
+  }
+  g.fillStyle = 'rgba(95,240,255,0.14)'; g.fillRect(0, 0, 1024, 70);
+  g.fillStyle = '#5ff0ff'; g.font = '600 30px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
+  g.fillText(`HOW I THINK · ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, 44, 36);
+  g.textBaseline = 'alphabetic';
+  g.fillStyle = '#f1e6cf'; g.font = '76px "Young Serif", Georgia, serif'; g.fillText(title, 44, 190);
+  g.fillStyle = '#5ff0ff'; g.fillRect(44, 222, 120, 4);
+  g.fillStyle = '#c9d6e3'; g.font = '34px "IBM Plex Sans", sans-serif'; wrapText(g, text, 44, 290, 936, 48);
+  return c;
+}
+function buildVeeWorld(p) {
+  const A = new THREE.Color(0x5ff0ff), CYAN = 0x5ff0ff;
+  const ws = new THREE.Scene();
+  ws.background = new THREE.Color(0x020507); ws.fog = new THREE.Fog(0x020507, 16, 42);
+  ws.add(new THREE.HemisphereLight(0xbfefff, 0x020507, 0.45));
+  const updates = [], hit = [], stations = [], fades = [];
+  const RADIUS = 13, R = 8.4, LOAD = reduceMotion ? 0.01 : 4.6, VEE_AT = reduceMotion ? 0 : 3.9;
+  // everything starts invisible and fades in at its moment in the load
+  const fadeIn = (obj, at) => obj.traverse(o => {
+    const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+    for (const m of mats) { if (m.userData.fadeTo === undefined) { m.userData.fadeTo = m.opacity; m.transparent = true; m.opacity = 0; fades.push({ m, at }); } }
+  });
+  const swarmTargets = [];   // [x, y, z, time it settles]
+  const addTargets = (pts, at) => { for (const q of pts) swarmTargets.push([q.x, q.y, q.z, at]); };
+
+  // the hex floor
+  const gc = mk(1024, 1024), gg = gc.getContext('2d');
+  gg.fillStyle = '#04090c'; gg.fillRect(0, 0, 1024, 1024); gg.strokeStyle = 'rgba(95,240,255,0.22)'; gg.lineWidth = 2;
+  for (let y = 0, row = 0; y < 1064; y += 55.4, row++) for (let x = (row & 1) * 32; x < 1064; x += 64) {
+    gg.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; gg.lineTo(x + Math.cos(a) * 30, y + Math.sin(a) * 30); } gg.closePath(); gg.stroke();
+  }
+  const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(5, 5); gt.anisotropy = 8;
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(RADIUS + 1.5, 96), new THREE.MeshStandardMaterial({ map: gt, roughness: 0.4, metalness: 0.4 }));
+  ground.rotation.x = -Math.PI / 2; ws.add(ground); fadeIn(ground, 0.6);
+  for (const [r, w, op, at] of [[R - 1.8, 0.02, 0.45, 0.9], [RADIUS + 1.4, 0.05, 0.85, 0.7]]) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(r - w, r + w, 128), new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: op, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.position.y = 0.01; ws.add(m); fadeIn(m, at);
+    const pts = []; for (let i = 0; i < 160; i++) { const a = (i / 160) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0.02, Math.sin(a) * r)); } addTargets(pts, at);
+  }
+  { const pts = []; for (let i = 0; i < 420; i++) { const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * RADIUS; pts.push(new THREE.Vector3(Math.cos(a) * r, 0.02, Math.sin(a) * r)); } addTargets(pts, 0.6); }
+
+  const pedMat = new THREE.MeshStandardMaterial({ color: 0x141c26, metalness: 0.7, roughness: 0.35 });
+  const bezel = new THREE.MeshStandardMaterial({ color: 0x0a0f14, metalness: 0.6, roughness: 0.35 });
+  function place(angleDeg, r) {
+    const a = THREE.MathUtils.degToRad(angleDeg), g = new THREE.Group();
+    g.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r); g.lookAt(0, 0, 0); ws.add(g); return g;
+  }
+  function addStation(g, st, y) {
+    st.center = new THREE.Vector3(g.position.x, y, g.position.z);
+    st.normal = new THREE.Vector3(-g.position.x, 0, -g.position.z).normalize();
+    g.traverse(o => { if (o.isMesh) { o.userData.station = st; hit.push(o); } });
+    stations.push(st);
+  }
+
+  // The emblems: one small sculpture per step, above its screen. Each returns an update(dt, t, lit).
+  const add = (g, m) => { g.add(m); return m; };
+  const glowMat = (op = 0.9) => new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false });
+  const EMBLEMS = [
+    g => {   // your question: sound rings rippling out
+      const rings = [0, 1, 2].map(() => add(g, new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.018, 8, 48), glowMat())));
+      add(g, new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), glowMat(1)));
+      return (dt, t, lit) => rings.forEach((r, i) => { const k = (t * 0.5 + i / 3) % 1; r.scale.setScalar(0.5 + k * 1.6); r.material.opacity = (1 - k) * (0.6 + lit * 0.4); });
+    },
+    g => {   // my facts: a fan of cards; the one your question touches lights up
+      const cards = [0, 1, 2, 3, 4].map(i => { const m = add(g, new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.42, 0.02), new THREE.MeshBasicMaterial({ color: 0x0d2b33, transparent: true, opacity: 0.9 })));
+        const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.7 })); m.add(e); m.userData.e = e; return m; });
+      return (dt, t, lit) => cards.forEach((c, i) => { const a = (i - 2) * 0.32 + Math.sin(t * 0.6) * 0.08; c.position.set(Math.sin(a) * 0.5, -Math.cos(a) * 0.12, Math.cos(a) * 0.1 - i * 0.02); c.rotation.z = -a;
+        const on = (Math.floor(t * 0.8) % 5) === i; c.material.color.setHex(on ? 0x1d6c78 : 0x0d2b33); c.userData.e.material.opacity = on ? 1 : 0.45 + lit * 0.3; });
+    },
+    g => {   // the library: a sphere of 1,030 passages; the closest few brighten
+      const N = 1030, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), a = i * 2.39996; pos[i * 3] = Math.cos(a) * r * 0.62; pos[i * 3 + 1] = y * 0.62; pos[i * 3 + 2] = Math.sin(a) * r * 0.62; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const pts = add(g, new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.035, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+      let pick = [], pickT = 0;
+      return (dt, t, lit) => { pts.rotation.y += dt * 0.25; pts.rotation.x = Math.sin(t * 0.2) * 0.3; pickT -= dt;
+        if (pickT <= 0) { pickT = 1.6; pick = Array.from({ length: 4 }, () => Math.floor(Math.random() * N)); }
+        for (let i = 0; i < N; i++) { const b = 0.42 + lit * 0.25; col[i * 3] = 0.37 * b; col[i * 3 + 1] = 0.94 * b; col[i * 3 + 2] = b; }
+        for (const i of pick) { col[i * 3] = 1; col[i * 3 + 1] = 1; col[i * 3 + 2] = 1; }
+        geo.attributes.color.needsUpdate = true; };
+    },
+    g => {   // the model: a turning core
+      const shell = add(g, new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.5, 1)), new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.8 })));
+      const core = add(g, new THREE.Mesh(new THREE.SphereGeometry(0.2, 24, 16), glowMat(0.9)));
+      return (dt, t, lit) => { shell.rotation.y += dt * 0.4; shell.rotation.x += dt * 0.15; const k = 1 + 0.12 * Math.sin(t * 3) + lit * 0.35; core.scale.setScalar(k); core.material.opacity = 0.6 + lit * 0.4; };
+    },
+    g => {   // guardrails: a hex shield
+      const outer = add(g, new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(0.62, 0.62, 0.05, 6)), new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.85 })));
+      const inner = add(g, new THREE.Mesh(new THREE.CircleGeometry(0.42, 6), new THREE.MeshBasicMaterial({ color: 0x0f3a44, transparent: true, opacity: 0.85, side: THREE.DoubleSide })));
+      outer.rotation.x = Math.PI / 2; inner.rotation.z = Math.PI / 6;
+      return (dt, t, lit) => { g.rotation.y = Math.sin(t * 0.5) * 0.5; inner.material.color.setHex(lit > 0.3 ? 0x1f7f8c : 0x0f3a44); outer.material.opacity = 0.6 + 0.25 * Math.sin(t * 2) + lit * 0.3; };
+    },
+    g => {   // my answer: a beam with motes rising, back to you
+      const beam = add(g, new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 1.4, 16, 1, true), glowMat(0.55))); beam.position.y = -0.1;
+      const N = 60, pos = new Float32Array(N * 3), d = Array.from({ length: N }, () => ({ u: Math.random(), a: Math.random() * 6.28 }));
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      add(g, new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xbffaff, size: 0.05, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
+      return (dt, t, lit) => { d.forEach((q, i) => { q.u += dt * (0.25 + lit * 0.6); if (q.u > 1) q.u -= 1; const r = 0.08 + q.u * 0.35; pos[i * 3] = Math.cos(q.a + q.u * 4) * r; pos[i * 3 + 1] = -0.8 + q.u * 1.6; pos[i * 3 + 2] = Math.sin(q.a + q.u * 4) * r; });
+        geo.attributes.position.needsUpdate = true; beam.material.opacity = 0.35 + lit * 0.5; };
+    }
+  ];
+
+  // the six stations, left to right, on an arc in front of you
+  const n = p.modules.length, STEP = 25, MW = 2.6, MH = MW * 0.625, MY = 2.05, EY = 3.75;
+  const st6 = p.modules.map(([title, text], i) => {
+    const angle = (i - (n - 1) / 2) * STEP, g = place(angle, R), at = 1.6 + i * 0.32;
+    const pm = pedMat.clone(), bz = bezel.clone();   // its own materials, so it fades in at its own moment
+    const frame = new THREE.Group(); frame.position.y = MY; g.add(frame);
+    frame.add(new THREE.Mesh(new THREE.BoxGeometry(MW + 0.14, MH + 0.14, 0.1), bz));
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(MW, MH), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(veeScreenCanvas(i, n, title, text)) })); scr.position.z = 0.052; frame.add(scr);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, MY - MH / 2, 12), pm); post.position.y = (MY - MH / 2) / 2; g.add(post);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.07, 6), pm); base.position.y = 0.035; g.add(base);
+    const ringM = new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.94, 6), ringM); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
+    const em = new THREE.Group(); em.position.y = EY; g.add(em); const emUpdate = EMBLEMS[i](em);
+    const light = new THREE.PointLight(CYAN, 0.5, 8, 2); light.position.set(0, 3, 1.6); g.add(light);
+    fadeIn(g, at);
+    // the swarm builds the screen's outline and the emblem first
+    const wp = new THREE.Vector3(), pts = [];
+    for (let k = 0; k < 70; k++) { const u = k / 70, per = 2 * (MW + MH), d2 = u * per; let x, y;
+      if (d2 < MW) { x = -MW / 2 + d2; y = MH / 2; } else if (d2 < MW + MH) { x = MW / 2; y = MH / 2 - (d2 - MW); } else if (d2 < 2 * MW + MH) { x = MW / 2 - (d2 - MW - MH); y = -MH / 2; } else { x = -MW / 2; y = -MH / 2 + (d2 - 2 * MW - MH); }
+      g.updateMatrixWorld(true); pts.push(g.localToWorld(wp.set(x, MY + y, 0.06)).clone()); }
+    for (let k = 0; k < 40; k++) { const a = Math.random() * 6.28, b = Math.acos(2 * Math.random() - 1); pts.push(g.localToWorld(wp.set(Math.sin(b) * Math.cos(a) * 0.55, EY + Math.cos(b) * 0.55, Math.sin(b) * Math.sin(a) * 0.55)).clone()); }
+    for (let k = 0; k < 24; k++) pts.push(g.localToWorld(wp.set(0, (k / 24) * (MY - MH / 2), 0)).clone());
+    addTargets(pts, at);
+    const st = { id: 'm' + i, info: { title, text }, exhibit: true, standOff: 4.4, pitch: 0.18, nearDist: 6.2, ringM, lit: 0 };
+    addStation(g, st, MY);
+    updates.push((dt, t) => { st.lit = Math.max(st.lit - dt * 0.9, near === st ? 0.6 : 0); ringM.opacity = 0.35 + 0.15 * Math.sin(t * 1.6 + i) + st.lit * 0.6; light.intensity = 0.4 + st.lit * 0.9; emUpdate(dt, t, st.lit); });
+    return { st, angle };
+  });
+
+  // the path a question takes: along the floor, past each station's foot, from the first to the last
+  const pathPts = st6.map(({ angle }) => { const a = THREE.MathUtils.degToRad(angle); return new THREE.Vector3(Math.sin(a) * (R - 2.1), 0.03, -Math.cos(a) * (R - 2.1)); });
+  pathPts.unshift(new THREE.Vector3(pathPts[0].x - 1.2, 0.03, pathPts[0].z + 1.6)); pathPts.push(new THREE.Vector3(pathPts[n].x + 1.2, 0.03, pathPts[n].z + 1.6));
+  const curve = new THREE.CatmullRomCurve3(pathPts);
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.025, 6, false), new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ws.add(tube); fadeIn(tube, 1.3); addTargets(curve.getSpacedPoints(180), 1.3);
+  const PK = 26, pkPos = new Float32Array(PK * 3), pkGeo = new THREE.BufferGeometry(); pkGeo.setAttribute('position', new THREE.BufferAttribute(pkPos, 3));
+  const pkM = new THREE.PointsMaterial({ color: 0xd8fdff, size: 0.12, map: dotTex(), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+  const packets = new THREE.Points(pkGeo, pkM); packets.frustumCulled = false; ws.add(packets); fadeIn(packets, 1.5);
+  const pulseM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), pulseM); ws.add(pulse);
+  let pulseU = -1;   // where a question in flight has got to along the path (0…1); -1 when none
+
+  const exit = makeExitPainting(ws, { R: 11.2, angleDeg: 180, pedMat, hit, stations, updates });
+
+  // The loading readout above the middle: what's compiling, then it fades away
+  const lc = mk(1024, 256), lg = lc.getContext('2d'), loadTex = new THREE.CanvasTexture(lc);
+  const loadSp = new THREE.Sprite(new THREE.SpriteMaterial({ map: loadTex, transparent: true, depthWrite: false })); loadSp.scale.set(5.2, 1.3, 1); loadSp.position.set(0, 4.3, -2); ws.add(loadSp);
+  const STAGES = [[0, 'SEEDING NANOBOTS'], [0.6, 'COMPILING FLOOR'], [1.3, 'TRACING THE PATH'], [1.6, 'LOADING STATIONS'], [3.5, 'COMPILING VEE'], [LOAD, 'READY']];
+  let lastPct = -1;
+  function drawLoad(k, label) {
+    lg.clearRect(0, 0, 1024, 256);
+    lg.textAlign = 'center'; lg.fillStyle = '#5ff0ff'; lg.font = '600 40px "IBM Plex Mono", monospace'; lg.fillText(`${label} · ${Math.round(k * 100)}%`, 512, 92);
+    lg.fillStyle = 'rgba(95,240,255,0.18)'; rr(lg, 162, 132, 700, 14, 7); lg.fill(); lg.fillStyle = '#5ff0ff'; rr(lg, 162, 132, Math.max(14, 700 * k), 14, 7); lg.fill();
+    lg.fillStyle = '#9fb3c2'; lg.font = '30px "IBM Plex Sans", sans-serif'; lg.fillText(`${(1030 * k).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} of 1,030 passages · ~2,100 nanobots`, 512, 206);
+    loadTex.needsUpdate = true;
+  }
+  drawLoad(0, STAGES[0][1]);
+
+  // the swarm: her nanobots, flying from the seed to everything they compile, then drifting as dust
+  const SN = swarmTargets.length, sPos = new Float32Array(SN * 3), sCol = new Float32Array(SN * 3), sD = [];
+  for (let i = 0; i < SN; i++) { const [x, y, z, at] = swarmTargets[i]; sD.push({ tx: x, ty: y, tz: z, at: Math.max(0, at - 0.95 + Math.random() * 0.35), lift: 1 + Math.random() * 2.5, ph: Math.random() * 6.28,
+    sx: (Math.random() - 0.5) * 0.4, sy: 2.4 + (Math.random() - 0.5) * 0.4, sz: -2 + (Math.random() - 0.5) * 0.4 }); }
+  const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3)); sGeo.setAttribute('color', new THREE.BufferAttribute(sCol, 3));
+  const swarm = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); swarm.frustumCulled = false; ws.add(swarm);
+  const seedM = glowMat(1); const seed = new THREE.Mesh(new THREE.SphereGeometry(0.14, 20, 14), seedM); seed.position.set(0, 2.4, -2); ws.add(seed);
+  const seedLight = new THREE.PointLight(CYAN, 2.2, 14, 2); seedLight.position.copy(seed.position); ws.add(seedLight);
+
+  const worldVee = addWorldVee(ws, p, 'vee', hit, stations, updates, new THREE.Vector3(0, 1.7, 8.6));
+  let T = 0, spoke = false;
+  updates.push((dt, t) => {
+    T += reduceMotion ? 60 : dt;   // reduced motion: the world is simply there, compiled
+    // fades
+    for (const f of fades) { const k = Math.min(1, Math.max(0, (T - f.at) / 0.6)); f.m.opacity = f.m.userData.fadeTo * k; }
+    // the seed swells, then gives itself up to the swarm
+    const sk = Math.min(1, T / 0.5), gone = Math.min(1, Math.max(0, (T - 3.2) / 1.0));
+    seed.scale.setScalar((0.4 + sk * 0.8 + 0.1 * Math.sin(t * 6)) * (1 - gone)); seedM.opacity = 1 - gone; seedLight.intensity = 2.2 * (1 - gone) + 0.2;
+    // the swarm
+    for (let i = 0; i < SN; i++) {
+      const d = sD[i], k = reduceMotion ? 1 : Math.min(1, Math.max(0, (T - d.at) / 0.95)), e = k * k * (3 - 2 * k), q = 1 - e;
+      const mx = (d.sx + d.tx) / 2, my = Math.max(d.sy, d.ty) + d.lift, mz = (d.sz + d.tz) / 2;
+      let x = q * q * d.sx + 2 * q * e * mx + e * e * d.tx, y = q * q * d.sy + 2 * q * e * my + e * e * d.ty, z = q * q * d.sz + 2 * q * e * mz + e * e * d.tz;
+      if (k >= 1) { x += Math.sin(t * 0.7 + d.ph) * 0.04; y += Math.sin(t * 0.9 + d.ph * 2) * 0.04; }
+      sPos[i * 3] = x; sPos[i * 3 + 1] = y; sPos[i * 3 + 2] = z;
+      const b = T < d.at ? 0 : k < 1 ? 1 : Math.max(0.12, 1 - (T - d.at - 0.95) * 0.6) * (0.75 + 0.25 * Math.sin(t * 2 + d.ph));
+      sCol[i * 3] = 0.56 * b; sCol[i * 3 + 1] = 0.97 * b; sCol[i * 3 + 2] = b;
+    }
+    sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
+    // the readout
+    if (T < LOAD + 1.2) {
+      const k = Math.min(1, T / LOAD), pct = Math.round(k * 100), label = STAGES.filter(s => T >= s[0]).pop()[1];
+      if (pct !== lastPct) { lastPct = pct; drawLoad(k, label); }
+      loadSp.material.opacity = T < LOAD + 0.4 ? 1 : Math.max(0, 1 - (T - LOAD - 0.4) / 0.8);
+    } else loadSp.visible = false;
+    // Vee compiles last, gathering beside you, then says hello
+    if (T >= VEE_AT && !worldVee.compiled) worldVee.compiled = true;
+    if (T >= LOAD && !spoke) { spoke = true; worldVee.restore(); }
+    // packets drift along the path; a question in flight sends a bright pulse down it, lighting each station
+    const busy = typeof askState !== 'undefined' && askState.busy;
+    if (busy && pulseU < 0) pulseU = 0;
+    if (pulseU >= 0) {
+      pulseU += dt * 0.32; const pu = Math.min(1, pulseU); pulse.position.copy(curve.getPointAt(pu)); pulse.position.y = 0.16; pulseM.opacity = 0.95;
+      st6.forEach(({ st }, i) => { const at = (i + 1) / (n + 1); if (Math.abs(pu - at) < 0.04) st.lit = 1; });
+      if (pulseU >= 1) pulseU = busy ? 0 : -1;
+    } else pulseM.opacity = Math.max(0, pulseM.opacity - dt * 2);
+    for (let i = 0; i < PK; i++) { const u = (i / PK + t * 0.035) % 1, q = curve.getPointAt(u); pkPos[i * 3] = q.x; pkPos[i * 3 + 1] = 0.08; pkPos[i * 3 + 2] = q.z; }
+    pkGeo.attributes.position.needsUpdate = true;
+  });
+
+  return {
+    kind: 'vee', accent: p.theme.accent, accent2: '#bffaff', vee: worldVee,
+    scene: ws, stations, hit, radius: RADIUS, portal: exit.portal,
+    start: { pos: new THREE.Vector3(0, 1.7, 8.6), yaw: 0, pitch: 0.12 },
+    update(dt, t) { for (const u of updates) u(dt, t); },
+    dispose() {
+      exit.hallShot.dispose();
+      ws.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+        for (const m of mats) { if (SHARED_MATS.has(m)) continue; if (m.map) m.map.dispose(); m.dispose(); }
+      });
+    }
+  };
+}
+
 let panelOpenLarge = false;   // the world panel starts hidden; Details opens it, and that choice carries over between worlds
 /* ---------- The builder's office (About & Resume) ----------
    An enclosed office behind the hall door, centred on an operator desk: an arc of monitors in
@@ -4849,7 +5181,7 @@ function openWorld(pt) {
   showHeader();
   // settle the hall paintings first, so the exit painting's view of the hall is calm
   for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
-  world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
+  world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : pt.p.id === 'vee' ? buildVeeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
   markSeen(pt.p.id);
   renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize(); liftPanel.hidden = true;
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
@@ -5423,10 +5755,10 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
-  if (wm) { const pf = paintings.find(p => p.p.id === wm[1]); if (pf) openWorld(pf); }
+  if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
   tick();
 });
 })();
