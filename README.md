@@ -63,6 +63,7 @@
     <td width="120" align="center" valign="middle"><img src="assets/rounded/recluda-icon.png" width="100" alt="Recluda icon"></td>
     <td valign="top">
       <strong>Recluda</strong><br>
+      Signing In. Made Easy.
       Coming soon · iPhone, iPad and Mac
       <br><br>
       A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can't trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data, no per-seat fee.
