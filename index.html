@@ -1940,7 +1940,52 @@ function buildAppKiosks() {
     const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(x, F.y + 1.6, z), normal: new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y)), standOff: 2.0, pitch: -0.05 };
     hallLinks.push({ mesh: scr, url: p.links[0][1], floor: FI[p.floor], stop });
     hallLinks.push({ mesh: body, url: p.links[0][1], floor: FI[p.floor], stop });
+    if (id === 'handheld') buildWatchPodium(g, p, F, loader);
   }
+}
+// STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
+// puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
+// watch to open the App Store, like the phone.
+function buildWatchPodium(kiosk, p, F, loader) {
+  const A = new THREE.Color(p.theme.accent), SHOTS = ['tuner', 'tempo', 'play', 'loop', 'rec'].map(n => `assets/shots/hw-${n}.jpg`);
+  const g = new THREE.Group(); g.position.set(0.98, 0, 0.12); g.rotation.y = -0.18; kiosk.add(g);   // to the phone's outboard side, turned a little toward you
+  const ped = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.86, 0.34), colMat); ped.position.y = 0.43; g.add(ped);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.022, 0.36), new THREE.MeshBasicMaterial({ color: A })); edge.position.y = 0.87; g.add(edge);
+  // the puck it stands on
+  const puck = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.04, 40), new THREE.MeshStandardMaterial({ color: 0x5a616c, metalness: 0.8, roughness: 0.3 })); puck.position.y = 0.9; g.add(puck);
+  // the watch: a rounded case with its screen, crown and side button, and a band looping behind
+  const w = new THREE.Group(); w.position.set(0, 1.12, 0.0); w.rotation.x = -0.22; w.scale.setScalar(1.4); g.add(w);
+  const W = 0.205, H = 0.25, R = 0.055, shape = new THREE.Shape();
+  shape.moveTo(-W / 2 + R, -H / 2); shape.lineTo(W / 2 - R, -H / 2); shape.quadraticCurveTo(W / 2, -H / 2, W / 2, -H / 2 + R);
+  shape.lineTo(W / 2, H / 2 - R); shape.quadraticCurveTo(W / 2, H / 2, W / 2 - R, H / 2); shape.lineTo(-W / 2 + R, H / 2);
+  shape.quadraticCurveTo(-W / 2, H / 2, -W / 2, H / 2 - R); shape.lineTo(-W / 2, -H / 2 + R); shape.quadraticCurveTo(-W / 2, -H / 2, -W / 2 + R, -H / 2);
+  const caseM = new THREE.MeshStandardMaterial({ color: 0x1b1d22, metalness: 0.85, roughness: 0.25 });
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.045, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.006, bevelSegments: 3, curveSegments: 10 }), caseM);
+  body.position.z = -0.045; w.add(body);
+  const scrM = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.86, W * 0.86 * 438 / 360), scrM); scr.position.z = 0.0085; w.add(scr);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.024, 20), new THREE.MeshStandardMaterial({ color: 0x9aa1ab, metalness: 0.9, roughness: 0.2 }));
+  crown.rotation.z = Math.PI / 2; crown.position.set(W / 2 + 0.014, H * 0.2, -0.02); w.add(crown);
+  const button = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.05, 0.018), caseM); button.position.set(W / 2 + 0.006, -H * 0.12, -0.02); w.add(button);
+  const bandM = new THREE.MeshStandardMaterial({ color: new THREE.Color(p.theme.bg).lerp(A, 0.25), roughness: 0.8 });
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(W * 0.8, 0.34, 0.012), bandM); strap.position.set(0, -0.02, -0.07); strap.rotation.x = 0.35; w.add(strap);
+  const glow = new THREE.PointLight(A, 0.3, 2.2, 2); glow.position.set(0, 0.05, 0.45); w.add(glow);
+  const tag = textSprite([['APPLE WATCH', '600 30px "IBM Plex Mono", monospace', p.theme.accent], ['Tap the watch to open', '28px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.05);
+  tag.position.set(0, 0.5, 0.24); g.add(tag);
+  // where it stands in the room, for walking around it and for walking up to it
+  kiosk.updateMatrixWorld(true); g.updateMatrixWorld(true);
+  const wp = g.localToWorld(new THREE.Vector3(0, 0, 0)), fp = g.localToWorld(new THREE.Vector3(0, 0, 1)).sub(wp).normalize();
+  F.blocks.push({ x0: wp.x - 0.4, x1: wp.x + 0.4, z0: wp.z - 0.4, z1: wp.z + 0.4 });
+  const shots = [], k0 = Math.random() * 5;
+  let loaded = false, shown = -1;
+  buildingUpdates.push((dt, t) => {
+    if (!F.g.visible) return;
+    if (!loaded) { loaded = true; SHOTS.forEach((src, i) => loader.load(src, tx => { shots[i] = tx; })); }
+    const k = Math.floor((reduceMotion ? 0 : t / 2.6) + k0) % SHOTS.length;
+    if (k !== shown && shots[k]) { shown = k; scrM.map = shots[k]; scrM.color.set(0xffffff); scrM.needsUpdate = true; }
+  });
+  const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(wp.x, F.y + 1.1, wp.z), normal: new THREE.Vector3(fp.x, 0, fp.z).normalize(), standOff: 1.7, pitch: -0.2 };
+  for (const m of [scr, body]) hallLinks.push({ mesh: m, url: p.links[0][1], floor: FI[p.floor], stop });
 }
 
 /* ---------- L3 · Platform Wing ----------
