@@ -11,7 +11,7 @@
 
 <table>
   <tr>
-    <td width="120" align="center" valign="middle"><img src="assets/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/rounded/kaizendoku-icon.png" width="100" alt="KaizenDoku icon"></td>
     <td valign="top">
       <strong>KaizenDoku</strong><br>
       Sudoku. With Friends.
@@ -32,7 +32,7 @@
     </td>
   </tr>
   <tr>
-    <td width="120" align="center" valign="middle"><img src="assets/steadywatch-icon.png" width="100" alt="STEADYWATCH HANDHELD icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/rounded/steadywatch-icon.png" width="100" alt="STEADYWATCH HANDHELD icon"></td>
     <td valign="top">
       <strong>STEADYWATCH™ HANDHELD</strong><br>
       Harmonic Tuner
@@ -60,7 +60,7 @@
     </td>
   </tr>
   <tr>
-    <td width="120" align="center" valign="middle"><img src="assets/recluda-icon.png" width="100" alt="Recluda icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/rounded/recluda-icon.png" width="100" alt="Recluda icon"></td>
     <td valign="top">
       <strong>Recluda</strong><br>
       Coming soon · iPhone, iPad and Mac
