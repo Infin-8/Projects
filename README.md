@@ -35,7 +35,7 @@
     <td width="120" align="center" valign="middle"><img src="assets/rounded/steadywatch-icon.png" width="100" alt="STEADYWATCH HANDHELD icon"></td>
     <td valign="top">
       <strong>STEADYWATCH™ HANDHELD</strong><br>
-      Harmonic Tuner
+      Practice tools for Musicians.
       <br><br>
       A live harmonic tuner and steadiness practice tool for iPhone and Apple Watch. Play or sing, and every harmonic of your note becomes a wave band that stands still when you're in tune.
       <br><br>
