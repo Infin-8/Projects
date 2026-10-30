@@ -510,7 +510,7 @@ const PROJECTS = [
     floor: 'l2', pos: [3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
-    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Practice Panel', wing: 'Apps',
+    id: 'handheld', name: 'STEADYWATCH™ HANDHELD', tagline: 'Practice Panel', wing: 'Apps', version: '2.1',   // shown as a badge on its portrait
     desc: 'A practice panel for musicians on iPhone and Apple Watch: tune, play along with your tracks, record yourself and keep time. Tracks are analysed on the iPhone for their key, chords, tempo and bars, and nothing leaves the device.',
     modules: [['TRACK','Play along with your music: its chord now and next, A·B loops, slow it down without changing the pitch, or change the key'],['REC','Record a take after a count-in on the beat; it becomes a track you can loop'],['CHORDS','Chord pairings on the circle of fifths, each in its own colours, played in time'],['TEMPO','A metronome on atomic time that listens to your timing'],['NOTE','Every harmonic of your note as a wave band that stands still in tune'],['APPLE WATCH','A tuner and haptic metronome on your wrist, and a remote for TRACK and REC']],
     stack: 'iPhone · Apple Watch · Swift · SwiftUI',
@@ -596,10 +596,20 @@ const W = 1024, H = 768;
 function mk(w = W, h = H) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 
 // Square portrait: the app icon, full bleed, with a thin inner mat line
-function drawLogo(c, img) {
+function drawLogo(c, img, p) {
   const g = c.getContext('2d');
   if (img) g.drawImage(img, 0, 0, c.width, c.height);
   g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(5, 5, c.width - 10, c.height - 10);
+  // the app's version, as a badge in the bottom-right corner (outside the icon's disc)
+  if (p && p.version) {
+    const s = c.width / 1024, label = 'v' + p.version;
+    g.font = `600 ${Math.round(52 * s)}px "IBM Plex Mono", monospace`;
+    const w = g.measureText(label).width + 44 * s, h = 76 * s, x = c.width - w - 34 * s, y = c.height - h - 34 * s;
+    g.save(); rr(g, x, y, w, h, h / 2); g.fillStyle = 'rgba(2, 18, 28, 0.82)'; g.fill();
+    g.strokeStyle = (p.theme && p.theme.accent) || '#3fe0e0'; g.lineWidth = 3 * s; g.stroke(); g.restore();
+    g.fillStyle = '#e6fbff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, x + w / 2, y + h / 2 + 2 * s);
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  }
 }
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
@@ -2250,7 +2260,7 @@ const paintings = [];
 const frameMat = gold;
 function buildPaintings() {
   [...PROJECTS, ...WING_PROJECTS].forEach(p => {
-    const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo]);
+    const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo], p);
     const tex = new THREE.CanvasTexture(art); tex.anisotropy = 8;
     const uniforms = { map: { value: tex }, uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 }, uAspect: { value: p.size[0] / p.size[1] } };
     const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag });
