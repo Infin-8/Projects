@@ -135,6 +135,7 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 .dir-btn.floor-btn b { font-weight: 600; color: #5ff0ff; margin-right: 3px; }
 .dir-btn.floor-btn[aria-current="true"] { background: #5ff0ff; border-color: #5ff0ff; color: #05070b; }
 .dir-btn.floor-btn[aria-current="true"] b { color: #05070b; }
+@media (max-width: 560px) { .dir-btn.floor-btn:not([aria-current="true"]) .fl-name { display: none; } .dir-btn.floor-btn:not([aria-current="true"]) b { margin-right: 0; } }   /* phones: six floors fit as tags, like lift buttons; your floor keeps its name */
 .dir-here { gap: 6px; }
 .dir-btn.sub-btn { font-size: 11px; padding: 5px 9px; border-color: color-mix(in srgb, var(--gilt-dim) 70%, transparent); color: var(--muted); }
 .here-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5ff0ff; margin-right: 2px; }
@@ -439,7 +440,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <nav class="hud" id="directory" aria-label="Floors and displays"></nav>
 <button type="button" class="hud" id="navToggle" aria-controls="directory" aria-pressed="false" aria-label="Hide the buttons">▾</button>
 <div class="hud" id="prompt" hidden></div>
-<div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press B or 1–4</span></span></div>
+<div class="hud" id="liftPanel" hidden role="group" aria-label="Glass lift: choose a floor"><span class="lp-title">Glass lift<span class="desk"> · press 1–4, B or R</span></span></div>
 <div class="hud" id="floorToast" aria-live="polite"></div>
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
@@ -521,7 +522,7 @@ const PROJECTS = [
   },
   {
     // a teaser: Recluda isn't on the App Store yet, so no phone kiosk; its world has recluda.com and its screens
-    id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Apps', teaser: true,
+    id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Recluda', teaser: true,
     desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data, no per-seat fee. Coming soon to the App Store.',
     modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone, from any Recluda server, through Recluda\'s push relay'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push (or the code the VPN shows)'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
     stack: 'Secure Enclave · Face ID · OpenID Connect · RADIUS · APNs',
@@ -529,7 +530,7 @@ const PROJECTS = [
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: 'assets/recluda-icon.png',
     site: { url: 'https://recluda.com', label: 'recluda.com', shot: 'assets/site-recluda.jpg' },
     shots: [1, 2, 3, 4, 5, 6].map(n => `assets/shots/rc-${n}.jpg`),
-    floor: 'l2', pos: [-7.92, 3.2, 1.5], rotY: Math.PI / 2, size: [3.2, 3.2]
+    floor: 'b2', pos: [-3.6, 2.9, 4.92], rotY: Math.PI, size: [3.2, 3.2]
   },
   {
     id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
@@ -756,7 +757,7 @@ const POOLS = [
   { id: 'vault', name: 'VAULT™', prime: 5, color: '#3fe0e0', color2: '#9ff8ff', bg: '#06141c', page: 'game' },
   { id: 'viper', name: 'VIPER™', prime: 13, color: '#ff5a4e', color2: '#ffb3a8', bg: '#1a0808', page: 'game-336' },
   { id: 'lotus', name: 'LOTUS™', prime: 17, color: '#ffc24a', color2: '#ffe3a3', bg: '#1a1406', page: 'game-432' }];
-// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium, Recluda VPN on the far wall
+// the Platform Wing is L3: VAULT™ and VIPER™ face the lift, LOTUS™ is across the atrium. Recluda VPN is on B2's far wall
 const WING_PROJECTS = [
   ...POOLS.map((P, i) => ({
     id: P.id, name: P.name, kind: 'pool', prime: P.prime, inWing: true, wing: 'Platform',
@@ -770,7 +771,7 @@ const WING_PROJECTS = [
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
-  { id: 'oidc', name: 'Recluda VPN', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'VPN and sign-in approval with your biometric key',
+  { id: 'oidc', name: 'Recluda VPN', kind: 'oidc', inWing: true, wing: 'Recluda', tagline: 'VPN and sign-in approval with your biometric key',
     desc: 'The server behind Recluda, now a product of its own: Recluda Server, a self-hosted identity provider for VPN logins and sign-ins that installs on any Linux server with one command. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Notifications reach phones through Recluda\'s push relay on Cloudflare. A signed license or a 30-day trial, and no per-seat fee.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
@@ -784,7 +785,7 @@ const WING_PROJECTS = [
     site: { url: 'https://recluda.com', label: 'recluda.com', addr: 'https://recluda.com', shot: 'assets/site-recluda.jpg',
       heading: 'recluda.com', cardText: 'The screen on your right opens recluda.com.' },
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: null,
-    floor: 'l3', pos: [0, 3.1, -10.92], rotY: 0, size: [3.3, 3.3] }];
+    floor: 'b2', pos: [0, 2.9, -10.92], rotY: 0, size: [3.3, 3.3] }];
 for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
 DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
 
@@ -881,17 +882,19 @@ scene.fog = new THREE.Fog(0x080a12, 14, 38);
 const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 
 /* ---------- The building, as data ----------
-   Five floors stacked around an open atrium, each one a section:
-   B1 Cryostat Lab · L1 Lobby · L2 Apps · L3 Platform Wing · L4 the Builder's Office.
+   Six floors stacked around an open atrium, each one a section:
+   B2 Recluda · B1 Cryostat Lab · L1 Lobby · L2 Apps · L3 Platform Wing · L4 the Builder's Office.
+   B2, the server room, is sealed off below the cryostat: no atrium (atrium: false), only the lift goes down.
    A floor is a room x0..x1 by z0..z1, h tall, with its floor at height y; each floor's ceiling is the
    next floor's y. "look" is where you face stepping out of the lift [x, z, pitch]. */
 const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
+  { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -15, h: 6, x0: -8, x1: 8, z0: -11, z1: 5, atrium: false, lightsZ: [1, -7], look: [0, -4, 0.05], hello: ['B2 · Recluda.', 'The server room: Recluda Server and the Recluda app.'] },
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
-  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
-  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools, and Recluda VPN.'] },
+  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD, on the App Store.'] },
+  { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 // L4's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
@@ -1298,18 +1301,20 @@ FLOORS.forEach((F, i) => {
   const bottom = i === 0, top = i === FLOORS.length - 1;
   const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2;
   const fm = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }); fm.map.repeat.set(0.25, 0.25);
-  const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : [ATRIUM, liftHole], -1), fm); fl.rotation.x = -Math.PI / 2; g.add(fl);
-  const ce = new THREE.Mesh(slabGeo(F, top ? [] : [ATRIUM, liftHole], 1), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.y = F.h; g.add(ce);
+  // the atrium opens through a floor only between two floors that both have it (B1's floor is solid over B2)
+  const openBelow = !bottom && F.atrium !== false && FLOORS[i - 1].atrium !== false, openAbove = !top && F.atrium !== false && FLOORS[i + 1].atrium !== false;
+  const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : openBelow ? [ATRIUM, liftHole] : [liftHole], -1), fm); fl.rotation.x = -Math.PI / 2; g.add(fl);
+  const ce = new THREE.Mesh(slabGeo(F, top ? [] : openAbove ? [ATRIUM, liftHole] : [liftHole], 1), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.y = F.h; g.add(ce);
   wallAt(g, d, F.h, F.x0, F.h / 2, cz, Math.PI / 2); wallAt(g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
   wallAt(g, w, F.h, cx, F.h / 2, F.z0, 0); wallAt(g, w, F.h, cx, F.h / 2, F.z1, Math.PI);
   for (const x of [F.x0 + 0.03, F.x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(x, 0.9, cz); g.add(b); }
-  // the atrium: a lit edge where the floor opens, and a glass railing around it (on B1, around the cryostat)
-  if (!bottom) {
+  // the atrium: a lit edge where the floor opens, and a glass railing around it (on B1, around the cryostat; none on B2)
+  if (openBelow) {
     const edge = new THREE.Mesh(new THREE.CylinderGeometry(ATRIUM.r, ATRIUM.r, 0.4, 64, 1, true), edgeMat); edge.position.set(ATRIUM.x, -0.2, ATRIUM.z); g.add(edge);
     const lip = new THREE.Mesh(new THREE.TorusGeometry(ATRIUM.r, 0.025, 8, 96), lineMat); lip.rotation.x = Math.PI / 2; lip.position.set(ATRIUM.x, 0.02, ATRIUM.z); g.add(lip);
     const under = lip.clone(); under.position.y = -0.4; g.add(under);
   }
-  const rail = new THREE.Group(); rail.position.set(ATRIUM.x, 0, ATRIUM.z); g.add(rail);
+  const rail = new THREE.Group(); rail.position.set(ATRIUM.x, 0, ATRIUM.z); rail.visible = F.atrium !== false; g.add(rail);
   const RR = ATRIUM.r + 0.14;
   const tr = new THREE.Mesh(new THREE.TorusGeometry(RR, 0.035, 8, 96), steel); tr.rotation.x = Math.PI / 2; tr.position.y = 1.05; rail.add(tr);
   const band = new THREE.Mesh(new THREE.CylinderGeometry(RR, RR, 0.95, 64, 1, true), glassMat); band.position.y = 0.52; rail.add(band);
@@ -1336,7 +1341,7 @@ for (const p of PROJECTS) if (p.stand) {
 function walkable(x, z, f = player.floor) {
   const F = typeof f === 'number' ? FLOORS[f] : f;
   if (x < F.x0 + 0.9 || x > F.x1 - 0.9 || z < F.z0 + 0.9 || z > F.z1 - 0.8) return false;
-  if (Math.hypot(x - ATRIUM.x, z - ATRIUM.z) < ATRIUM.r + 0.55) return false;
+  if (F.atrium !== false && Math.hypot(x - ATRIUM.x, z - ATRIUM.z) < ATRIUM.r + 0.55) return false;
   const lx = x - LIFT.x, lz = z - LIFT.z, lr = Math.hypot(lx, lz);
   if (lr > LIFT.r - 0.45 && lr < LIFT.r + 0.45 && !(lz > 0 && Math.abs(lx) < 0.5)) return false;
   for (const b of F.blocks) if (x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return false;
@@ -1480,10 +1485,11 @@ for (const HERE of FLOORS) {
   p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
   p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('QUANTUM HALL', 56, 92);
   p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Floor guide', 56, 172);
-  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™ · Recluda VPN'],
-    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD · Recluda'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts']];
+  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™'],
+    ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts'],
+    ['B2', 'Recluda', 'Recluda Server · Recluda VPN · the app']];
   rows.forEach(([tag, name, sub], i) => {
-    const y = 270 + i * 150, here = tag === HERE.tag;
+    const y = 262 + i * 128, here = tag === HERE.tag;
     p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
     p.fillStyle = here ? '#05070b' : '#5ff0ff'; p.textAlign = 'center'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(tag, 108, y + 8);
     p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '40px "Young Serif", Georgia, serif'; p.fillText(name, 190, y - 6);
@@ -1570,6 +1576,12 @@ function makeVBanner(w, hangUp, near = 16) {
   b.group.position.copy(BANNER.pos); L1.g.add(b.group);
   buildingUpdates.push((dt, t) => b.update(dt, t));
 }
+
+/* ---------- B2 · Recluda ----------
+   The server room, sealed off below the cryostat: Recluda Server and the Recluda app. Recluda VPN faces you
+   across the room from the lift, the app is on the wall behind you. */
+const B2 = FLOORS[FI.b2];
+floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', B2.x0 + 0.06, 4.7, ATRIUM.z, Math.PI / 2);
 
 /* ---------- B1 · Cryostat Lab ----------
    The source, at the foot of the building: a dilution refrigerator with its vacuum can hoisted off,
@@ -1895,8 +1907,8 @@ const POOL_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(POOL_
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
 /* ---------- L2 · Apps ----------
-   The two apps face you as you step out of the lift; Recluda, coming soon, is on the left wall, and an
-   empty frame waits for the next one. */
+   The two apps face you as you step out of the lift, and an empty frame on the left wall waits for the
+   next one. (Recluda has its own floor, B2.) */
 const L2 = FLOORS[FI.l2];
 floorSign(L2.g, 'LEVEL 2', 'Apps', 0, 6.2, L2.z1 - 0.06, Math.PI);
 for (const z of [-6.5]) {
@@ -2000,7 +2012,7 @@ function buildWatchPodium(kiosk, p, F, loader) {
 }
 
 /* ---------- L3 · Platform Wing ----------
-   VAULT™, VIPER™, LOTUS™ and Recluda VPN around the walls; all three pools nested in
+   VAULT™, VIPER™ and LOTUS™ around the walls; all three pools nested in
    the atrium, floating over the open floors below, each turning in 4D, where the entropy
    column from B1 ends. A wall panel gives the exact math behind the three shells. */
 const L3 = FLOORS[FI.l3];
@@ -3700,7 +3712,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['core', 'A live sign-in', 'Device to OIDC server to phone, approved with a biometric key, then a JWT.'],
       ['hero', 'The platform', 'Device flow, biometric-key approval, RADIUS bridge, push relay, multi-tenant, self-hosted.'],
       ['site', 'The live demo', 'Press E to run a real device-flow sign-in.'],
-      ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
+      ['portal', "That's the tour.", 'The exit display takes you back to the server room.']];
   } else {
     lines = [[`Welcome to ${p.name}.`, `${p.site ? p.site.label + ' is' : 'Everything is'} straight ahead.`, 'site'],
              ['The features are up on the big screens.', 'Click one and I’ll walk you over.', 'hero']];
@@ -3764,7 +3776,7 @@ addEventListener('keydown', e => {
   } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
   if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
-  if (!liftPanel.hidden) { const k = { KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
+  if (!liftPanel.hidden) { const k = { KeyR: FI.b2, KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 // for Vee's idle nudges: when did the visitor last do anything?
@@ -4071,7 +4083,7 @@ dir.append(floorRow, hereRow);
 const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM.x, FLOORS[FI.l3].y + 2.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 [...FLOORS].reverse().forEach(F => {
   const b = document.createElement('button'); b.className = 'dir-btn floor-btn'; b.type = 'button'; b.id = 'go-' + F.id; b.dataset.floor = FI[F.id];
-  b.innerHTML = `<b>${F.tag}</b> ${esc(F.short)}`; b.title = `${F.tag} · ${F.name}`;
+  b.innerHTML = `<b>${F.tag}</b><span class="fl-name"> ${esc(F.short)}</span>`; b.title = `${F.tag} · ${F.name}`; b.setAttribute('aria-label', `${F.tag} ${F.name}`);
   b.addEventListener('click', () => jumpToFloor(FI[F.id])); floorRow.appendChild(b);
 });
 // what's on each floor, in the order you meet it
