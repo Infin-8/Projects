@@ -523,7 +523,7 @@ const PROJECTS = [
     // a teaser: Recluda isn't on the App Store yet, so no phone kiosk; its world has recluda.com and its screens
     id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Apps', teaser: true,
     desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data, no per-seat fee. Coming soon to the App Store.',
-    modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone: no code to type, no QR to scan'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
+    modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone, from any Recluda server, through Recluda\'s push relay'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push (or the code the VPN shows)'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
     stack: 'Secure Enclave · Face ID · OpenID Connect · RADIUS · APNs',
     links: [['recluda.com','https://recluda.com'], ['VPN Guide','https://recluda.com/vpn-guide']],
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: 'assets/recluda-icon.png',
@@ -771,15 +771,16 @@ const WING_PROJECTS = [
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
   { id: 'oidc', name: 'Recluda VPN', kind: 'oidc', inWing: true, wing: 'Platform', tagline: 'VPN and sign-in approval with your biometric key',
-    desc: 'The server behind Recluda: a self-hosted identity provider for VPN logins and sign-ins. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Runs on a Raspberry Pi, with no per-seat fee.',
+    desc: 'The server behind Recluda, now a product of its own: Recluda Server, a self-hosted identity provider for VPN logins and sign-ins that installs on any Linux server with one command. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Notifications reach phones through Recluda\'s push relay on Cloudflare. A signed license or a 30-day trial, and no per-seat fee.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
       ['BIOMETRIC KEY', 'A Secure Enclave signature unlocked by Face ID or Touch ID, with number matching and QR approval.'],
-      ['RADIUS BRIDGE', 'Translates a RADIUS Access-Request into OIDC. Live on UDP 1812.'],
+      ['RADIUS BRIDGE', 'Turns a VPN login into a sign-in on UDP 1812. The VPN shows the number to tap and a code to enter.'],
+      ['PUSH RELAY', 'Self-hosted servers send sign-in notifications through push.recluda.com, a Cloudflare Worker. It never sees the number.'],
       ['MULTI-TENANT', 'Full isolation per organization, with unlimited tenants in one deployment.'],
-      ['SELF-HOSTED', 'Docker Compose, 7 containers, on a Raspberry Pi 5 (8GB) or any Linux VM.']],
-    stack: 'RFC 8628 · OpenID Connect · JWT · RADIUS · Docker · Raspberry Pi',
-    links: [['recluda.com', 'https://recluda.com'], ['VPN Guide', 'https://recluda.com/vpn-guide']],
+      ['SELF-HOSTED', 'Recluda Server installs with one command on any Linux server or a Raspberry Pi. Signed licenses, checked offline.']],
+    stack: 'RFC 8628 · OpenID Connect · JWT · RADIUS · APNs · Cloudflare Workers · Docker',
+    links: [['recluda.com', 'https://recluda.com'], ['Install', 'https://recluda.com/server'], ['VPN Guide', 'https://recluda.com/vpn-guide']],
     site: { url: 'https://recluda.com', label: 'recluda.com', addr: 'https://recluda.com', shot: 'assets/site-recluda.jpg',
       heading: 'recluda.com', cardText: 'The screen on your right opens recluda.com.' },
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: null,
@@ -3691,13 +3692,13 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   } else if (p.kind === 'oidc') {
     lines = [
       [`Welcome to ${p.name}.`, 'Watch a sign-in play out in front of you.', 'core'],
-      ['Device flow, biometric key, RADIUS and tenants.', 'The big screens cover each one.', 'hero'],
+      ['Device flow, biometric key, RADIUS, the push relay and tenants.', 'The big screens cover each one.', 'hero'],
       ['recluda.com is on your right.', 'Walk up and press E to open it.', 'site'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
       ['core', 'A live sign-in', 'Device to OIDC server to phone, approved with a biometric key, then a JWT.'],
-      ['hero', 'The platform', 'Device flow, biometric-key approval, RADIUS bridge, multi-tenant, self-hosted.'],
+      ['hero', 'The platform', 'Device flow, biometric-key approval, RADIUS bridge, push relay, multi-tenant, self-hosted.'],
       ['site', 'The live demo', 'Press E to run a real device-flow sign-in.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the Platform Wing.']];
   } else {
