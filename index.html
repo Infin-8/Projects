@@ -2085,6 +2085,50 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
     if (total !== lastBytes || wallT === 0) { lastBytes = total; drawLabel(total); }
   });
 }
+/* B2's install terminal, on the south wall beside the Recluda app: the install from recluda.com/server, typed out
+   with the installer's own output (the recluda script in recluda-server). Tap it to open that page.
+   The version is the one recluda.com/downloads serves; change it with each release. */
+const INSTALL = { x: 2.6, y: 2.5, z: FLOORS[FI.b2].z1 - 0.08, url: 'https://recluda.com/server', version: '0.4.0' };
+{
+  const F = FLOORS[FI.b2], v = INSTALL.version, W = 3.2, H = 2.0;
+  const lines = [['$', `curl -fLO https://recluda.com/downloads/recluda-server-${v}.tar.gz`], ['$', `tar xzf recluda-server-${v}.tar.gz`], ['$', `cd recluda-server-${v}`],
+    ['$', './recluda install --hostname auth.example.com'], ['', "Wrote recluda.env (owner-only: it holds the server's secrets)."],
+    ['', "Push notifications: on, through Recluda's push relay (trial)."], ['', 'Recluda Server is running at https://auth.example.com'], ['$', './recluda admin set-password']];
+  const c = mk(1024, 640), g = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: tex })); scr.position.set(INSTALL.x, INSTALL.y, INSTALL.z - 0.04); scr.rotation.y = Math.PI; F.g.add(scr);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(W + 0.12, H + 0.12, 0.06), colMat); fr.position.set(INSTALL.x, INSTALL.y, INSTALL.z); F.g.add(fr);
+  const draw = (n, typed) => {   // n lines done, plus `typed` characters of the next
+    g.fillStyle = '#03100f'; g.fillRect(0, 0, 1024, 640); g.strokeStyle = 'rgba(45,212,191,0.55)'; g.lineWidth = 4; g.strokeRect(8, 8, 1008, 624);
+    g.fillStyle = 'rgba(45,212,191,0.14)'; g.fillRect(8, 8, 1008, 56); g.textAlign = 'left'; g.fillStyle = '#2dd4bf'; g.font = '600 24px "IBM Plex Mono", monospace'; g.fillText('INSTALL RECLUDA SERVER · LINUX + DOCKER', 32, 45);
+    g.textAlign = 'right'; g.fillStyle = '#7fa9a3'; g.fillText(`v${v}`, 992, 45); g.textAlign = 'left';
+    g.font = '21px "IBM Plex Mono", monospace';
+    for (let i = 0; i <= Math.min(n, lines.length - 1); i++) {
+      const [pr, txt] = lines[i], shown = i < n ? txt : txt.slice(0, typed), y = 110 + i * 46;
+      if (pr) { g.fillStyle = '#2dd4bf'; g.fillText(pr, 32, y); }
+      g.fillStyle = pr ? '#e6fbf7' : '#9fc9c2'; g.fillText(shown, pr ? 58 : 32, y);
+      if (i === n && Math.floor(performance.now() / 400) % 2) { g.fillStyle = '#2dd4bf'; g.fillRect((pr ? 58 : 32) + g.measureText(shown).width + 3, y - 18, 12, 22); }
+    }
+    g.fillStyle = 'rgba(45,212,191,0.12)'; g.fillRect(8, 572, 1008, 60); g.fillStyle = '#e6fbf7'; g.font = '600 22px "IBM Plex Sans", sans-serif';
+    g.fillText('x86 or ARM, a Raspberry Pi too · 30-day trial for 25 people · Tap to open recluda.com/server', 32, 610);
+    tex.needsUpdate = true;
+  };
+  draw(lines.length, 0);
+  const lbl = textSprite([['ONE COMMAND TO INSTALL', '600 44px "IBM Plex Mono", monospace', '#2dd4bf'], ['recluda.com/server', '38px "IBM Plex Sans", sans-serif', '#c9d2e3']], 1024, 180, 2.4);
+  lbl.position.set(INSTALL.x, INSTALL.y + H / 2 + 0.55, INSTALL.z - 0.3); F.g.add(lbl);
+  INSTALL.stop = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(INSTALL.x, F.y + INSTALL.y, INSTALL.z), normal: new THREE.Vector3(0, 0, -1), standOff: 3.4, pitch: 0.04 };
+  hallLinks.push({ mesh: scr, url: INSTALL.url, floor: FI.b2, stop: INSTALL.stop });
+  // typed out on a loop while you're on B2: each command at typing speed, its output at once, then a pause
+  const SPEED = 38, HOLD = 7; let t0 = null, last = '';
+  buildingUpdates.push((dt, t) => {
+    if (!F.g.visible || player.floor !== FI.b2) { t0 = null; return; }
+    if (t0 === null) t0 = t;
+    let e = t - t0, n = 0, typed = 0;
+    for (; n < lines.length; n++) { const d = lines[n][0] ? lines[n][1].length / SPEED + 0.6 : 0.5; if (e < d) { typed = lines[n][0] ? Math.min(lines[n][1].length, Math.floor(e * SPEED)) : 0; break; } e -= d; }
+    if (n >= lines.length && e > HOLD) t0 = t;
+    const key = `${n}:${typed}:${Math.floor(performance.now() / 400) % 2}`;
+    if (key !== last) { last = key; draw(n, typed); }
+  });
+}
 const POOL_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(POOL_WALL.x, B1.y + POOL_WALL.y, B1.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 5.6, pitch: 0.06 };
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
@@ -4272,7 +4316,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 // what's on each floor, in the order you meet it
 function floorStops(i) {
   const out = [];
-  if (i === FI.b2) out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP]);
+  if (i === FI.b2) out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]);
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]);
