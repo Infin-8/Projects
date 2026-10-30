@@ -890,7 +890,7 @@ const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
-  { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -15, h: 6, x0: -3, x1: 8, z0: -9, z1: 4, atrium: false, lightX: 2.5, lightsZ: [1.5, -5], look: [5.6, 4, 0.06], hello: ['B2 · Recluda.', 'The server room. Follow a VPN sign-in along the wall on your right.'] },
+  { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -15, h: 6, x0: -3, x1: 8, z0: -9, z1: 5.5, atrium: false, lightX: 2.5, lightsZ: [2.5, -4.5], look: [2.5, 5.5, 0.08], hello: ['B2 · Recluda.', 'The server room. Follow a VPN sign-in along the wall on your right.'] },
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
@@ -1579,10 +1579,10 @@ function makeVBanner(w, hangUp, near = 16) {
 
 /* ---------- B2 · Recluda ----------
    The server room, sealed off below the cryostat, and smaller than the floors above. Facing you as the lift opens:
-   the floor plaque over the install terminal. On your right, the west wall reads left to right as a sign-in goes:
+   the floor plaque over the Recluda wall (what Recluda Server is, the install terminal, what you get). On your right, the west wall reads left to right as a sign-in goes:
    the VPN's login screen, the Recluda Server rack against the wall, the phone. Recluda VPN is on the north wall. */
 const B2 = FLOORS[FI.b2];
-floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 5.6, 4.35, B2.z1 - 0.06, Math.PI);   // straight ahead as the lift opens, over the install terminal
+floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 2.5, 4.75, B2.z1 - 0.06, Math.PI);   // straight ahead as the lift opens, over the Recluda wall
 // The server rack, against the west wall facing the lift, between the VPN screen and the phone: what Recluda Server
 // runs (its Docker Compose services, and a Raspberry Pi, which it also runs on). RACK.blink(id) flashes a unit's lights.
 const RACK = { x: B2.x0 + 0.7, z: -2.6, units: [
@@ -2086,10 +2086,10 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
     if (total !== lastBytes || wallT === 0) { lastBytes = total; drawLabel(total); }
   });
 }
-/* B2's install terminal, facing the lift under the floor plaque: the install from recluda.com/server, typed out
+/* B2's install terminal, in the centre of the Recluda wall facing the lift: the install from recluda.com/server, typed out
    with the installer's own output (the recluda script in recluda-server). Tap it to open that page.
    The version is the one recluda.com/downloads serves; change it with each release. */
-const INSTALL = { x: 5.6, y: 2.2, z: FLOORS[FI.b2].z1 - 0.08, url: 'https://recluda.com/server', version: '0.4.0' };
+const INSTALL = { x: 2.5, y: 2.35, z: FLOORS[FI.b2].z1 - 0.14, url: 'https://recluda.com/server', version: '0.4.0' };
 {
   const F = FLOORS[FI.b2], v = INSTALL.version, W = 3.2, H = 2.0;
   const lines = [['$', `curl -fLO https://recluda.com/downloads/recluda-server-${v}.tar.gz`], ['$', `tar xzf recluda-server-${v}.tar.gz`], ['$', `cd recluda-server-${v}`],
@@ -2254,6 +2254,45 @@ floorSign(L3.g, 'Quantum V^ Platform', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Ma
   });
   infoPanel(L3.g, { eyebrow: 'THE MATH', title: 'Hurwitz shells', body: 'Each pool is one shell of the F4 lattice: all the Hurwitz quaternions of norm p, a prime. There are exactly 24(p + 1) of them. p = 5 gives 144, p = 13 gives 336 and p = 17 gives 432.', foot: 'VAULT™ 144 · VIPER™ 336 · LOTUS™ 432' },
     L3.x1 - 0.06, 3.0, -8.4, -Math.PI / 2, 3.2);
+}
+
+/* B2's Recluda wall, facing the lift under the floor plaque: what Recluda Server is on the left, the install
+   terminal in the centre (built above, in front of this panel), what you get on the right. Like L3's platform
+   wall, in Recluda's teal. Only what the install guide and the server package say. */
+const RECLUDA_WALL = { w: 10.4, h: 3.0, url: 'https://recluda.com' };
+function buildRecludaWall() {
+  const F = FLOORS[FI.b2], { w, h } = RECLUDA_WALL, y = INSTALL.y, z = F.z1 - 0.06, CW = 4096, CH = Math.round(CW * h / w);
+  const c = mk(CW, CH), g = c.getContext('2d'), TEAL = '#2dd4bf';
+  const bg = g.createRadialGradient(CW / 2, CH * 0.5, 80, CW / 2, CH * 0.5, CW * 0.55); bg.addColorStop(0, '#0a2a2c'); bg.addColorStop(0.4, '#06141a'); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, CW, CH); g.strokeStyle = 'rgba(45,212,191,0.45)'; g.lineWidth = 4; g.strokeRect(18, 18, CW - 36, CH - 36);
+  const COLW = 1180, LX = 130, RX = CW - 130 - COLW; g.textAlign = 'left';
+  // left: what it is
+  g.fillStyle = TEAL; g.fillRect(LX, 140, 90, 6); g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('RECLUDA SERVER', LX, 218);
+  g.fillStyle = '#e6fbf7'; let px = 104; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText('Sign-in approval you host').width > COLW && --px > 60); g.fillText('Sign-in approval you host', LX, 340);
+  g.fillStyle = '#c9e4df'; g.font = '44px "IBM Plex Sans", sans-serif';
+  let ty = wrapText(g, 'A self-hosted identity provider for VPN logins and sign-ins. People approve in the Recluda app with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching.', LX, 440, COLW, 62);
+  wrapText(g, 'The database, the signing key and every sign-in record stay on your server.', LX, ty + 24, COLW, 62);
+  // right: what you get
+  g.fillStyle = TEAL; g.fillRect(RX, 140, 90, 6); g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('WHAT YOU GET', RX, 218);
+  [['Any VPN, any app', 'RADIUS for VPNs, OpenID Connect for apps.'],
+   ['One command', 'Installs on Linux or a Raspberry Pi, x86 or ARM.'],
+   ['Notifications', "Through Recluda's push relay, which never sees the number."],
+   ['A license you hold', 'Signed and checked offline. It sets how many people can enroll and never blocks a sign-in.'],
+   ['Try it first', 'A 30-day trial for 25 people, no license needed.']].forEach(([t, d], i) => {
+    const yy = 318 + i * 172;
+    g.fillStyle = TEAL; g.beginPath(); g.arc(RX + 32, yy - 18, 32, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#04161a'; g.font = '600 36px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText(String(i + 1), RX + 32, yy - 5); g.textAlign = 'left';
+    g.fillStyle = '#e6fbf7'; g.font = '56px "Young Serif", Georgia, serif'; g.fillText(t, RX + 96, yy);
+    g.fillStyle = '#b4d6d0'; g.font = '41px "IBM Plex Sans", sans-serif'; wrapText(g, d, RX + 96, yy + 54, COLW - 96, 50);
+  });
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(2.5, y, z - 0.01); m.rotation.y = Math.PI; F.g.add(m);
+  const ft = 0.14;
+  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(2.5 + fx, y + fy, z - 0.04); F.g.add(f);
+  });
+  RECLUDA_WALL.stop = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(2.5, F.y + y, F.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: 0.1 };
+  hallLinks.push({ mesh: m, url: RECLUDA_WALL.url, floor: FI.b2, stop: RECLUDA_WALL.stop });
 }
 
 /* L3's north wall, across the atrium from the lift: the platform in one wide display. LOTUS™ in the centre (its
@@ -4376,7 +4415,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 // what's on each floor, in the order you meet it
 function floorStops(i) {
   const out = [];
-  if (i === FI.b2) out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]);
+  if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
@@ -5670,6 +5709,7 @@ function veeDestination(id) {
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
     case 'platform-wall': return PLATFORM_WALL.stop || null;
+    case 'recluda-wall': return RECLUDA_WALL.stop || null;
     case 'server-rack': return RACK_STOP;
     case 'vpn-signin': return SIGNIN_STOP;
     case 'install': return INSTALL.stop;
@@ -6163,7 +6203,7 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildPlatformWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
