@@ -5611,6 +5611,9 @@ function veeDestination(id) {
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
+    case 'server-rack': return RACK_STOP;
+    case 'vpn-signin': return SIGNIN_STOP;
+    case 'install': return INSTALL.stop;
     case 'timeline': return { exhibit: true, floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
   }
   return null;
