@@ -2256,6 +2256,65 @@ floorSign(L3.g, 'Quantum V^ Platform', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Ma
     L3.x1 - 0.06, 3.0, -8.4, -Math.PI / 2, 3.2);
 }
 
+/* L3's north wall, across the atrium from the lift: the platform in one wide display. LOTUS™ in the centre (its
+   432 nodes and nearest-neighbour edges, projected from 4D as on its own display), what the platform is on the
+   left, and how the entropy flows on the right (the same five stages as B1's storage wall). Built once the fonts
+   are in; tap it to open the Quantum V^ site. */
+const PLATFORM_WALL = { w: 15.0, h: 3.95, y: 3.6, url: 'https://quantum-v.nathaniel-a-vazquez.workers.dev/' };
+function buildPlatformWall() {
+  const F = FLOORS[FI.l3], { w, h, y } = PLATFORM_WALL, z = F.z0 + 0.08, CW = 4096, CH = Math.round(CW * h / w);
+  const c = mk(CW, CH), g = c.getContext('2d'), L = POOLS.find(P => P.id === 'lotus');
+  const bg = g.createRadialGradient(CW / 2, CH * 0.45, 60, CW / 2, CH * 0.45, CW * 0.55); bg.addColorStop(0, '#1a1406'); bg.addColorStop(0.35, '#0b0d16'); bg.addColorStop(1, '#05070b');
+  g.fillStyle = bg; g.fillRect(0, 0, CW, CH);
+  g.strokeStyle = 'rgba(255,194,74,0.45)'; g.lineWidth = 4; g.strokeRect(18, 18, CW - 36, CH - 36);
+  // LOTUS™, centred
+  const nodes = hurwitzShell(L.prime), edges = shellEdges(nodes), sp = Math.sqrt(L.prime), pts = new Float32Array(nodes.length * 3);
+  nodes.forEach((n, i) => projectNode(n.q, sp, 0.55, 0.35, 1, pts, i * 3));
+  // scaled so the shell fills the space above its caption
+  const ux = i => pts[i * 3] + pts[i * 3 + 2] * 0.35, uy = i => pts[i * 3 + 1] - pts[i * 3 + 2] * 0.2;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; nodes.forEach((n, i) => { x0 = Math.min(x0, ux(i)); x1 = Math.max(x1, ux(i)); y0 = Math.min(y0, uy(i)); y1 = Math.max(y1, uy(i)); });
+  const top = 70, bottom = CH - 200, R = Math.min((bottom - top) / (y1 - y0), 1150 / (x1 - x0)), cx = CW / 2 - (x0 + x1) / 2 * R, cy = top + y1 * R;
+  const X = i => cx + ux(i) * R, Y = i => cy - uy(i) * R;
+  const hx = CW / 2, hy = (top + bottom) / 2, hr = (bottom - top) * 0.62, halo = g.createRadialGradient(hx, hy, 0, hx, hy, hr); halo.addColorStop(0, 'rgba(255,194,74,0.16)'); halo.addColorStop(1, 'rgba(255,194,74,0)');
+  g.fillStyle = halo; g.beginPath(); g.arc(hx, hy, hr, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = L.color; g.globalAlpha = 0.3; g.lineWidth = 2.2;
+  for (let k = 0; k < edges.length; k += 2) { g.beginPath(); g.moveTo(X(edges[k]), Y(edges[k])); g.lineTo(X(edges[k + 1]), Y(edges[k + 1])); g.stroke(); }
+  g.globalAlpha = 1;
+  nodes.forEach((n, i) => { g.fillStyle = n.half ? L.color2 : L.color; g.beginPath(); g.arc(X(i), Y(i), n.half ? 7 : 9.5, 0, Math.PI * 2); g.fill(); });
+  g.textAlign = 'center'; g.fillStyle = '#f1e6cf'; g.font = '84px "Young Serif", Georgia, serif'; g.fillText('LOTUS™', cx, CH - 118);
+  g.fillStyle = L.color; g.font = '600 34px "IBM Plex Mono", monospace'; g.fillText(`p = ${L.prime} · ${nodes.length} NODES · ONE SHELL OF THE F4 LATTICE`, cx, CH - 64);
+  // left: what the platform is
+  const LX = 150, COLW = 1180; g.textAlign = 'left';
+  g.fillStyle = L.color; g.fillRect(LX, 150, 90, 6);
+  g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('QUANTUM V^ PLATFORM', LX, 228);
+  g.fillStyle = '#f1e6cf'; g.font = '112px "Young Serif", Georgia, serif'; g.fillText('Entropy as a Service', LX, 352);
+  g.fillStyle = '#c9d2e3'; g.font = '46px "IBM Plex Sans", sans-serif';
+  let ty = wrapText(g, 'Quantum-derived randomness as a service, from the Quantum V^ research. Three entropy pools, VAULT™, VIPER™ and LOTUS™, are measured on IBM Quantum hardware; the QRNG API serves bytes from the pool they seed.', LX, 450, COLW, 66);
+  wrapText(g, 'QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.', LX, ty + 22, COLW, 66);
+  // right: how the entropy flows
+  const RX = CW - 150 - COLW; g.fillStyle = L.color; g.fillRect(RX, 150, 90, 6);
+  g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('HOW THE ENTROPY FLOWS', RX, 228);
+  [['Measure', 'The three pools run on IBM Quantum hardware. Each run is a real job.'],
+   ['Master pool', 'The SHA-256 of their measurements: one 32-byte pool.'],
+   ['HKDF stream', 'Expanded by a counter that only counts up, so it never repeats.'],
+   ['QRNG API', 'Bytes, integers, floats and UUIDs, with where they came from.'],
+   ['QES-256', 'A drop-in Math.random() for your app, drawn from that stream.']].forEach(([t, d], i) => {
+    const yy = 330 + i * 136;
+    g.fillStyle = L.color; g.beginPath(); g.arc(RX + 34, yy - 16, 34, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1a1406'; g.font = '600 38px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText(String(i + 1), RX + 34, yy - 3); g.textAlign = 'left';
+    g.fillStyle = '#f1e6cf'; g.font = '52px "Young Serif", Georgia, serif'; g.fillText(t, RX + 100, yy - 4);
+    g.fillStyle = '#a9b3c6'; g.font = '38px "IBM Plex Sans", sans-serif'; g.fillText(d, RX + 100, yy + 46);
+  });
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(0, y, z + 0.04); F.g.add(m);
+  const ft = 0.16;   // a gold frame, like the paintings'
+  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.12), gold); f.position.set(fx, y + fy, z + 0.06); F.g.add(f);
+  });
+  PLATFORM_WALL.stop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(0, F.y + y, z), normal: new THREE.Vector3(0, 0, 1), standOff: 3.9, pitch: 0.3 };   // between the wall and the atrium railing, looking up at it
+  hallLinks.push({ mesh: m, url: PLATFORM_WALL.url, floor: FI.l3, stop: PLATFORM_WALL.stop });
+}
+
 /* ---------- L4 · The builder's floor ----------
    The top floor: the office's glass door (see buildKiosk), a timeline of the builder's career along
    the west wall, the skills wall to the north, and a starry skylight over the atrium. */
@@ -4320,7 +4379,7 @@ function floorStops(i) {
   if (i === FI.b2) out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]);
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
-  if (i === FI.l3) out.push(['Entropy pools', wingStop]);
+  if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
   return out;
 }
@@ -5610,6 +5669,7 @@ function veeDestination(id) {
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
+    case 'platform-wall': return PLATFORM_WALL.stop || null;
     case 'server-rack': return RACK_STOP;
     case 'vpn-signin': return SIGNIN_STOP;
     case 'install': return INSTALL.stop;
@@ -6103,7 +6163,7 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildPlatformWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
