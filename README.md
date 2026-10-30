@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://hall.steady-watch.com/"><strong>Walk the gallery →</strong></a><br>
-  <sub>Five floors around an atrium, from the cryostat lab to the builder's office. Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
+  <sub>Six floors around an atrium, from Recluda's server room and the cryostat lab to the builder's office. Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
 </p>
 
 ## Apps

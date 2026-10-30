@@ -7,9 +7,9 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<meta name="description" content="Quantum Hall: a five-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD harmonic tuner, Recluda (coming soon), the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda VPN, and Vee, the holographic guide.">
+<meta name="description" content="Quantum Hall: a six-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda (coming soon) and its server room, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
-<meta property="og:description" content="Five floors around an atrium, from a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
+<meta property="og:description" content="Six floors around an atrium, from a server room and a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://hall.steady-watch.com/assets/gallery-preview.png">
 <meta property="og:url" content="https://hall.steady-watch.com/">
 <link rel="canonical" href="https://hall.steady-watch.com/">
@@ -1262,7 +1262,7 @@ function makeCryostat() {
 function pulseStages(list, t) {   // a pulse of cold travels down the stages, top to bottom
   list.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
 }
-/* ---------- The building: five floors stacked around an open atrium ----------
+/* ---------- The building: six floors stacked around an open atrium (B2 sealed below it) ----------
    Each floor in FLOORS gets a group set at its height, and everything on that floor is built inside
    the group in the floor's own coordinates (its floor at y = 0). A round atrium opens up through every
    floor, and a glass lift beside it runs the full height of the building. */
@@ -3777,7 +3777,7 @@ function buildMascot() {
   vee.tour = [
     ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Every display is a product, and every floor is a section.', null],
     ['Straight ahead: the Quantum V^ Platform.', 'Walk up to a display and step inside.', plat ? plat.center : null],
-    ['The glass lift goes everywhere.', 'Apps on L2, the Platform Wing on L3, the Cryostat Lab below.', liftAt],
+    ['The glass lift goes everywhere.', 'Apps on L2, the Platform Wing on L3, the Cryostat Lab and Recluda below.', liftAt],
     ['Want a guided tour?', "Press T. The builder's office is on L4.", null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
@@ -3841,15 +3841,17 @@ function updateMascot(dt, t) {
   vee.tourT += dt;   // the room tour plays through once, then rests on its last line
   if (vee.tourT > 5 && vee.reveal >= vee.total && vee.tourK < vee.tour.length - 1) { vee.tourT = 0; vee.tourK++; vee.sayTour(); }
 }
-// The hall's guided tour, floor by floor: the lobby, the Cryostat Lab, the apps, the Platform Wing, the builder's office
+// The hall's guided tour, floor by floor: the lobby, the Cryostat Lab, Recluda's server room, the apps, the Platform Wing, the builder's office
 function hallTourStops() {
   const P = id => paintings.find(p => p.p.id === id), stops = [], plat = P('platform');
   stops.push({ floor: FI.l1, center: new THREE.Vector3(BANNER.pos.x, L1.y + BANNER.pos.y, BANNER.pos.z), normal: new THREE.Vector3(0, 0, 1), standOff: 7.2, pitch: 0.24,
-    line: 'This is the Quantum Hall.', sub: 'Five floors around an atrium, with a column of light up the middle.' });
+    line: 'This is the Quantum Hall.', sub: 'Six floors around an atrium, with a column of light up the middle.' });
   stops.push({ ...SLIT_STOP, standOff: 5.4, line: 'The entrance: a double slit.', sub: 'Each photon lands at a random spot. That randomness is where it all starts.' });
   if (plat) stops.push({ floor: plat.floor, center: plat.center, normal: plat.normal, standOff: 4.6, pitch: 0.18, line: plat.p.name, sub: `${plat.p.tagline}. Step inside to explore it.` });
   stops.push({ ...CRYO_STOP, line: 'B1 · The Cryostat Lab.', sub: 'Cooled to about 10 mK. The light rises from its chip.' });
-  for (const id of ['kaizendoku', 'handheld', 'recluda']) {
+  stops.push({ ...RACK_STOP, standOff: 4.4, line: 'B2 · Recluda.', sub: 'The server room. Recluda Server runs on any Linux server, or a Raspberry Pi.' });
+  stops.push({ ...SIGNIN_STOP, line: 'A VPN sign-in, on a loop.', sub: 'The VPN asks the rack, the push relay reaches the phone, Face ID approves.' });
+  for (const id of ['kaizendoku', 'handheld']) {
     const pt = P(id); if (!pt) continue;
     stops.push({ floor: pt.floor, center: pt.center, normal: pt.normal, standOff: 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
