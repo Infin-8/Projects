@@ -1764,6 +1764,30 @@ const SIGNIN = { code: '7QK-4MX', num: 47, choices: [31, 47, 82], vpn: { x: B2.x
   });
 }
 const SIGNIN_STOP = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(B2.x0, B2.y + 2.2, -2.9), normal: new THREE.Vector3(1, 0, 0), standOff: 8.6, pitch: 0.02 };   // the VPN, the rack and the phone in one view
+// B2's raised floor: 60 cm access-floor tiles over the whole room, and perforated grille tiles in front of the rack,
+// where a server room vents cold air up to the equipment
+{
+  const T = 0.6, F = B2, W = F.x1 - F.x0, D = F.z1 - F.z0;
+  const tile = (perf) => {
+    const c = mk(256, 256), g = c.getContext('2d');
+    g.fillStyle = '#05070b'; g.fillRect(0, 0, 256, 256);   // the seam between tiles
+    g.fillStyle = perf ? '#1b2230' : '#171c27'; g.fillRect(4, 4, 248, 248);
+    g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(4, 4, 248, 3); g.fillRect(4, 4, 3, 248);   // a lit top edge, as if raised
+    if (perf) { g.fillStyle = '#3fbfb0'; for (let y = 22; y < 240; y += 14) for (let x = 22; x < 240; x += 14) { g.beginPath(); g.arc(x, y, 4.2, 0, Math.PI * 2); g.fill(); } }   // cool air: light through the holes
+    return c;
+  };
+  const plain = new THREE.CanvasTexture(tile(false)); plain.wrapS = plain.wrapT = THREE.RepeatWrapping; plain.repeat.set(W / T, D / T); plain.anisotropy = 8;
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: plain, roughness: 0.45, metalness: 0.5 }));
+  fl.rotation.x = -Math.PI / 2; fl.position.set((F.x0 + F.x1) / 2, 0.004, (F.z0 + F.z1) / 2); F.g.add(fl);
+  const perf = new THREE.CanvasTexture(tile(true)); perf.anisotropy = 8;
+  const pm = new THREE.MeshBasicMaterial({ map: perf, color: 0xb8c6cc });
+  const cool = new THREE.PointLight(0x2dd4bf, 0.35, 2.6, 2); cool.position.set(RACK.x + 1.6, 0.4, RACK.z); F.g.add(cool);
+  // two columns of grilles along the rack's glass front (the rack faces +x)
+  for (let ix = 0; ix < 2; ix++) for (let iz = 0; iz < 4; iz++) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(T, T), pm); m.rotation.x = -Math.PI / 2;
+    m.position.set(F.x0 + Math.round((RACK.x + 1.0 - F.x0) / T) * T + (ix + 0.5) * T, 0.006, RACK.z + (iz - 2 + 0.5) * T); F.g.add(m);
+  }
+}
 const RACK_STOP = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(RACK.x + 0.65, B2.y + 1.8, RACK.z), normal: new THREE.Vector3(1, 0, 0), standOff: 3.4, pitch: 0.08 };
 
 /* ---------- B1 · Cryostat Lab ----------
@@ -2591,6 +2615,8 @@ const LIGHT_PATHS = (() => {
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
+  // B2: out of the lift (door at z -2.85), along a spine in front of the sign-in wall, to the Recluda wall and Recluda VPN
+  add(FI.b2, X, door, X, -1.2); add(FI.b2, X, -1.2, 0.3, -1.2); add(FI.b2, 0.3, 1.2, 0.3, -5.6); add(FI.b2, 2.5, -1.2, 2.5, 3.4); add(FI.b2, 2.5, -1.2, 2.5, -6.8);
   add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
   return segs;
 })();
