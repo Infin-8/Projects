@@ -117,3 +117,27 @@
     </td>
   </tr>
 </table>
+
+## Packages
+
+<table>
+  <tr>
+    <td width="120" align="center" valign="middle"><img src="assets/rounded/recluda-icon.png" width="100" alt="Recluda icon"></td>
+    <td valign="top">
+      <strong>Recluda Server</strong> · v0.4.0<br>
+      Sign-in approval you host.
+      <br><br>
+      The server behind Recluda, as public container images on the GitHub Container Registry, for Linux on x86 (amd64) or ARM (arm64), a Raspberry Pi included. The installer pulls them for you; a signed license or a 30-day trial for 25 people.
+      <br><br>
+      <strong><a href="https://github.com/users/Infin-8/packages/container/package/recluda-server">recluda-server</a></strong><br>
+      The sign-in server: OpenID Connect with the RFC 8628 device flow, and the admin console.<br>
+      <code>docker pull ghcr.io/infin-8/recluda-server:0.4.0</code>
+      <br><br>
+      <strong><a href="https://github.com/users/Infin-8/packages/container/package/recluda-radius">recluda-radius</a></strong><br>
+      The RADIUS bridge: turns a VPN login into a sign-in, on UDP 1812.<br>
+      <code>docker pull ghcr.io/infin-8/recluda-radius:0.4.0</code>
+      <br><br>
+      <a href="https://recluda.com/server">Install guide</a> · <a href="https://recluda.com/vpn-guide">VPN guide</a> · <a href="https://github.com/Infin-8?tab=packages">All packages</a>
+    </td>
+  </tr>
+</table>
