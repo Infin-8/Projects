@@ -1286,11 +1286,28 @@ const edgeMat = new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6
 const liftHole = { x: LIFT.x, z: LIFT.z, r: LIFT.r + 0.02 };
 const faceYaw = (fx, fz, tx, tz) => Math.atan2(-(tx - fx), -(tz - fz));
 // a gold sign like a museum's wing sign: an eyebrow line over a title
-function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2) {
-  const sc = mk(1024, 200), sg = sc.getContext('2d');
+// Recluda's face scan, its approved frame (recluda.com's header-facescan.js): four rounded corner brackets and the
+// smile, lit in Recluda teal, on a dark tile; cx, cy is the centre, s the tile's size
+function drawFaceScan(g, cx, cy, s) {
+  const bg = g.createLinearGradient(0, cy - s / 2, 0, cy + s / 2); bg.addColorStop(0, '#082428'); bg.addColorStop(1, '#020a0c');
+  g.fillStyle = bg; rr(g, cx - s / 2, cy - s / 2, s, s, s * 0.24); g.fill();
+  const size = s * 0.86, half = size * 0.34, arm = size * 0.16, line = Math.max(3, size * 0.052), TEAL = '#2dd4bf';   // a little bolder than the header, to read from across the room
+  const glow = g.createRadialGradient(cx, cy, 0, cx, cy, half * 1.25); glow.addColorStop(0, 'rgba(45,212,191,0.22)'); glow.addColorStop(1, 'rgba(45,212,191,0)');
+  g.fillStyle = glow; g.beginPath(); g.arc(cx, cy, half * 1.25, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = TEAL; g.lineWidth = line; g.lineCap = 'round';
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const x = cx + sx * half, y = cy + sy * half;
+    g.beginPath(); g.moveTo(x, y - sy * arm); g.quadraticCurveTo(x, y, x - sx * arm, y); g.stroke();
+  }
+  g.beginPath(); g.arc(cx, cy + half * 0.02, half * 0.42, 160 * Math.PI / 180, 20 * Math.PI / 180, true); g.stroke();
+}
+// mark: optionally draws an emblem at the plaque's left (mark(g, cx, cy, size)), and the text moves over beside it
+function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
+  const sc = mk(1024, 200), sg = sc.getContext('2d'), tx = mark ? 600 : 512, tw = mark ? 760 : 940;
   sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
-  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText(eyebrow, 512, 76);
-  let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > 940 && --px > 30); sg.fillText(title, 512, 158);
+  if (mark) mark(sg, 112, 100, 148);
+  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText(eyebrow, tx, 76);
+  let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > tw && --px > 30); sg.fillText(title, tx, 158);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
   sign.position.set(x, y, z); sign.rotation.y = ry; g.add(sign); return sign;
 }
@@ -1582,7 +1599,7 @@ function makeVBanner(w, hangUp, near = 16) {
    the floor plaque over the Recluda wall (what Recluda Server is, the install terminal, what you get). On your right, the west wall reads left to right as a sign-in goes:
    the VPN's login screen, the Recluda Server rack against the wall, the phone. Recluda VPN is on the north wall. */
 const B2 = FLOORS[FI.b2];
-floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 2.5, 4.75, B2.z1 - 0.06, Math.PI);   // straight ahead as the lift opens, over the Recluda wall
+floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 2.5, 4.75, B2.z1 - 0.06, Math.PI, 4.2, drawFaceScan);   // straight ahead as the lift opens, over the Recluda wall
 // The server rack, against the west wall facing the lift, between the VPN screen and the phone: what Recluda Server
 // runs (its Docker Compose services, and a Raspberry Pi, which it also runs on). RACK.blink(id) flashes a unit's lights.
 const RACK = { x: B2.x0 + 0.7, z: -2.6, units: [
