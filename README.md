@@ -122,7 +122,7 @@
 
 <table>
   <tr>
-    <td width="120" align="center" valign="middle"><img src="assets/rounded/recluda-icon.png" width="100" alt="Recluda icon"></td>
+    <td width="120" align="center" valign="middle"><img src="assets/rounded/recluda-server-icon.png" width="100" alt="Recluda face scan"></td>
     <td valign="top">
       <strong>Recluda Server</strong> · v0.4.0<br>
       Sign-in approval you host.
