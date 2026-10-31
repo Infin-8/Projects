@@ -34,27 +34,30 @@
   <tr>
     <td width="120" align="center" valign="middle"><img src="assets/rounded/steadywatch-icon.png" width="100" alt="STEADYWATCH HANDHELD icon"></td>
     <td valign="top">
-      <strong>STEADYWATCH™ HANDHELD</strong><br>
-      Practice tools for Musicians.
+      <strong>STEADYWATCH™ HANDHELD</strong> · v2.1<br>
+      Practice Panel.
       <br><br>
-      A live harmonic tuner and steadiness practice tool for iPhone and Apple Watch. Play or sing, and every harmonic of your note becomes a wave band that stands still when you're in tune.
+      A practice panel for musicians on iPhone and Apple Watch: tune, play along with your tracks, record yourself and keep time. Tracks are analysed on the iPhone for their key, chords, tempo and bars, and nothing leaves the device.
       <br><br>
-      <strong>HARMONIC BANDS</strong><br>
-      Each harmonic of your note is a wave band: the bands drift while you're off pitch and stand still in tune.
+      <strong>TRACK</strong><br>
+      Play along with your music: its chord now and next, A·B loops, slow it down without changing the pitch, or change the key.
       <br><br>
-      <strong>ORB NEEDLE</strong><br>
-      How far flat or sharp you are.
-      <br><br>
-      <strong>STEADINESS RING</strong><br>
-      How steadily you hold the note over a 1, 3 or 8 second window, with a counter that times the hold.
+      <strong>REC</strong><br>
+      Record a take after a count-in on the beat; it becomes a track you can loop.
       <br><br>
       <strong>CHORDS</strong><br>
-      The notes sounding, the chord they make and the song's key.
+      Chord pairings on the circle of fifths, each in its own colours, played in time.
       <br><br>
-      <strong>A4 TUNING</strong><br>
-      Set A4 from 415 to 446 Hz, with the Digital Crown on Apple Watch.
+      <strong>TEMPO</strong><br>
+      A metronome on atomic time that listens to your timing.
       <br><br>
-      Free on the App Store.
+      <strong>NOTE</strong><br>
+      Every harmonic of your note as a wave band that stands still in tune.
+      <br><br>
+      <strong>APPLE WATCH</strong><br>
+      A tuner and haptic metronome on your wrist, and a remote for TRACK and REC.
+      <br><br>
+      Free on the App Store. STEADYWATCH™ Pro, new in 2.1, is a one-time purchase (no subscription) that unlocks unlimited tracks, REC, A·B loops, speed and key, the Apple Watch remote and SYNC sessions.
       <br>
       <a href="https://apps.apple.com/us/app/steadywatch-handheld/id6755752518">Download on the App Store</a> · <a href="https://steady-watch.com">Website</a>
     </td>
