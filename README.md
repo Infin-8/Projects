@@ -34,7 +34,7 @@
   <tr>
     <td width="120" align="center" valign="middle"><img src="assets/rounded/steadywatch-icon.png" width="100" alt="STEADYWATCH HANDHELD icon"></td>
     <td valign="top">
-      <strong>STEADYWATCH™ HANDHELD</strong> · v2.1<br>
+      <strong>STEADYWATCH™ HANDHELD</strong><br>
       Practice tools for Musicians.
       <br><br>
       A practice panel for Musicians on iPhone and Apple Watch: tune, play along with your tracks, record yourself and keep time. Tracks are analysed on the iPhone for their key, chords, tempo and bars, and nothing leaves the device.
