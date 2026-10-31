@@ -2232,6 +2232,65 @@ function buildAppKiosks() {
     if (id === 'handheld') buildWatchPodium(g, p, F, loader);
   }
 }
+// Recluda runs on iPhone, iPad and Mac (on a Mac, the iPad app: Designed for iPad): three podiums along L2's west
+// wall beside its display, each device cycling through the app's real screens. Coming soon, so a tap opens
+// recluda.com rather than the App Store. Recluda's icon turns over the middle one.
+const RECLUDA_DEVICES = { x: -6.25, zs: [-0.8, -2.25, -3.95], ry: Math.PI / 2 - 0.32 };
+function buildRecludaDevices() {
+  const loader = new THREE.TextureLoader(), p = PROJECTS.find(q => q.id === 'recluda'), F = FLOORS[FI[p.floor]], A = new THREE.Color(p.theme.accent);
+  const bodyM = new THREE.MeshStandardMaterial({ color: 0x15171c, metalness: 0.7, roughness: 0.3 }), alu = new THREE.MeshStandardMaterial({ color: 0x9aa1ab, metalness: 0.85, roughness: 0.3 });
+  const devices = [
+    { name: 'iPhone', shots: p.shots, build: (g, scrM) => {   // like the other apps' phones, leaning back on the stand
+      const ph = new THREE.Group(); ph.position.set(0, 1.62, 0.02); ph.rotation.x = -0.18; g.add(ph);
+      ph.add(new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.96, 0.035), bodyM));
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.91), scrM); scr.position.z = 0.019; ph.add(scr); return [ph, scr]; } },
+    { name: 'iPad', shots: [1, 2, 3, 4, 5, 6].map(n => `assets/shots/rc-ipad-${n}.jpg`), build: (g, scrM) => {
+      const pd = new THREE.Group(); pd.position.set(0, 1.66, 0.02); pd.rotation.x = -0.2; g.add(pd);
+      pd.add(new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.06, 0.03), bodyM));
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 0.987), scrM); scr.position.z = 0.016; pd.add(scr);
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.02), alu); stand.position.set(0, -0.2, -0.14); stand.rotation.x = 0.45; pd.add(stand); return [pd, scr]; } },
+    { name: 'Mac', shots: [1, 2, 3, 4, 5, 6].map(n => `assets/shots/rc-mac-${n}.jpg`), wide: true, build: (g, scrM) => {   // a laptop, open on the podium
+      const mac = new THREE.Group(); mac.position.set(0, 1.07, 0); g.add(mac);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.03, 0.76), alu); base.position.y = 0.015; mac.add(base);
+      const keys = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.34), new THREE.MeshStandardMaterial({ color: 0x1b1e24, roughness: 0.6 })); keys.rotation.x = -Math.PI / 2; keys.position.set(0, 0.031, -0.08); mac.add(keys);
+      const lid = new THREE.Group(); lid.position.set(0, 0.03, -0.37); lid.rotation.x = -0.22; mac.add(lid);   // hinged at the back, tipped back a little
+      const shell = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.72, 0.02), alu); shell.position.y = 0.36; lid.add(shell);
+      const bezel = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.7), new THREE.MeshBasicMaterial({ color: 0x050608 })); bezel.position.set(0, 0.36, 0.0105); lid.add(bezel);
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.04, 0.65), scrM); scr.position.set(0, 0.365, 0.011); lid.add(scr); return [lid, scr]; } }];
+  RECLUDA_DEVICES.stops = [];
+  devices.forEach((dv, i) => {
+    const x = RECLUDA_DEVICES.x, z = RECLUDA_DEVICES.zs[i], ry = RECLUDA_DEVICES.ry;
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; F.g.add(g);   // facing the room, turned toward the lift
+    F.blocks.push({ x0: x - 0.75, x1: x + 0.75, z0: z - 0.75, z1: z + 0.75 });
+    const pw = dv.wide ? 1.2 : 0.62, pd = dv.wide ? 0.84 : 0.42;
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(pw, 1.05, pd), colMat); ped.position.y = 0.525; g.add(ped);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.02, 0.025, pd + 0.02), new THREE.MeshBasicMaterial({ color: A })); edge.position.y = 1.06; g.add(edge);
+    const scrM = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const [dev, scr] = dv.build(g, scrM);
+    const glow = new THREE.PointLight(A, 0.3, 3, 2); glow.position.set(0, 1.6, 0.7); g.add(glow);
+    const tag = textSprite([[dv.name.toUpperCase(), '600 32px "IBM Plex Mono", monospace', p.theme.accent], ['Coming soon · tap for recluda.com', '26px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.4);
+    tag.position.set(0, 0.62, pd / 2 + 0.1); g.add(tag);
+    const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(x, F.y + 1.55, z), normal: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), standOff: dv.wide ? 2.3 : 2.0, pitch: -0.08 };
+    RECLUDA_DEVICES.stops.push(stop);
+    hallLinks.push({ mesh: scr, url: p.links[0][1], floor: FI[p.floor], stop });
+    // screens load the first time the floor is in view, then cycle (each device on its own beat)
+    const shots = [], k0 = i * 2;
+    let loaded = false, shown = -1;
+    buildingUpdates.push((dt, t) => {
+      if (!F.g.visible) return;
+      if (!loaded) { loaded = true; dv.shots.forEach((src, k) => loader.load(src, tx => { shots[k] = tx; })); }
+      const k = Math.floor((reduceMotion ? 0 : t / 3.4) + k0) % dv.shots.length;
+      if (k !== shown && shots[k]) { shown = k; scrM.map = shots[k]; scrM.color.set(0xffffff); scrM.needsUpdate = true; }
+    });
+  });
+  // Recluda's icon, turning over the middle podium
+  const icon = new THREE.Group(); icon.position.set(RECLUDA_DEVICES.x, 2.85, RECLUDA_DEVICES.zs[1]); F.g.add(icon);
+  const img = LOGOS[p.logo], it = img ? new THREE.CanvasTexture((() => { const c = mk(256, 256), x2 = c.getContext('2d'); rr(x2, 0, 0, 256, 256, 56); x2.clip(); x2.drawImage(img, 0, 0, 256, 256); return c; })()) : null;
+  const face = new THREE.MeshBasicMaterial({ map: it, transparent: true });
+  for (const s of [1, -1]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), face); f.position.z = s * 0.045; if (s < 0) f.rotation.y = Math.PI; icon.add(f); }
+  icon.add(new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: A })));
+  buildingUpdates.push((dt, t) => { if (!F.g.visible) return; icon.rotation.y = reduceMotion ? 0.3 + Math.PI / 2 : t * 0.6; icon.position.y = 2.85 + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.06); });
+}
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
 // watch to open the App Store, like the phone.
@@ -2629,7 +2688,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l1, 0, L1.z1 - 0.6, 0, plat.pos[2] + 3.4, PATH_W.main);
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
-  add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
+  add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
   // B2: out of the lift (door at z -2.85), straight to the rack, and branches to the Recluda wall and Recluda VPN
@@ -4463,6 +4522,7 @@ function floorStops(i) {
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
+  if (i === FI.l2 && RECLUDA_DEVICES.stops) out.push(['Recluda devices', { ...RECLUDA_DEVICES.stops[1], standOff: 4.0, pitch: -0.02 }]);   // all three podiums in view   // after Recluda's display
   return out;
 }
 function renderNav() {
@@ -6246,7 +6306,7 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildRecludaDevices(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
