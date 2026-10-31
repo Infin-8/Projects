@@ -2229,7 +2229,7 @@ function buildAppKiosks() {
     const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(x, F.y + 1.6, z), normal: new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y)), standOff: 2.0, pitch: -0.05 };
     hallLinks.push({ mesh: scr, url: p.links[0][1], floor: FI[p.floor], stop });
     hallLinks.push({ mesh: body, url: p.links[0][1], floor: FI[p.floor], stop });
-    if (id === 'handheld') buildWatchPodium(g, p, F, loader);
+    if (id === 'handheld') { buildWatchPodium(g, p, F, loader); buildVisionPodium(p, F, loader); }
   }
 }
 // Recluda runs on iPhone, iPad and Mac (on a Mac, the iPad app: Designed for iPad): three podiums along L2's west
@@ -2290,6 +2290,55 @@ function buildRecludaDevices() {
   for (const s of [1, -1]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), face); f.position.z = s * 0.045; if (s < 0) f.rotation.y = Math.PI; icon.add(f); }
   icon.add(new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: A })));
   buildingUpdates.push((dt, t) => { if (!F.g.visible) return; icon.rotation.y = reduceMotion ? 0.3 + Math.PI / 2 : t * 0.6; icon.position.y = 2.85 + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.06); });
+}
+// STEADYWATCH™ HANDHELD is also on Apple Vision Pro (the App Store lists it there, as an iPhone app: visionOS 26.2 or
+// later). A podium on the other side of its display, mirroring the phone's: the headset on a stand, and the app's
+// iPhone screens floating over it in a visionOS window, with the window bar beneath. Tap it to open the App Store.
+function buildVisionPodium(p, F, loader) {
+  const A = new THREE.Color(p.theme.accent), side = p.pos[0] > 0 ? -1 : 1, x = p.pos[0] + side * 3.15, z = 5.9;   // in the gap between its display and KaizenDoku's, clear of both frames
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = Math.PI + side * 0.2; F.g.add(g);
+  F.blocks.push({ x0: x - 0.7, x1: x + 0.7, z0: z - 0.7, z1: z + 0.7 });
+  const ped = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.05, 0.42), colMat); ped.position.y = 0.525; g.add(ped);
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.025, 0.44), new THREE.MeshBasicMaterial({ color: A })); edge.position.y = 1.06; g.add(edge);
+  // the stand: a short post with a curved rest the headset sits on
+  const alu = new THREE.MeshStandardMaterial({ color: 0xb8bec7, metalness: 0.85, roughness: 0.28 });
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.26, 16), alu); post.position.y = 1.2; g.add(post);
+  // the headset: a curved glass front in an aluminium frame, a grey light seal behind it, and a knit band looping back
+  const hs = new THREE.Group(); hs.position.set(0, 1.42, 0.02); g.add(hs);
+  const W = 0.32, H = 0.15, R = 0.06, sh = new THREE.Shape();
+  sh.moveTo(-W / 2 + R, -H / 2); sh.lineTo(W / 2 - R, -H / 2); sh.quadraticCurveTo(W / 2, -H / 2, W / 2, -H / 2 + R); sh.lineTo(W / 2, H / 2 - R);
+  sh.quadraticCurveTo(W / 2, H / 2, W / 2 - R, H / 2); sh.lineTo(-W / 2 + R, H / 2); sh.quadraticCurveTo(-W / 2, H / 2, -W / 2, H / 2 - R); sh.lineTo(-W / 2, -H / 2 + R); sh.quadraticCurveTo(-W / 2, -H / 2, -W / 2 + R, -H / 2);
+  const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 4, curveSegments: 16 }), alu);
+  frame.position.z = -0.07; hs.add(frame);
+  const glass = new THREE.Mesh(new THREE.ShapeGeometry(sh, 16), new THREE.MeshStandardMaterial({ color: 0x07090c, metalness: 0.4, roughness: 0.08 }));
+  glass.position.z = 0.0125; glass.scale.setScalar(0.97); hs.add(glass);
+  const sheen = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.7, 0.01), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.35 })); sheen.position.set(0, H * 0.18, 0.014); hs.add(sheen);
+  const seal = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.05, bevelEnabled: false, curveSegments: 16 }), new THREE.MeshStandardMaterial({ color: 0x5b6068, roughness: 0.9 }));
+  seal.scale.set(0.94, 0.9, 1); seal.position.z = -0.12; hs.add(seal);
+  const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.025, 10, 40, Math.PI), new THREE.MeshStandardMaterial({ color: new THREE.Color(p.theme.bg).lerp(A, 0.2), roughness: 0.85 }));
+  band.rotation.set(Math.PI / 2, 0, 0); band.scale.set(1, 1.25, 0.6); band.position.set(0, -0.005, -0.12); hs.add(band);
+  // the app, floating over the headset in a visionOS window: frosted glass around the iPhone screen, the window bar below
+  const win = new THREE.Group(); win.position.set(0, 2.42, -0.05); g.add(win);
+  const scrM = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true });
+  const SW = 0.5, SH = SW * 2.1667;
+  const fr = mk(256, 512), fg = fr.getContext('2d'); fg.fillStyle = 'rgba(210,225,235,0.16)'; rr(fg, 0, 0, 256, 512, 34); fg.fill(); fg.strokeStyle = 'rgba(255,255,255,0.35)'; fg.lineWidth = 3; rr(fg, 2, 2, 252, 508, 32); fg.stroke();
+  const glassWin = new THREE.Mesh(new THREE.PlaneGeometry(SW + 0.08, SH + 0.08), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(fr), transparent: true, depthWrite: false })); win.add(glassWin);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), scrM); scr.position.z = 0.004; win.add(scr);
+  const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.022), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })); bar.position.set(0, -SH / 2 - 0.075, 0.004); win.add(bar);
+  const glow = new THREE.PointLight(A, 0.3, 3, 2); glow.position.set(0, 1.6, 0.6); g.add(glow);
+  const tag = textSprite([['APPLE VISION PRO', '600 30px "IBM Plex Mono", monospace', p.theme.accent], ['On the App Store · tap to open', '26px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.4);
+  tag.position.set(0, 0.62, 0.3); g.add(tag);
+  const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(x, F.y + 1.9, z), normal: new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y)), standOff: 2.6, pitch: 0.12 };
+  for (const m of [scr, frame, glass]) hallLinks.push({ mesh: m, url: p.links[0][1], floor: FI[p.floor], stop });
+  const shots = [], k0 = 3;
+  let loaded = false, shown = -1;
+  buildingUpdates.push((dt, t) => {
+    if (!F.g.visible) return;
+    if (!loaded) { loaded = true; p.shots.forEach((src, i) => loader.load(src, tx => { shots[i] = tx; })); }
+    win.position.y = 2.42 + (reduceMotion ? 0 : Math.sin(t * 0.9) * 0.025);   // the window floats
+    const k = Math.floor((reduceMotion ? 0 : t / 3.6) + k0) % p.shots.length;
+    if (k !== shown && shots[k]) { shown = k; scrM.map = shots[k]; scrM.color.set(0xffffff); scrM.needsUpdate = true; }
+  });
 }
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
