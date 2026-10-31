@@ -523,7 +523,7 @@ const PROJECTS = [
   {
     // a teaser: Recluda isn't on the App Store yet, so no phone kiosk; its world has recluda.com and its screens
     id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Apps', teaser: true,
-    desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data, no per-seat fee. Coming soon to the App Store.',
+    desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data. Coming soon to the App Store.',
     modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone, from any Recluda server, through Recluda\'s push relay'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push (or the code the VPN shows)'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
     stack: 'Secure Enclave · Face ID · OpenID Connect · RADIUS · APNs',
     links: [['recluda.com','https://recluda.com'], ['VPN Guide','https://recluda.com/vpn-guide']],
@@ -772,7 +772,7 @@ const WING_PROJECTS = [
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
   })),
   { id: 'oidc', name: 'Recluda VPN', kind: 'oidc', inWing: true, wing: 'Recluda', tagline: 'VPN and sign-in approval with your biometric key',
-    desc: 'The server behind Recluda, now a product of its own: Recluda Server, a self-hosted identity provider for VPN logins and sign-ins that installs on any Linux server with one command. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Notifications reach phones through Recluda\'s push relay on Cloudflare. A signed license or a 30-day trial, and no per-seat fee.',
+    desc: 'The server behind Recluda, now a product of its own: Recluda Server, a self-hosted identity provider for VPN logins and sign-ins that installs on any Linux server with one command. A VPN asks over RADIUS, any app over OpenID Connect (the RFC 8628 device flow), and the person approves in the Recluda app on iPhone, iPad or Mac with a biometric key: a Secure Enclave signature unlocked by Face ID or Touch ID, with number matching. Notifications reach phones through Recluda\'s push relay on Cloudflare. A signed license or a 30-day trial.',
     modules: [
       ['DEVICE FLOW', 'RFC 8628 device authorization grant, JWKS and JWT issuance, OpenID Connect discovery.'],
       ['BIOMETRIC KEY', 'A Secure Enclave signature unlocked by Face ID or Touch ID, with number matching and QR approval.'],
