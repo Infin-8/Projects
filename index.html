@@ -574,9 +574,10 @@ const ABOUT = {
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v2.1', logo: 'assets/steadywatch-icon.png' },
-    { name: 'KaizenDoku', version: 'App Store v2.5.0', logo: 'assets/kaizendoku-icon.png' }],
+    { name: 'KaizenDoku', version: 'App Store v2.5.0', logo: 'assets/kaizendoku-icon.png' },
+    { name: 'Quantum V^ Platform', version: 'quantumv.dev', logo: 'assets/quantumv-logo.png' }],
   contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'quantumv.dev · steady-watch.com · recluda.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store, and the Quantum V^ Platform.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -4098,7 +4099,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['site', 'The Resume', 'Decoded from a stream of QES-256 keys. Press E to open the PDF.'],
       ['m0', 'Experience', 'Four roles, newest first.'],
       ['skills', 'Skills', 'From languages and mobile to quantum computing and cryptography.'],
-      ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku, both on the App Store.'],
+      ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store, and the Quantum V^ Platform at quantumv.dev.'],
       ['contact', 'Contact', 'Email, LinkedIn and GitHub.'],
       ['dock', 'My Nesting Station', 'The thousands of nanobots that compile my image rest and recharge here.'],
       ['portal', "That's the office.", 'The door takes you back to the hall.']];
@@ -5458,11 +5459,13 @@ function officeSkillsCanvas(skills) {
 }
 function officeWorkCanvas(work) {
   const c = mk(640, 400), g = officeScreenBase(c, 'NOTABLE WORK');
+  const three = work.length > 2, top = three ? 70 : 84, step = three ? 106 : 150, size = three ? 90 : 110;   // two rows, or three tighter ones
   work.forEach((w, i) => {
-    const y = 84 + i * 150, logo = LOGOS[w.logo];
-    if (logo) { g.save(); rr(g, 28, y, 110, 110, 24); g.clip(); g.drawImage(logo, 28, y, 110, 110); g.restore(); }
-    g.fillStyle = '#f1e6cf'; let px = 32; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(w.name).width > 450 && --px > 18); g.fillText(w.name, 160, y + 42);
-    g.fillStyle = '#3fe0e0'; g.font = '600 22px "IBM Plex Mono", monospace'; g.fillText(w.version, 160, y + 80);
+    const y = top + i * step, logo = LOGOS[w.logo];
+    if (logo) { g.save(); rr(g, 28, y, size, size, size * 0.22); g.clip(); g.drawImage(logo, 28, y, size, size); g.restore(); }
+    const x = 28 + size + 22;
+    g.fillStyle = '#f1e6cf'; let px = three ? 30 : 32; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(w.name).width > 612 - x && --px > 18); g.fillText(w.name, x, y + size * 0.4);
+    g.fillStyle = '#3fe0e0'; g.font = `600 ${three ? 20 : 22}px "IBM Plex Mono", monospace`; g.fillText(w.version, x, y + size * 0.74);
   });
   return c;
 }
