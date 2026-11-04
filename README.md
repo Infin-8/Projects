@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://hall.steady-watch.com/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum Hall lobby: the Quantum V^ banner hangs over the freestanding Quantum V^ Platform display, with the glass lift to the right, a glowing light path down the middle and Vee, the holographic guide"></a>
+  <a href="https://hall.quantumv.dev/"><img src="assets/gallery-preview.png" width="800" alt="The Quantum Hall lobby: the Quantum V^ banner hangs over the freestanding Quantum V^ Platform display, with the glass lift to the right, a glowing light path down the middle and Vee, the holographic guide"></a>
 </p>
 
 <p align="center">
-  <a href="https://hall.steady-watch.com/"><strong>Walk the gallery →</strong></a><br>
+  <a href="https://hall.quantumv.dev/"><strong>Walk the gallery →</strong></a><br>
   <sub>Six floors around an atrium, from Recluda's server room and the cryostat lab to the builder's office. Walk up to a display and step inside to see the project. Runs in the browser on desktop and mobile.</sub>
 </p>
 
@@ -113,7 +113,7 @@
       <strong>QCAP STACK</strong><br>
       IBM <strong>Q</strong>uantum · <strong>C</strong>loudflare · <strong>A</strong>pple Secure Enclave · Raspberry <strong>P</strong>i
       <br><br>
-      <a href="https://quantum-v.nathaniel-a-vazquez.workers.dev/">Website</a> · <a href="https://quantum-v.nathaniel-a-vazquez.workers.dev/qrng">Q-RNG Demo</a> · <a href="https://quantum-v.nathaniel-a-vazquez.workers.dev/qes-rng">QES-256</a> · <a href="https://quantum-v.nathaniel-a-vazquez.workers.dev/status">Live Status</a>
+      <a href="https://quantumv.dev/">Website</a> · <a href="https://quantumv.dev/qrng">Q-RNG Demo</a> · <a href="https://quantumv.dev/qes-rng">QES-256</a> · <a href="https://quantumv.dev/status">Live Status</a>
     </td>
   </tr>
 </table>

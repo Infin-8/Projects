@@ -1,9 +1,15 @@
-# Quantum Hall on Cloudflare: the gallery as static files, at hall.steady-watch.com.
-# Deploy from this folder with `npx wrangler deploy` (after committing). .assetsignore keeps the
-# motion lab, git history and repo files out of the upload.
+# Quantum Hall on Cloudflare: the gallery as static files, at hall.quantumv.dev (moved from hall.steady-watch.com
+# 2026-11-03; worker.js redirects the old address there). Deploy from this folder with `npx wrangler deploy`
+# (after committing). .assetsignore keeps the motion lab, git history and repo files out of the upload.
 name = "quantum-hall"
+main = "worker.js"
 compatibility_date = "2026-10-01"
-routes = [{ pattern = "hall.steady-watch.com", custom_domain = true }]
+routes = [
+  { pattern = "hall.quantumv.dev", custom_domain = true },
+  { pattern = "hall.steady-watch.com", custom_domain = true },
+]
 
 [assets]
 directory = "."
+binding = "ASSETS"
+run_worker_first = true   # every request goes through worker.js first, so the old address can redirect

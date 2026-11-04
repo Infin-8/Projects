@@ -10,9 +10,9 @@
 <meta name="description" content="Quantum Hall: a six-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda (coming soon) and its server room, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
 <meta property="og:description" content="Six floors around an atrium, from a server room and a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
-<meta property="og:image" content="https://hall.steady-watch.com/assets/gallery-preview.png">
-<meta property="og:url" content="https://hall.steady-watch.com/">
-<link rel="canonical" href="https://hall.steady-watch.com/">
+<meta property="og:image" content="https://hall.quantumv.dev/assets/gallery-preview.png">
+<meta property="og:url" content="https://hall.quantumv.dev/">
+<link rel="canonical" href="https://hall.quantumv.dev/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
@@ -537,7 +537,7 @@ const PROJECTS = [
     desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.',
     modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · Cloudflare · Raspberry Pi',
-    links: [['Quantum V^','https://quantum-v.nathaniel-a-vazquez.workers.dev/'],['Q-RNG demo','https://quantum-v.nathaniel-a-vazquez.workers.dev/qrng'],['QES-256','https://quantum-v.nathaniel-a-vazquez.workers.dev/qes-rng'],['Live status','https://quantum-v.nathaniel-a-vazquez.workers.dev/status']],
+    links: [['Quantum V^','https://quantumv.dev/'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/quantumv-logo.png',
     floor: 'l1', stand: true, pos: [0, 3.4, -0.2], rotY: 0, size: [6.4, 4.4]   // freestanding, front and centre in the lobby
   }
@@ -574,7 +574,7 @@ const ABOUT = {
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v2.1', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.5.0', logo: 'assets/kaizendoku-icon.png' }],
-  contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'steady-watch.com · recluda.com · kaizendoku.com']],
+  contactRows: [['EMAIL', 'nate_vazquez@icloud.com'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'quantumv.dev · steady-watch.com · recluda.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nate_vazquez@icloud.com']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
@@ -765,8 +765,8 @@ const WING_PROJECTS = [
     desc: `A quantum-harvested entropy pool. Its ${24 * (P.prime + 1)} nodes are exactly the Hurwitz quaternions of norm ${P.prime}: one shell of the F4 lattice, the Hurwitz order.`,
     modules: poolModules(P.prime),
     stack: 'IBM Quantum entropy · Hurwitz quaternions · F4 lattice',
-    links: [[`Open ${P.name}`, `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`], ['Quantum V^', 'https://quantum-v.nathaniel-a-vazquez.workers.dev/']],
-    site: { url: `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`, label: 'Quantum V^', addr: `https://quantum-v.nathaniel-a-vazquez.workers.dev/${P.page}`, shot: `assets/site-${P.id}.jpg`,
+    links: [[`Open ${P.name}`, `https://quantumv.dev/${P.page}`], ['Quantum V^', 'https://quantumv.dev/']],
+    site: { url: `https://quantumv.dev/${P.page}`, label: 'Quantum V^', addr: `https://quantumv.dev/${P.page}`, shot: `assets/site-${P.id}.jpg`,
       heading: 'Live pool', cardText: 'The screen on your right opens the live pool on the Quantum V^ site.' },
     theme: { bg: P.bg, fg: '#f1e6cf', accent: P.color }, poolColor: P.color, poolColor2: P.color2, logo: null,
     floor: 'l3', pos: i < 2 ? [i ? -3.6 : 3.6, 3.1, 5.92] : [-7.92, 3.1, -4], rotY: i < 2 ? Math.PI : Math.PI / 2, size: [3.3, 3.3]
@@ -2003,7 +2003,7 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
     });
     p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Pool of 512 bytes, refilled at 20%. Falls back to Math.random() if offline.', 44, 526);
     small(p, coarseUI ? 'TAP TO OPEN THE LIBRARY' : 'CLICK TO OPEN THE LIBRARY', 44, 586, '#5ff0ff');
-  }, 'https://quantum-v.nathaniel-a-vazquez.workers.dev/qes-rng');
+  }, 'https://quantumv.dev/qes-rng');
   let lastLive = -1, lastJob = 0, attSeen = null;
   buildingUpdates.push((dt, t) => {
     if (!B1.g.visible) return;
@@ -2399,7 +2399,7 @@ function buildRecludaWall() {
    432 nodes and nearest-neighbour edges, projected from 4D as on its own display), what the platform is on the
    left, and how the entropy flows on the right (the same five stages as B1's storage wall). Built once the fonts
    are in; tap it to open the Quantum V^ site. */
-const PLATFORM_WALL = { w: 15.0, h: 3.95, y: 3.6, url: 'https://quantum-v.nathaniel-a-vazquez.workers.dev/' };
+const PLATFORM_WALL = { w: 15.0, h: 3.95, y: 3.6, url: 'https://quantumv.dev/' };
 function buildPlatformWall() {
   const F = FLOORS[FI.l3], { w, h, y } = PLATFORM_WALL, z = F.z0 + 0.08, CW = 4096, CH = Math.round(CW * h / w);
   const c = mk(CW, CH), g = c.getContext('2d'), L = POOLS.find(P => P.id === 'lotus');
@@ -3879,7 +3879,7 @@ function buildReception() {
 const ASK_VEE_LINKS = [
   { site: 'recluda.com', product: 'Recluda', q: 'How does Face ID approval work?', url: 'https://recluda.com/?ask=How+does+Face+ID+approval+work%3F' },
   { site: 'steady-watch.com', product: 'STEADYWATCH™ HANDHELD', q: 'What is STEADYWATCH™ HANDHELD?', url: 'https://steady-watch.com/?ask=What+is+STEADYWATCH+HANDHELD%3F' },
-  { site: 'Quantum V^', product: 'Quantum V^', q: 'What is QES-256?', url: 'https://quantum-v.nathaniel-a-vazquez.workers.dev/?ask=What+is+QES-256%3F' },
+  { site: 'Quantum V^', product: 'Quantum V^', q: 'What is QES-256?', url: 'https://quantumv.dev/?ask=What+is+QES-256%3F' },
 ];
 function drawQr(g, url, x, y, size) {   // dark modules on white, with a quiet zone, so phones read it
   const q = qrcode(0, 'M'); q.addData(url); q.make();
