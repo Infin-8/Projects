@@ -902,11 +902,11 @@ const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 const OFFICE_DOOR_X = -5.13;
 
 /* ---------- Live quantum entropy ----------
-   Real random bytes from the Quantum V^ Platform's QRNG API (api.steady-watch.com), drawn from IBM
+   Real random bytes from the Quantum V^ Platform's QRNG API (api.quantumv.dev), drawn from IBM
    Quantum hardware. One small shared pool, refilled 128 bytes at a time only when it runs low: at most
    every 20 s, and only while the page is visible. If the API can't be reached, bits quietly fall back to
    the browser's crypto randomness and qrngLive() turns false, so nothing claims to be live when it isn't. */
-const QRNG = { url: 'https://api.steady-watch.com/qrng/bytes?n=128', hex: '', bits: [], draws: [], meta: null, last: 0, tried: 0, busy: false, fallback: true,
+const QRNG = { url: 'https://api.quantumv.dev/qrng/bytes?n=128', hex: '', bits: [], draws: [], meta: null, last: 0, tried: 0, busy: false, fallback: true,
   received: 0, used: 0, ones: 0, att: null, attTried: false };   // this visit's tallies, and the pool's attestation
 function qrngRefill() {
   const now = Date.now();
@@ -940,7 +940,7 @@ function qrngBit() {
 // the attestation: where the pool's entropy came from (hives, IBM Quantum job IDs, fingerprints); fetched once per visit
 function qrngAttest() {
   if (QRNG.att || QRNG.attBusy) return; QRNG.attBusy = true;
-  fetch('https://api.steady-watch.com/qrng/attestation', { cache: 'no-store' })
+  fetch('https://api.quantumv.dev/qrng/attestation', { cache: 'no-store' })
     .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
     .then(j => { if (j && j.hives && j.master_fingerprint) QRNG.att = j; })
     .catch(() => {})
@@ -1880,7 +1880,7 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
    Six screens on the west wall, behind the cryostat as you step out of the lift: what the live
    QRNG service is producing, where its entropy comes from (the attestation, the three hives and
    real IBM Quantum job IDs), the cryostat's stage temperatures, and the QES-256 library that puts
-   it all behind Math.random()'s signature. Everything marked live comes from api.steady-watch.com. */
+   it all behind Math.random()'s signature. Everything marked live comes from api.quantumv.dev. */
 const hallLinks = [];   // things in the hall that open a link when tapped up close
 {
   const coarseUI = matchMedia('(pointer: coarse)').matches;   // (touchUI is defined further down)
