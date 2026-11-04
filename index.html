@@ -2003,7 +2003,7 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
       const y = 204 + i * 50; p.fillStyle = '#00ff66'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(a, 44, y);
       p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText('← ' + b, 600, y);
     });
-    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Pool of 512 bytes, refilled at 20%. Falls back to Math.random() if offline.', 44, 526);
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Pool of 512 bytes, refilled at 20%.', 44, 526);
     small(p, coarseUI ? 'TAP TO OPEN THE LIBRARY' : 'CLICK TO OPEN THE LIBRARY', 44, 586, '#5ff0ff');
   }, 'https://quantumv.dev/qes-rng');
   let lastLive = -1, lastJob = 0, attSeen = null;
@@ -2047,7 +2047,7 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
         QRNG.meta ? `COUNTER ${QRNG.meta.counter} · LIVE` : 'COUNTER · MONOTONIC'],
       ['Served by the API', 'The Quantum V^ QRNG service hands it out as bytes, numbers or UUIDs, with an attestation of where the pool came from.',
         '/qrng/bytes · /int · /float · /uuid · /batch · /attestation'],
-      ['Client pools', 'Each app keeps its own pool and drains it instantly, refilling in the background. QES-256 holds 512 bytes, refills at 20% and falls back to Math.random() offline.',
+      ['Client pools', 'Each app keeps its own pool and drains it instantly, refilling in the background. QES-256 holds 512 bytes and refills at 20%.',
         'THIS PAGE: 128-BYTE TOP-UPS · SEE THE RACK →']];
     S.forEach(([t, b, d], i) => {
       const x = x0 + i * (W + gap); stage(x, W, i + 1, t, b, d);
