@@ -535,8 +535,8 @@ const PROJECTS = [
   },
   {
     id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
-    desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.',
-    modules: [['Q-RNG','Quantum random number API on IBM Quantum hardware'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys. It is a quantum-seeded generator: each hardware run behind the seed is listed by IBM Quantum job ID, and fresh system randomness is mixed into every draw.',
+    modules: [['Q-RNG','Quantum-seeded random number API (IBM Quantum hardware seed)'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · Cloudflare · Raspberry Pi',
     links: [['Quantum V^','https://quantumv.dev/'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status'],['Support','mailto:support@quantumv.dev']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/quantumv-logo.png',
@@ -2053,7 +2053,7 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
       const x = x0 + i * (W + gap); stage(x, W, i + 1, t, b, d);
       if (i < 4) { p.fillStyle = '#3fe0e0'; p.beginPath(); const ax = x + W + 12, ay = 530; p.moveTo(ax, ay - 20); p.lineTo(ax + gap - 24, ay); p.lineTo(ax, ay + 20); p.closePath(); p.fill(); }
     });
-    p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText('EVERY BYTE TRACES BACK TO A REAL IBM QUANTUM JOB · VERIFY ANY JOB AT QUANTUM.IBM.COM/JOBS/{JOB_ID}', 70, 930);
+    p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText('SEEDED BY 912 IBM QUANTUM HARDWARE MEASUREMENTS · FRESH SYSTEM RANDOMNESS IN EVERY DRAW', 70, 930);
     tex.needsUpdate = true;
   };
   draw();
@@ -2431,7 +2431,7 @@ function buildPlatformWall() {
   g.fillStyle = '#f1e6cf'; g.font = '112px "Young Serif", Georgia, serif'; g.fillText('Entropy as a Service', LX, 352);
   g.fillStyle = '#c9d2e3'; g.font = '46px "IBM Plex Sans", sans-serif';
   let ty = wrapText(g, 'Quantum-derived randomness as a service, from the Quantum V^ research. Three entropy pools, VAULT™, VIPER™ and LOTUS™, are measured on IBM Quantum hardware; the QRNG API serves bytes from the pool they seed.', LX, 450, COLW, 66);
-  wrapText(g, 'QES-256 turns them into 32-byte keys, each traceable to a verifiable IBM Quantum job ID.', LX, ty + 22, COLW, 66);
+  wrapText(g, 'QES-256 turns them into 32-byte keys, from a generator seeded by IBM Quantum hardware runs.', LX, ty + 22, COLW, 66);
   // right: how the entropy flows
   const RX = CW - 150 - COLW; g.fillStyle = L.color; g.fillRect(RX, 150, 90, 6);
   g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('HOW THE ENTROPY FLOWS', RX, 228);
