@@ -2399,7 +2399,7 @@ function buildRecludaWall() {
 
 /* L3's north wall, across the atrium from the lift: the platform in one wide display. LOTUS™ in the centre (its
    432 nodes and nearest-neighbour edges, projected from 4D as on its own display), what the platform is on the
-   left, and how the entropy flows on the right (the same five stages as B1's storage wall). Built once the fonts
+   left, and how it works on the right: B1's five stages in plain words, plus the mixing step. Built once the fonts
    are in; tap it to open the Quantum V^ site. */
 const PLATFORM_WALL = { w: 15.0, h: 3.95, y: 3.6, url: 'https://quantumv.dev/' };
 function buildPlatformWall() {
@@ -2434,12 +2434,12 @@ function buildPlatformWall() {
   wrapText(g, 'QES-256 turns them into 32-byte keys, from a generator seeded by IBM Quantum hardware runs.', LX, ty + 22, COLW, 66);
   // right: how the entropy flows
   const RX = CW - 150 - COLW; g.fillStyle = L.color; g.fillRect(RX, 150, 90, 6);
-  g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('HOW THE ENTROPY FLOWS', RX, 228);
-  [['Measure', 'The three pools run on IBM Quantum hardware. Each run is a real job.'],
-   ['Master pool', 'The SHA-256 of their measurements: one 32-byte pool.'],
-   ['HKDF stream', 'Expanded by a counter that only counts up, so it never repeats.'],
-   ['QRNG API', 'Bytes, integers, floats and UUIDs, with where they came from.'],
-   ['QES-256', 'A drop-in Math.random() for your app, drawn from that stream.']].forEach(([t, d], i) => {
+  g.font = '600 44px "IBM Plex Mono", monospace'; g.fillText('HOW IT WORKS', RX, 228);
+  [['Quantum coin tosses', 'IBM quantum computers measure qubits, each like a coin toss.'],
+   ['One secret seed', 'All 912 results are blended into one secret 256-bit number.'],
+   ['Grown into a stream', 'A standard cryptographic recipe grows it into endless numbers.'],
+   ['One more shuffle', 'Fresh randomness from the server is mixed into every number.'],
+   ['Ready to use', 'Random numbers, IDs and keys for any app, through the API.']].forEach(([t, d], i) => {
     const yy = 330 + i * 136;
     g.fillStyle = L.color; g.beginPath(); g.arc(RX + 34, yy - 16, 34, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#1a1406'; g.font = '600 38px "IBM Plex Mono", monospace'; g.textAlign = 'center'; g.fillText(String(i + 1), RX + 34, yy - 3); g.textAlign = 'left';
