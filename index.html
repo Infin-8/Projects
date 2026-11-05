@@ -3577,15 +3577,17 @@ function buildKiosk() {
    Its stations follow a question through how she thinks; the wording matches her 'How Vee works' panel. */
 const VEE_WORLD = {
   id: 'vee', kind: 'vee', name: "Vee's world", tagline: 'How I think, compiled around you', wing: 'Reception', noBadge: true, sectionTitle: 'How I think',
-  desc: "A loading program for Vee. Her nanobots compile this space around you, then a path follows a question from left to right: what you ask, what she knows, what she looks up, the model that writes the answer, the rules it keeps, and how the answer comes back to you.",
+  desc: "A loading program for Vee. Her nanobots compile this space around you, then a path follows a question from left to right: what you ask, what she knows, what she looks up, the model that writes the answer, the rules it keeps, and how the answer comes back to you. Behind the library, a branch shows how Claude and other AI tools search the research directly.",
   modules: [
     ['Your question', 'You type it, or hold to talk and Whisper turns your voice into text. I also know your floor, what you are looking at, what you have explored and our last few turns.'],
     ['My facts', 'A persona and facts synced from this gallery. Only the sections your question touches come along, with live QRNG data when your page sends it.'],
-    ['The library', 'About 1,000 Quantum V^ research passages in Vectorize. Your question becomes a vector, and only the closest passages join in.'],
+    ['The library', 'About 1,000 published Quantum V^ passages in Vectorize. Your question becomes a vector, and only the closest passages join in. Other AI tools can search it too: see the branch behind.'],
     ['The model', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI writes the answer, served at the edge.'],
     ['Guardrails', "Only my sources. I credit each paper, say when I don't know, never quote prices and resist prompt injection. An evaluation suite checks me."],
     ['My answer', 'Tags in my reply become motion: a mood, a gesture, a walk to an exhibit. Common answers are cached, so repeats cost nothing.']],
-  stack: 'Mistral Small 3.1 · Cloudflare Workers AI · Vectorize · Whisper · Aura · Three.js',
+  // off the path: what other AI tools can do with the library, without Vee (the branch station behind the library)
+  branch: ['Research search', "The library also works without me. Claude and other AI tools can search it directly, through an API and MCP, and get back the closest passages with their sources. They can also search a private index of about 8,000 unpublished research notes, which I never use in my answers."],
+  stack: 'Mistral Small 3.1 · Cloudflare Workers AI · Vectorize · MCP · Whisper · Aura · Three.js',
   links: [],
   theme: { accent: '#5ff0ff', bg: '#05080d', fg: '#e6f8fb' }
 };
@@ -3741,7 +3743,7 @@ function buildReception() {
     [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
      ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
      ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
-     ['RETRIEVAL', 'RAG: ~1,000 Quantum V^ research passages in Vectorize; the closest join each question.'],
+     ['RETRIEVAL', 'RAG over ~1,000 passages in Vectorize; AI tools like Claude can search them (and private notes) via MCP.'],
      ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
      ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
      ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
@@ -5194,7 +5196,7 @@ function buildProductWorld(p) {
    path, each station, then Vee herself, gathering beside you). The path then follows a question through how she
    thinks, left to right, one station per step, each with a screen and an emblem. Ask her something here and a
    pulse runs the path, lighting each station as the question passes. Built when you step in, freed when you leave. */
-function veeScreenCanvas(i, n, title, text) {
+function veeScreenCanvas(i, n, title, text, eyebrow) {
   const c = mk(1024, 640), g = c.getContext('2d');
   const bg = g.createLinearGradient(0, 0, 0, 640); bg.addColorStop(0, '#08131a'); bg.addColorStop(1, '#04080c');
   g.fillStyle = bg; g.fillRect(0, 0, 1024, 640);
@@ -5204,7 +5206,7 @@ function veeScreenCanvas(i, n, title, text) {
   }
   g.fillStyle = 'rgba(95,240,255,0.14)'; g.fillRect(0, 0, 1024, 70);
   g.fillStyle = '#5ff0ff'; g.font = '600 30px "IBM Plex Mono", monospace'; g.textBaseline = 'middle';
-  g.fillText(`HOW I THINK · ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, 44, 36);
+  g.fillText(eyebrow || `HOW I THINK · ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`, 44, 36);
   g.textBaseline = 'alphabetic';
   g.fillStyle = '#f1e6cf'; g.font = '76px "Young Serif", Georgia, serif'; g.fillText(title, 44, 190);
   g.fillStyle = '#5ff0ff'; g.fillRect(44, 222, 120, 4);
@@ -5344,6 +5346,65 @@ function buildVeeWorld(p) {
   const pulseM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
   const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), pulseM); ws.add(pulse);
   let pulseU = -1;   // where a question in flight has got to along the path (0…1); -1 when none
+
+  // The branch: off the path, behind the library and the model, raised so it shows above their screens from the
+  // entrance. It isn't a step in answering you: it's other AI tools (Claude, through an API and MCP) searching the
+  // same library directly, plus a private research index Vee never draws on. A line on the floor ties it to the
+  // library, and query packets run along it toward the library.
+  const branchInfo = p.branch && (() => {
+    const [title, text] = p.branch, BR = 11.8, BY = 3.95, BEY = 5.55, at = 1.6 + n * 0.32;
+    const g = place(0, BR), pm = pedMat.clone(), bz = bezel.clone();
+    const frame = new THREE.Group(); frame.position.y = BY; g.add(frame);
+    frame.add(new THREE.Mesh(new THREE.BoxGeometry(MW + 0.14, MH + 0.14, 0.1), bz));
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(MW, MH), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(veeScreenCanvas(0, 0, title, text, 'FOR OTHER AI TOOLS · BRANCH OF 03')) }));
+    scr.position.z = 0.052; frame.add(scr);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, BY - MH / 2, 12), pm); post.position.y = (BY - MH / 2) / 2; g.add(post);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.07, 6), pm); base.position.y = 0.035; g.add(base);
+    const ringM = new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.94, 6), ringM); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring);
+    // its emblem: the published library (cyan) and the private research notes (gold), both feeding one port
+    const em = new THREE.Group(); em.position.y = BEY; g.add(em);
+    const cloud = (N, rad, hex, x) => {
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), a = i * 2.39996; pos[i * 3] = Math.cos(a) * r * rad; pos[i * 3 + 1] = y * rad; pos[i * 3 + 2] = Math.sin(a) * r * rad; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const m = new THREE.Points(geo, new THREE.PointsMaterial({ color: hex, size: 0.03, map: dotTex(), transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+      m.position.x = x; em.add(m); return m;
+    };
+    const pub = cloud(520, 0.32, 0x5ff0ff, -0.62), priv = cloud(1300, 0.46, 0xffc24a, 0.62);
+    const port = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), glowMat(1)); port.position.y = -0.62; em.add(port);
+    const wireM = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.6 });
+    em.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.62, -0.3, 0), new THREE.Vector3(0, -0.62, 0), new THREE.Vector3(0.62, -0.44, 0)]), wireM));
+    const light = new THREE.PointLight(CYAN, 0.5, 8, 2); light.position.set(0, 4.2, 1.6); g.add(light);
+    fadeIn(g, at);
+    { const wp = new THREE.Vector3(), pts = []; g.updateMatrixWorld(true);
+      for (let k = 0; k < 70; k++) { const u = k / 70, per = 2 * (MW + MH), d2 = u * per; let x, y;
+        if (d2 < MW) { x = -MW / 2 + d2; y = MH / 2; } else if (d2 < MW + MH) { x = MW / 2; y = MH / 2 - (d2 - MW); } else if (d2 < 2 * MW + MH) { x = MW / 2 - (d2 - MW - MH); y = -MH / 2; } else { x = -MW / 2; y = -MH / 2 + (d2 - 2 * MW - MH); }
+        pts.push(g.localToWorld(wp.set(x, BY + y, 0.06)).clone()); }
+      for (let k = 0; k < 30; k++) pts.push(g.localToWorld(wp.set(0, (k / 30) * (BY - MH / 2), 0)).clone());
+      addTargets(pts, at); }
+    const st = { id: 'branch', info: { title, text }, exhibit: true, standOff: 4.6, pitch: 0.42, nearDist: 6.8, ringM, lit: 0 };
+    addStation(g, st, BY);
+    // the branch line: from the library's foot, curving out behind the arc to this station's foot
+    const lib = st6[2], la = THREE.MathUtils.degToRad(lib.angle);
+    const from = new THREE.Vector3(Math.sin(la) * R, 0.03, -Math.cos(la) * R), to = new THREE.Vector3(0, 0.03, -BR);
+    const mid = from.clone().lerp(to, 0.5); mid.x -= 0.6; mid.z -= 0.6;
+    const bCurve = new THREE.QuadraticBezierCurve3(from, mid, to);
+    const bTube = new THREE.Mesh(new THREE.TubeGeometry(bCurve, 60, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    ws.add(bTube); fadeIn(bTube, at); addTargets(bCurve.getSpacedPoints(50), at);
+    const QN = 8, qPos = new Float32Array(QN * 3), qGeo = new THREE.BufferGeometry(); qGeo.setAttribute('position', new THREE.BufferAttribute(qPos, 3));
+    const queries = new THREE.Points(qGeo, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.1, map: dotTex(), transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+    queries.frustumCulled = false; ws.add(queries); fadeIn(queries, at + 0.2);
+    updates.push((dt, t) => {
+      st.lit = Math.max(st.lit - dt * 0.9, near === st ? 0.6 : 0);
+      ringM.opacity = 0.35 + 0.15 * Math.sin(t * 1.3) + st.lit * 0.6; light.intensity = 0.4 + st.lit * 0.9;
+      pub.rotation.y += dt * 0.3; priv.rotation.y -= dt * 0.2; port.rotation.y += dt * 1.2;
+      port.scale.setScalar(1 + 0.15 * Math.sin(t * 3) + st.lit * 0.3); wireM.opacity = 0.4 + 0.3 * Math.sin(t * 2) + st.lit * 0.3;
+      for (let i = 0; i < QN; i++) { const u = 1 - ((i / QN + t * 0.06) % 1), q = bCurve.getPointAt(u); qPos[i * 3] = q.x; qPos[i * 3 + 1] = 0.08; qPos[i * 3 + 2] = q.z; }   // toward the library
+      qGeo.attributes.position.needsUpdate = true;
+    });
+    return st;
+  })();
 
   const exit = makeExitPainting(ws, { R: 11.2, angleDeg: 180, pedMat, hit, stations, updates });
 
@@ -5672,7 +5733,7 @@ function renderWorldPanel(pt) {
       <p class="wp-desc">${esc(p.desc)}</p>
       ${world.kind === 'platform' ? `
       <h3 class="wp-sub">Modules</h3>
-      <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
+      <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}${p.branch ? `<li><b>${esc(p.branch[0])} (branch)</b><span>${esc(p.branch[1])}</span></li>` : ''}</ul>
       <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
       <h3 class="wp-sub">${esc(p.sectionTitle || 'Features')}</h3>
