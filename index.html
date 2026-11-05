@@ -389,6 +389,11 @@ body.touring #top, body.touring #worldPanel, body.touring #stick { display: none
   #worldPanel .wp-tag { display: none; }
   #worldPanel .wp-toggle { align-self: center; }
 }
+/* Phones held upright: no world toolbar (Tour, Details), so it doesn't cover Vee's chat box. Turn the phone sideways to
+   get it back; the exit painting in each world still leads back to the hall. */
+@media (max-width: 760px) and (orientation: portrait) {
+  #worldPanel { display: none !important; }
+}
 /* Branded products (KaizenDoku): system font, heavy weights, card colours and gradient title from the product's own site */
 #worldPanel.branded { font-family: var(--wp-font); background: color-mix(in srgb, #0d0d0d 92%, transparent); }
 #worldPanel.branded h2 { font-family: var(--wp-font); font-weight: 900; letter-spacing: -1px; background: var(--wp-title-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
