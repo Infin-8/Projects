@@ -151,7 +151,8 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 @media (pointer: coarse), (max-width: 760px) { #navToggle { display: grid; } }
 body.nav-hidden #directory { display: none; }
 body.nav-hidden #navToggle { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); opacity: .8; }
-body.in-world #navToggle, body.touring #navToggle { display: none !important; }
+body.touring #navToggle { display: none !important; }
+body.in-world #navToggle { display: none; }
 /* the glass lift's floor buttons, shown while you stand in it */
 #liftPanel {
   left: 0; right: 0; margin-inline: auto; width: fit-content; max-width: calc(100vw - 32px);
@@ -393,6 +394,12 @@ body.touring #top, body.touring #worldPanel, body.touring #stick { display: none
    get it back; the exit painting in each world still leads back to the hall. */
 @media (max-width: 760px) and (orientation: portrait) {
   #worldPanel { display: none !important; }
+  /* ...and the quick navigation takes its place: the ▾ toggle and, unless you've tucked it away, the world's buttons
+     at the bottom, with Vee's chat box and the tour bar just above them, as in the hall */
+  body.in-world #navToggle { display: grid; }
+  body.in-world:not(.nav-hidden):not(.touring) #directory { display: flex; }
+  body.in-world #askVee { bottom: calc(var(--dir-h, 76px) + 8px); }
+  body.in-world #tourBar { bottom: calc(var(--dir-h, 76px) + 6px); }
 }
 /* Branded products (KaizenDoku): system font, heavy weights, card colours and gradient title from the product's own site */
 #worldPanel.branded { font-family: var(--wp-font); background: color-mix(in srgb, #0d0d0d 92%, transparent); }
@@ -4514,9 +4521,10 @@ addEventListener('pageshow', e => { if (!e.persisted) return; if (current) exitR
    The top row is the building: a button per floor jumps you straight there (a quicker way than the lift),
    landing at the floor's lift door. The row under it lists what's on the floor you're on; each walks you over. */
 const dir = document.getElementById('directory');
-const floorRow = document.createElement('div'), hereRow = document.createElement('div');
+const floorRow = document.createElement('div'), hereRow = document.createElement('div'), worldRow = document.createElement('div');
 floorRow.className = 'dir-row'; hereRow.className = 'dir-row dir-here'; floorRow.setAttribute('aria-label', 'Floors'); hereRow.setAttribute('aria-label', 'On this floor');
-dir.append(floorRow, hereRow);
+worldRow.className = 'dir-row'; worldRow.setAttribute('aria-label', 'This world'); worldRow.hidden = true;   // inside a world (phones held upright): back to the hall, the tour
+dir.append(floorRow, worldRow, hereRow);
 const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM.x, FLOORS[FI.l3].y + 2.6, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 [...FLOORS].reverse().forEach(F => {
   const b = document.createElement('button'); b.className = 'dir-btn floor-btn'; b.type = 'button'; b.id = 'go-' + F.id; b.dataset.floor = FI[F.id];
@@ -4535,6 +4543,8 @@ function floorStops(i) {
   return out;
 }
 function renderNav() {
+  floorRow.hidden = !!world; worldRow.hidden = !world;
+  if (world) { renderWorldNav(); return; }
   floorRow.querySelectorAll('.floor-btn').forEach(b => b.setAttribute('aria-current', +b.dataset.floor === player.floor ? 'true' : 'false'));
   hereRow.innerHTML = '';
   const F = FLOORS[player.floor], lab = document.createElement('span'); lab.className = 'here-label'; lab.textContent = `${F.tag} · ${F.name}`; hereRow.appendChild(lab);
@@ -4542,6 +4552,17 @@ function renderNav() {
     const b = document.createElement('button'); b.className = 'dir-btn sub-btn'; b.type = 'button'; b.textContent = label;
     b.addEventListener('click', () => (stop.run ? stop.run() : walkTo(stop))); hereRow.appendChild(b);
   }
+  measureNav();
+}
+// Inside a world the directory lists the world instead of the building: back to the hall and the tour on top,
+// then each station. Only shown on phones held upright, where the world toolbar is hidden (see the CSS).
+function renderWorldNav() {
+  worldRow.innerHTML = ''; hereRow.innerHTML = '';
+  const btn = (row, cls, label, fn) => { const b = document.createElement('button'); b.className = 'dir-btn ' + cls; b.type = 'button'; b.textContent = label; b.addEventListener('click', fn); row.appendChild(b); return b; };
+  btn(worldRow, 'floor-btn', '← Hall', exitWorld);
+  btn(worldRow, 'tour-btn', '▶ Tour', () => { if (tour) endTour(); else startTour(); });
+  const lab = document.createElement('span'); lab.className = 'here-label'; lab.textContent = world.pt.p.name; hereRow.appendChild(lab);
+  for (const st of world.stations) if (st.info && st.info.title && !st.portal && !st.vee) btn(hereRow, 'sub-btn', st.info.title, () => walkTo(st));
   measureNav();
 }
 function measureNav() { document.documentElement.style.setProperty('--dir-h', dir.offsetHeight + 'px'); }
@@ -5794,7 +5815,7 @@ function openWorld(pt) {
   for (const p of paintings) { p.amp = 0; p.uniforms.uAmp.value = 0; p.uniforms.uGlow.value = 0; }
   world = pt.p.id === 'platform' ? buildPlatformWorld() : pt.p.id === 'about' ? buildOfficeWorld(pt.p) : pt.p.id === 'vee' ? buildVeeWorld(pt.p) : buildProductWorld(pt.p); world.pt = pt;
   markSeen(pt.p.id);
-  renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize(); liftPanel.hidden = true;
+  renderWorldPanel(pt); worldPanel.hidden = false; document.body.classList.add('in-world'); resize(); liftPanel.hidden = true; renderNav();
   player.pos.copy(world.start.pos); player.yaw = world.start.yaw; player.pitch = world.start.pitch;
   mode = 'walk'; auto = null; near = null;
   camera.fov = baseFov; camera.updateProjectionMatrix();
@@ -5809,7 +5830,7 @@ function exitWorld() {
   const fromFloor = world.pt.floor;
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
-  resetView(); canvas.focus();
+  resetView(); canvas.focus(); renderNav();
   if (fromFloor !== undefined && fromFloor !== FI.l1) placeOnFloor(fromFloor);   // back on the floor you left from, at its lift landing
   if (vee) { vee.arrive(); vee.sayExplored(); }   // she appears beside you again, with a word on what's left
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
