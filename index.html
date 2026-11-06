@@ -928,8 +928,8 @@ const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
 const OFFICE_DOOR_X = -5.13;
 
 /* ---------- Live quantum entropy ----------
-   Real random bytes from the Quantum V^ Platform's QRNG API (api.quantumv.dev), drawn from IBM
-   Quantum hardware. One small shared pool, refilled 128 bytes at a time only when it runs low: at most
+   Real random bytes from the Quantum V^ Platform's QRNG API (api.quantumv.dev), a generator seeded
+   by IBM Quantum hardware runs. One small shared pool, refilled 128 bytes at a time only when it runs low: at most
    every 20 s, and only while the page is visible. If the API can't be reached, bits quietly fall back to
    the browser's crypto randomness and qrngLive() turns false, so nothing claims to be live when it isn't. */
 const QRNG = { url: 'https://api.quantumv.dev/qrng/bytes?n=128', hex: '', bits: [], draws: [], meta: null, last: 0, tried: 0, busy: false, fallback: true,
@@ -943,7 +943,7 @@ function qrngRefill() {
     .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
     .then(j => {
       const hex = String(j.hex || '').toLowerCase();
-      if (!/^[0-9a-f]{64,}$/.test(hex) || j.source !== 'ibm-quantum-hardware') throw new Error('unexpected response');
+      if (!/^[0-9a-f]{64,}$/.test(hex) || j.seeded_from !== 'ibm-quantum-hardware') throw new Error('unexpected response');
       QRNG.hex = (QRNG.hex + hex).slice(-2048); QRNG.received += hex.length / 2;
       for (let k = 0; k + 64 <= hex.length; k += 64) QRNG.draws.unshift(hex.slice(k, k + 64));   // shown as 32-byte draws
       QRNG.draws.length = Math.min(QRNG.draws.length, 6);
@@ -5687,7 +5687,7 @@ function buildOfficeWorld(p) {
       }
       mg.globalAlpha = 1;
     }
-    mg.textAlign = 'left'; mg.fillStyle = 'rgba(0,255,102,0.7)'; mg.font = '600 18px "IBM Plex Mono", monospace'; mg.fillText(qrngLive() ? 'KEY STREAM · LIVE 32-BYTE DRAWS FROM IBM QUANTUM HARDWARE' : 'QES-256 KEY STREAM · 32-BYTE KEYS · ILLUSTRATION', 20, MH - 18);
+    mg.textAlign = 'left'; mg.fillStyle = 'rgba(0,255,102,0.7)'; mg.font = '600 18px "IBM Plex Mono", monospace'; mg.fillText(qrngLive() ? 'KEY STREAM · LIVE 32-BYTE DRAWS FROM THE QUANTUM-SEEDED QRNG' : 'QES-256 KEY STREAM · 32-BYTE KEYS · ILLUSTRATION', 20, MH - 18);
   }
   drawMain(0);
   const main = monitor(mainC, 0, 1.78, deskZ - 0.42, 2.4, 1.5, 0);
