@@ -390,6 +390,15 @@ body.touring #top, body.touring #worldPanel, body.touring #stick { display: none
   #worldPanel .wp-tag { display: none; }
   #worldPanel .wp-toggle { align-self: center; }
 }
+#stationCard {
+  --wp-accent: #5ff0ff; display: none; pointer-events: auto; left: 12px; right: 12px; bottom: calc(var(--dir-h, 76px) + 50px);
+  max-height: 38vh; overflow-y: auto; overscroll-behavior: contain; padding: 12px 40px 12px 14px;
+  background: color-mix(in srgb, var(--night) 92%, transparent); border: 1px solid var(--wp-accent); border-radius: 4px; color: var(--parchment);
+}
+#stationCard h3 { margin: 0 0 6px; font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--wp-accent); }
+#stationCard p { margin: 0; font-family: var(--body); font-size: 15px; line-height: 1.45; }
+#stationCardClose { position: absolute; top: 4px; right: 4px; width: 34px; height: 34px; font-size: 15px; color: var(--wp-accent); background: transparent; border: 0; cursor: pointer; }
+body.touring #stationCard { display: none !important; }
 /* Phones held upright: no world toolbar (Tour, Details), so it doesn't cover Vee's chat box. Turn the phone sideways to
    get it back; the exit painting in each world still leads back to the hall. */
 @media (max-width: 760px) and (orientation: portrait) {
@@ -398,6 +407,8 @@ body.touring #top, body.touring #worldPanel, body.touring #stick { display: none
      at the bottom, with Vee's chat box and the tour bar just above them, as in the hall */
   body.in-world #navToggle { display: grid; }
   body.in-world:not(.nav-hidden):not(.touring) #directory { display: flex; }
+  /* ...and a tapped display's details open in a small card, above the ▾ toggle */
+  #stationCard:not([hidden]) { display: block; }
   body.in-world #askVee { bottom: calc(var(--dir-h, 76px) + 8px); }
   body.in-world #tourBar { bottom: calc(var(--dir-h, 76px) + 6px); }
 }
@@ -498,6 +509,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
   </div>
 </section>
 <aside id="worldPanel" hidden aria-label="About this world"></aside>
+<aside class="hud" id="stationCard" hidden aria-live="polite" aria-label="About this display"><button type="button" id="stationCardClose" aria-label="Close">✕</button><h3 id="stationCardTitle"></h3><p id="stationCardText"></p></aside>
 <div id="loading">Entering Quantum Hall…</div>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:#120d18;color:#f1e6cf;text-align:center;z-index:9">Quantum Hall needs JavaScript. <a style="color:#d9a441" href="https://github.com/Infin-8/Projects">See the projects on GitHub.</a></p></noscript>
 
@@ -4241,7 +4253,7 @@ const look = { id: null, x: 0, y: 0, moved: 0 };
 canvas.addEventListener('pointerdown', e => {
   canvas.setPointerCapture(e.pointerId);
   if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.45 && e.clientY > innerHeight * 0.45 && joy.id === null) {
-    joy = { x: 0, y: 0, id: e.pointerId, ox: e.clientX, oy: e.clientY };
+    joy = { x: 0, y: 0, id: e.pointerId, ox: e.clientX, oy: e.clientY, moved: 0, t: performance.now() };
     stick.hidden = false; stick.style.left = e.clientX + 'px'; stick.style.top = e.clientY + 'px';
     return;
   }
@@ -4249,7 +4261,7 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   if (e.pointerId === joy.id) {
-    let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const m = Math.hypot(dx, dy), max = 45;
+    let dx = e.clientX - joy.ox, dy = e.clientY - joy.oy; const m = Math.hypot(dx, dy), max = 45; joy.moved = Math.max(joy.moved, m);
     if (m > max) { dx *= max / m; dy *= max / m; }
     joy.x = dx / max; joy.y = dy / max;
     stick.firstElementChild.style.transform = `translate(${dx}px,${dy}px)`;
@@ -4265,7 +4277,13 @@ canvas.addEventListener('pointermove', e => {
   }
 });
 function endPointer(e) {
-  if (e.pointerId === joy.id) { joy = { x: 0, y: 0, id: null }; stick.hidden = true; stick.firstElementChild.style.transform = ''; return; }
+  if (e.pointerId === joy.id) {
+    // a quick press that barely moved is a tap, not a walk: on a phone held upright the displays sit in the joystick's corner
+    const tapped = e.type === 'pointerup' && joy.moved <= 8 && performance.now() - joy.t < 350;
+    joy = { x: 0, y: 0, id: null }; stick.hidden = true; stick.firstElementChild.style.transform = '';
+    if (tapped) clickAt(e.clientX, e.clientY);
+    return;
+  }
   if (e.pointerId === look.id) {
     if (look.moved <= 6 && e.type === 'pointerup') clickAt(e.clientX, e.clientY);
     look.id = null;
@@ -4342,10 +4360,24 @@ terminal.addEventListener('click', e => { if (e.target === terminal) closeTermin
 function openSite(url) {   // runs inside the click or key press, so the browser allows the new tab
   const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.click();
 }
+// Phones held upright have no world panel (see the CSS), so a display's details open in a small card instead. It
+// reuses the panel's own entry when the station has no text of its own, then the world's description.
+const portraitPhone = matchMedia('(max-width: 760px) and (orientation: portrait)'), stationCard = document.getElementById('stationCard');
+function closeStationCard() { stationCard.hidden = true; }
+document.getElementById('stationCardClose').addEventListener('click', closeStationCard);
+function showStationCard(st, entry) {
+  const span = entry && entry.querySelector('span');
+  stationCard.style.setProperty('--wp-accent', world.accent);
+  document.getElementById('stationCardTitle').textContent = st.info.title;
+  document.getElementById('stationCardText').textContent = st.info.text || (span && span.textContent) || world.pt.p.desc;
+  if (!askEl.hidden) closeAsk();   // they share the space above the buttons
+  stationCard.hidden = false; stationCard.scrollTop = 0;
+}
 function showStation(st) {
   highlightStation(st.id);
   if (worldPanel._setOpen) worldPanel._setOpen(true);
   const b = worldPanel.querySelector(`.st[data-st="${st.id}"]`); if (b) b.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  if (portraitPhone.matches) showStationCard(st, b);
 }
 function walkTo(pt) {
   if (tour && !pt.tourStop) endTour();
@@ -5750,11 +5782,11 @@ function renderWorldPanel(pt) {
       <p class="wp-desc">${esc(p.desc)}</p>
       ${world.kind === 'platform' ? `
       <h3 class="wp-sub">Modules</h3>
-      <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}${p.branch ? `<li><b>${esc(p.branch[0])} (branch)</b><span>${esc(p.branch[1])}</span></li>` : ''}</ul>
+      <ul class="wp-modules">${p.modules.map(([k, v]) => `<li><b>${esc(k)}</b><span>${esc(v)}</span></li>`).join('')}</ul>
       <h3 class="wp-sub">In this world</h3>
       <ul class="wp-stations">${PLATFORM_STATIONS.map(s => `<li><button class="st" type="button" data-st="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.text)}</span></button></li>`).join('')}</ul>` : `
       <h3 class="wp-sub">${esc(p.sectionTitle || 'Features')}</h3>
-      <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}</ul>
+      <ul class="wp-stations">${p.modules.map(([k, v], i) => `<li><button class="st" type="button" data-st="m${i}"><b>${esc(p.theme.brand ? niceTitle(k) : k)}</b><span>${esc(v)}</span></button></li>`).join('')}${p.branch ? `<li><button class="st" type="button" data-st="branch"><b>${esc(p.branch[0])}</b><span>${esc(p.branch[1])}</span></button></li>` : ''}</ul>
       ${p.site ? `<h3 class="wp-sub">${esc(p.site.heading || 'Website')}</h3>
       <ul class="wp-stations"><li><button class="st" type="button" data-st="site"><b>${esc(p.site.label)}</b><span>${esc(p.site.cardText || 'On the centre screen in front of you. Walk up and press E, or tap it, to open the site.')}</span></button></li></ul>` : ''}
       ${p.extra ? `<h3 class="wp-sub">At the desk</h3>
@@ -5830,7 +5862,7 @@ function exitWorld() {
   const fromFloor = world.pt.floor;
   world.dispose(); world = null;
   worldPanel.hidden = true; worldPanel.innerHTML = ''; document.body.classList.remove('in-world'); resize();
-  resetView(); canvas.focus(); renderNav();
+  closeStationCard(); resetView(); canvas.focus(); renderNav();
   if (fromFloor !== undefined && fromFloor !== FI.l1) placeOnFloor(fromFloor);   // back on the floor you left from, at its lift landing
   if (vee) { vee.arrive(); vee.sayExplored(); }   // she appears beside you again, with a word on what's left
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
@@ -5991,7 +6023,7 @@ function askWhere() { return world ? `${world.pt.p.name} world` : `${FLOORS[play
 function openAsk() {
   const g = askGuide();
   if (!VEE_API || !g || g.away || tour) return false;
-  askEl.hidden = false; promptEl.hidden = true;
+  closeStationCard(); askEl.hidden = false; promptEl.hidden = true;
   if (g.tourK !== undefined && g.tour) g.tourK = g.tour.length - 1;   // her intro is done: you're talking now
   askHint(g); g.waveT = 1.4;
   if (!touchUI) setTimeout(() => askInput.focus(), 0);   // on a phone the keyboard waits until you tap the field
