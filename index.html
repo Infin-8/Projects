@@ -843,16 +843,6 @@ function wallTex(glow) {
   }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
-function carpetTex() {
-  // the photon path: dark runner with teal edge lines and a soft cyan beam down the middle
-  const c = mk(128, 512), g = c.getContext('2d');
-  g.fillStyle = '#0b0e16'; g.fillRect(0, 0, 128, 512);
-  const beam = g.createLinearGradient(0, 0, 128, 0);
-  beam.addColorStop(0.30, 'rgba(63,224,224,0)'); beam.addColorStop(0.5, 'rgba(120,240,240,0.85)'); beam.addColorStop(0.70, 'rgba(63,224,224,0)');
-  g.fillStyle = beam; g.fillRect(0, 0, 128, 512);
-  g.fillStyle = '#3fe0e0'; g.fillRect(2, 0, 3, 512); g.fillRect(123, 0, 3, 512);
-  const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 6); return t;
-}
 function dotTex() {
   const c = mk(64, 64), g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
@@ -2932,9 +2922,11 @@ void main() {
 }
 
 /* ---------- Light paths ----------
-   Glowing walkways on every floor: on L1 the main runner from the entrance to the Quantum V^
-   Platform display and a branch to the lift; on every other floor, out of the lift to each display.
-   Photons flow along the floor of every path toward where it leads. */
+   Light seams inlaid in the floor (since 2026-11-18, in place of glowing carpets and photons): on L1 two lines
+   along the main runner from the entrance to the Quantum V^ Platform display and one to the lift; on every
+   other floor, one line out of the lift to each display. A slow pulse runs along them toward where they
+   lead, animated in the shader (one uniform, no per-frame JavaScript). When you're walking somewhere, your
+   route on this floor lights up as its own brighter seam (showRoute) and fades when you arrive. */
 const PATH_W = { main: 3.0, branch: 1.1 };
 const LIGHT_PATHS = (() => {
   const segs = [], B = PATH_W.branch, door = LIFT.z + LIFT.r, X = LIFT.x;
@@ -2951,43 +2943,68 @@ const LIGHT_PATHS = (() => {
   add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
   return segs;
 })();
+const SEAM_W = 0.045, seamU = { uTime: { value: 0 } };
+// distance along the path network to each segment's start, so the pulse flows on across corners and branches
 {
-  const base = carpetTex();
+  const done = [];
   for (const sg of LIGHT_PATHS) {
-    const L = sg.a.distanceTo(sg.b), t = base.clone(); t.needsUpdate = true; t.repeat.set(1, Math.max(1, L / 4));
-    // blended as light, so where paths meet or cross they merge instead of one covering the other
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, L), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    m.rotation.set(-Math.PI / 2, 0, Math.atan2(sg.b.x - sg.a.x, -(sg.b.y - sg.a.y)) + Math.PI);   // lie flat, pointing from a to b
-    m.position.set((sg.a.x + sg.b.x) / 2, 0.012 + (sg.w < 2 ? 0.002 : 0), (sg.a.y + sg.b.y) / 2); FLOORS[sg.f].g.add(m);
+    sg.d0 = 0; sg.len = sg.a.distanceTo(sg.b);
+    for (const q of done) {
+      if (q.f !== sg.f) continue;
+      const ab = q.b.clone().sub(q.a), t = ab.dot(sg.a.clone().sub(q.a)) / ab.lengthSq(), near = q.a.clone().addScaledVector(ab, Math.max(0, Math.min(1, t)));
+      if (near.distanceTo(sg.a) < 0.05) { sg.d0 = q.d0 + Math.max(0, Math.min(1, t)) * q.len; break; }   // it starts on an earlier segment (its end, or partway along)
+    }
+    done.push(sg);
   }
 }
-// photons: each flows along one path at floor level, from its start toward where it leads
-const PHOTONS = 420;
-const pPos = new Float32Array(PHOTONS * 3), pCol = new Float32Array(PHOTONS * 3), pData = [];
-const cyanC = new THREE.Color(0x7ff0f0), goldC = new THREE.Color(0xffd36b);
-{
-  const lens = LIGHT_PATHS.map(sg => sg.a.distanceTo(sg.b)), tot = lens.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < PHOTONS; i++) {
-    let r = Math.random() * tot, k = 0; while (r > lens[k] && k < lens.length - 1) { r -= lens[k]; k++; }
-    const sg = LIGHT_PATHS[k];
-    pData.push({ sg, u: Math.random(), sp: (0.8 + Math.random() * 1.6) / lens[k], off: (Math.random() - 0.5) * sg.w * 0.55, h: 0.03 + Math.random() * 0.12, ph: Math.random() * 6.28 });
-    const c = Math.random() < 0.8 ? cyanC : goldC; pCol[i * 3] = c.r; pCol[i * 3 + 1] = c.g; pCol[i * 3 + 2] = c.b;
+const seamVert = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const seamFrag = `uniform float uTime, uD0, uLen, uBoost, uSpeed, uGap; uniform vec3 uColor; varying vec2 vUv;
+  void main() {
+    float d = uD0 + vUv.y * uLen;                                   // metres along the network
+    float ph = fract((d - uTime * uSpeed) / uGap);                  // a pulse every uGap metres, travelling forward
+    float pulse = smoothstep(0.0, 0.08, ph) * (1.0 - smoothstep(0.08, 0.45, ph));
+    float edge = 1.0 - smoothstep(0.55, 1.0, abs(vUv.x - 0.5) * 2.0); // soft sides
+    gl_FragColor = vec4(uColor * (0.32 + 1.1 * pulse) * uBoost * edge, 1.0);
+  }`;
+function seamMesh(a, b, d0, opts = {}) {   // a flat light seam from a to b (Vector2 in floor x, z)
+  const L = a.distanceTo(b), w = opts.w || SEAM_W;
+  const u = { uTime: seamU.uTime, uD0: { value: d0 }, uLen: { value: L + w }, uBoost: { value: opts.boost || 1 }, uSpeed: { value: opts.speed || 1.1 }, uGap: { value: opts.gap || 7 }, uColor: { value: new THREE.Color(opts.color || 0x5ff0ff) } };
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, L + w), new THREE.ShaderMaterial({ uniforms: u, vertexShader: seamVert, fragmentShader: seamFrag, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
+  m.rotation.set(-Math.PI / 2, 0, Math.atan2(b.x - a.x, -(b.y - a.y)) + Math.PI);   // lie flat, pointing from a to b
+  m.position.set((a.x + b.x) / 2, opts.y ?? 0.013, (a.y + b.y) / 2); m.userData.seamU = u;
+  return m;
+}
+for (const sg of LIGHT_PATHS) {
+  const g = FLOORS[sg.f].g;
+  if (sg.w > 2) {   // the lobby's main runner: two seams, a walkway's width apart
+    const dir = sg.b.clone().sub(sg.a).normalize(), n = new THREE.Vector2(-dir.y, dir.x).multiplyScalar(0.85);
+    for (const s2 of [1, -1]) g.add(seamMesh(sg.a.clone().addScaledVector(n, s2), sg.b.clone().addScaledVector(n, s2), sg.d0));
+  } else g.add(seamMesh(sg.a, sg.b, sg.d0));
+}
+// your route, while you're walking somewhere: a brighter, quicker seam from you to where you're going on this floor
+const ROUTE = { g: new THREE.Group(), key: '', fade: 0 };
+scene.add(ROUTE.g);
+function showRoute(points, floor) {
+  while (ROUTE.g.children.length) { const c = ROUTE.g.children.pop(); c.geometry.dispose(); c.material.dispose(); }
+  let d = 0;
+  for (let i = 0; i + 1 < points.length; i++) {
+    const a = new THREE.Vector2(points[i].x, points[i].z), b = new THREE.Vector2(points[i + 1].x, points[i + 1].z);
+    if (a.distanceTo(b) < 0.05) continue;
+    ROUTE.g.add(seamMesh(a, b, d, { w: 0.07, boost: 1.6, speed: 2.4, gap: 3.2, y: FLOORS[floor].y + 0.016 })); d += a.distanceTo(b);
   }
+  ROUTE.fade = 1;
 }
-const pGeo = new THREE.BufferGeometry();
-pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
-const photons = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.07, map: dotTex(), vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
-photons.frustumCulled = false; scene.add(photons);
-function placePhotons(t, dt, m) {
-  pData.forEach((d, i) => {
-    d.u += d.sp * dt * m; if (d.u > 1) d.u -= 1;
-    const { a, b } = d.sg, dx = b.x - a.x, dz = b.y - a.y, L = Math.hypot(dx, dz) || 1, nx = -dz / L, nz = dx / L;
-    pPos[i * 3] = a.x + dx * d.u + nx * d.off; pPos[i * 3 + 2] = a.y + dz * d.u + nz * d.off;
-    pPos[i * 3 + 1] = FLOORS[d.sg.f].y + d.h + 0.03 * Math.sin(t * 2 + d.ph) * m;   // skimming just above the path
-  });
-  pGeo.attributes.position.needsUpdate = true;
+function updateRoute(dt) {
+  if (mode === 'auto' && auto && auto.target && !world) {
+    // this floor's part of the route: from you, to the next waypoint, on until a lift ride
+    const pts = [player.pos, auto.target]; for (const q of auto.via) { if (q.ride !== undefined) break; pts.push(q); }
+    const key = player.floor + ':' + pts.slice(1).map(q => q.x.toFixed(1) + ',' + q.z.toFixed(1)).join(';');
+    if (key !== ROUTE.key) { ROUTE.key = key; showRoute(pts, player.floor); }
+    ROUTE.fade = Math.min(1, ROUTE.fade + dt * 4);
+  } else { ROUTE.key = ''; ROUTE.fade = Math.max(0, ROUTE.fade - dt * 1.5); }
+  for (const c of ROUTE.g.children) c.material.uniforms.uBoost.value = 1.6 * ROUTE.fade;
+  ROUTE.g.visible = ROUTE.fade > 0.01;
 }
-placePhotons(0, 0, 1);
 // only your floor and the ones beside it are drawn (the lift shows the rest as you pass them)
 function setFloorVis(lo, hi) { FLOORS.forEach((F, i) => { F.g.visible = i >= lo && i <= hi; }); }
 
@@ -2996,7 +3013,8 @@ function updateQuantum(dt, t) {
   const m = reduceMotion ? 0.15 : 1;
   // a pulse of cold travels down the stages, top to bottom
   if (B1.g.visible) pulseStages(pulses, t);
-  placePhotons(t, dt, m);
+  seamU.uTime.value = reduceMotion ? 0 : t;   // the seams' pulse
+  updateRoute(dt);
   if (!ride) liftCab.position.y = FLOORS[player.floor].y;
 }
 
