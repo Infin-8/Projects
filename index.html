@@ -7,9 +7,9 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=qv">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=qv">
-<meta name="description" content="Quantum Hall: a six-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda (coming soon) and its server room, and Vee, the holographic guide.">
+<meta name="description" content="Quantum Hall: a seven-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda (coming soon) and its server room, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
-<meta property="og:description" content="Six floors around an atrium, from a server room and a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
+<meta property="og:description" content="Seven floors around an atrium, from a server room and a cryostat lab to an AI lab and the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://hall.quantumv.dev/assets/gallery-preview.png">
 <meta property="og:url" content="https://hall.quantumv.dev/">
 <link rel="canonical" href="https://hall.quantumv.dev/">
@@ -135,7 +135,7 @@ body.in-world #tourBar { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); 
 .dir-btn.floor-btn b { font-weight: 600; color: #5ff0ff; margin-right: 3px; }
 .dir-btn.floor-btn[aria-current="true"] { background: #5ff0ff; border-color: #5ff0ff; color: #05070b; }
 .dir-btn.floor-btn[aria-current="true"] b { color: #05070b; }
-@media (max-width: 560px) { .dir-btn.floor-btn:not([aria-current="true"]) .fl-name { display: none; } .dir-btn.floor-btn:not([aria-current="true"]) b { margin-right: 0; } }   /* phones: six floors fit as tags, like lift buttons; your floor keeps its name */
+@media (max-width: 560px) { .dir-btn.floor-btn:not([aria-current="true"]) .fl-name { display: none; } .dir-btn.floor-btn:not([aria-current="true"]) b { margin-right: 0; } }   /* phones: seven floors fit as tags, like lift buttons; your floor keeps its name */
 .dir-here { gap: 6px; }
 .dir-btn.sub-btn { font-size: 11px; padding: 5px 9px; border-color: color-mix(in srgb, var(--gilt-dim) 70%, transparent); color: var(--muted); }
 .here-label { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #5ff0ff; margin-right: 2px; }
@@ -908,8 +908,8 @@ scene.fog = new THREE.Fog(0x080a12, 14, 38);
 const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 
 /* ---------- The building, as data ----------
-   Six floors stacked around an open atrium, each one a section:
-   B2 Recluda · B1 Cryostat Lab · L1 Lobby · L2 Apps · L3 Platform Wing · L4 the Builder's Office.
+   Seven floors stacked around an open atrium, each one a section:
+   B2 Recluda · B1 Cryostat Lab · L1 Lobby · L2 Apps · L3 Platform Wing · L4 AI Lab · L5 the Builder's Office (always the top floor).
    B2, the server room, is sealed off below the cryostat: no atrium (atrium: false), only the lift goes down; a smaller room.
    A floor is a room x0..x1 by z0..z1, h tall, with its floor at height y; each floor's ceiling is the
    next floor's y. "look" is where you face stepping out of the lift [x, z, pitch]. */
@@ -921,9 +921,11 @@ const FLOORS = [
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
-  { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
+  { id: 'l4', short: 'AI Lab', tag: 'L4', name: 'AI Lab', y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [-4.5, -1.1, 0.05], hello: ['L4 · The AI Lab.', 'Vee and Dr. Z, the AI guides: prototypes on podiums.'] },
+  // the office is always the top floor
+  { id: 'l5', short: 'Office', tag: 'L5', name: "Builder's Office", y: 32, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L5 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
-// L4's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
+// L5's south wall, as you face it: Vee's Nesting Station and reception, her user manual and 'How Vee works' in one
 // frame, then the office door at the end (world x; the wall faces north, so your right is -x)
 const OFFICE_DOOR_X = -5.13;
 
@@ -1288,7 +1290,7 @@ function makeCryostat() {
 function pulseStages(list, t) {   // a pulse of cold travels down the stages, top to bottom
   list.forEach((pm, i) => { const ph = (t * 0.7 - i * 0.22) % 1.6; pm.opacity = 0.12 + 0.75 * Math.max(0, 1 - Math.abs(ph - 0.3) * 4); });
 }
-/* ---------- The building: six floors stacked around an open atrium (B2 sealed below it) ----------
+/* ---------- The building: seven floors stacked around an open atrium (B2 sealed below it) ----------
    Each floor in FLOORS gets a group set at its height, and everything on that floor is built inside
    the group in the floor's own coordinates (its floor at y = 0). A round atrium opens up through every
    floor, and a glass lift beside it runs the full height of the building. */
@@ -1528,12 +1530,12 @@ for (const HERE of FLOORS) {
   p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(14, 14, 740, 996);
   p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('QUANTUM HALL', 56, 92);
   p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Floor guide', 56, 172);
-  const rows = [['L4', "The Builder's Office", 'About & Resume'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™'],
+  const rows = [['L5', "The Builder's Office", 'About & Resume'], ['L4', 'AI Lab', 'Vee · Dr. Z (prototypes)'], ['L3', 'Platform Wing', 'VAULT™ · VIPER™ · LOTUS™'],
     ['L2', 'Apps', 'KaizenDoku · STEADYWATCH™ HANDHELD · Recluda'], ['L1', 'Lobby', 'Quantum V^ Platform'], ['B1', 'Cryostat Lab', 'Where the entropy starts'],
     ['B2', 'Recluda', 'Recluda Server · Recluda VPN']];
   rows.forEach(([tag, name, sub], i) => {
-    const y = 262 + i * 128, here = tag === HERE.tag;
-    p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 52, 104, 92, 10); p.fill();
+    const y = 250 + i * 108, here = tag === HERE.tag;   // seven floors
+    p.fillStyle = here ? '#5ff0ff' : 'rgba(63,224,224,0.14)'; rr(p, 56, y - 48, 104, 84, 10); p.fill();
     p.fillStyle = here ? '#05070b' : '#5ff0ff'; p.textAlign = 'center'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(tag, 108, y + 8);
     p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '40px "Young Serif", Georgia, serif'; p.fillText(name, 190, y - 6);
     p.fillStyle = '#8e99b0'; let px = 24; do { p.font = `${px}px "IBM Plex Sans", sans-serif`; } while (p.measureText(sub).width > 520 && --px > 16); p.fillText(sub, 190, y + 32);
@@ -2444,6 +2446,124 @@ function buildRecludaDevices() {
   icon.add(new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: A })));
   buildingUpdates.push((dt, t) => { if (!F.g.visible) return; icon.rotation.y = reduceMotion ? 0.3 + Math.PI / 2 : t * 0.6; icon.position.y = 2.85 + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.06); });
 }
+/* ---------- L4 · AI Lab: the AI guides, as prototypes ----------
+   Vee and Dr. Z are one RAG worker (vee-worker) with two personas: a question is matched against about 1,000
+   passages in a Vectorize index and a model answers from what it finds, with links to its sources. Each stands
+   on a podium like the apps on L2, shown in the form visitors meet it in the Ask chat widget: Vee's drone head
+   (quantumv.dev and the other sites) and Dr. Z's Sudoku-board face (kaizendoku.com). The painters are ported
+   from vee-worker/web/vee-widget.js (paintFace, paintDrz); keep the two in step. */
+const AI_LAB = { x: -4.5, zs: [-2.6, 0.4], ry: Math.PI / 2, stops: [] };   // both facing east, toward the lift
+const WIDGET_FACES = (() => {
+  const xs = seed => { let x = seed; return () => ((x ^= x << 13, x ^= x >>> 17, x ^= x << 5) >>> 0) / 4294967296; };
+  // Vee: drones crowd the outline of her head, a few inside, with a hair cap swept to one side
+  const veeDots = (() => { const rnd = xs(2463534242), dots = [];
+    for (let i = 0; i < 230; i++) { const a = rnd() * Math.PI * 2, k = rnd() < 0.7 ? 0.88 + rnd() * 0.12 : Math.sqrt(rnd()) * 0.85;
+      dots.push({ x: 56 + Math.cos(a) * 27 * k, y: 62 + Math.sin(a) * 32 * k, c: '95,240,255', p: rnd() * 6.3, r: 0.9 + rnd() * 0.8 }); }
+    for (let i = 0; i < 120; i++) { const a = Math.PI + rnd() * Math.PI, k = 0.8 + rnd() * 0.25;
+      dots.push({ x: 56 + Math.cos(a) * 30 * k + 2, y: 54 + Math.sin(a) * 30 * k, c: '143,210,255', p: rnd() * 6.3, r: 0.9 + rnd() * 0.9 }); }
+    return dots; })();
+  function vee(g, t, look, open, smile) {
+    for (const d of veeDots) { g.fillStyle = `rgba(${d.c},${reduceMotion ? 0.7 : 0.45 + 0.4 * Math.sin(t / 380 + d.p)})`; g.beginPath(); g.arc(d.x + look.x * 1.5, d.y + look.y, d.r, 0, Math.PI * 2); g.fill(); }
+    g.save(); g.shadowColor = 'rgba(95,240,255,.9)'; g.shadowBlur = 8; g.fillStyle = '#e8ffff';
+    const ex = look.x * 7, ey = look.y * 4;
+    for (const sx of [-1, 1]) { const h = Math.max(1.5, 13 * open), x = 56 + sx * 12 + ex, y = 60 + ey; g.beginPath(); g.roundRect ? g.roundRect(x - 3, y - h / 2, 6, h, 3) : g.rect(x - 3, y - h / 2, 6, h); g.fill(); }
+    g.strokeStyle = '#e8ffff'; g.lineWidth = 2.2; g.lineCap = 'round'; g.beginPath();
+    const mx = 56 + look.x * 4, my = 78 + look.y * 2; g.moveTo(mx - 7, my); g.quadraticCurveTo(mx, my + smile * 5, mx + 7, my); g.stroke(); g.restore();
+  }
+  // Dr. Z: a 9×9 Sudoku board with eyes and a mouth; a Z shimmers across it, cells glint, and while he
+  // "thinks" a box, row and column light with one cell outlined in gold, like a hint in the app
+  const ZB = { X0: 20, Y0: 22, CS: 8, SIDE: 72, EYE_Y: 52, MOUTH_Y: 75 }, ZC = { main: '0,255,65', soft: '170,255,195', gold: '255,215,0' };
+  const near = (x, y, px, py, r) => Math.hypot(x - px, y - py) < r;
+  const drz = (() => { const rnd = xs(2463534242), frame = [], lines = [], cells = [];
+    for (let i = 0; i <= 44; i++) { const s = i / 44 * ZB.SIDE;
+      for (const [px, py] of [[ZB.X0 + s, ZB.Y0], [ZB.X0 + s, ZB.Y0 + ZB.SIDE], [ZB.X0, ZB.Y0 + s], [ZB.X0 + ZB.SIDE, ZB.Y0 + s]]) frame.push({ x: px, y: py, p: rnd() * 6.3, r: 0.75 + rnd() * 0.55 }); }
+    for (const k of [24, 48]) for (let s = 0; s <= ZB.SIDE; s += 3) lines.push({ x: ZB.X0 + k, y: ZB.Y0 + s, p: rnd() * 6.3 }, { x: ZB.X0 + s, y: ZB.Y0 + k, p: rnd() * 6.3 });
+    for (let row = 0; row < 9; row++) for (let col = 0; col < 9; col++) {
+      const cx = ZB.X0 + col * ZB.CS + ZB.CS / 2, cy = ZB.Y0 + row * ZB.CS + ZB.CS / 2;
+      const dim = near(cx, cy, 44, ZB.EYE_Y, 8) || near(cx, cy, 68, ZB.EYE_Y, 8) || (Math.abs(cy - ZB.MOUTH_Y) < 5 && Math.abs(cx - 56) < 11);
+      cells.push({ x: cx, y: cy, row, col, box: Math.floor(row / 3) * 3 + Math.floor(col / 3), p: rnd() * 6.3, dim }); }
+    return { frame, lines, cells }; })();
+  const HINTS = [[4, 4], [1, 5], [7, 2], [3, 6], [6, 8], [0, 1]].map(([row, col]) => ({ row, col, box: Math.floor(row / 3) * 3 + Math.floor(col / 3) }));
+  const Z_PATH = [...Array.from({ length: 9 }, (_, c) => c), ...Array.from({ length: 7 }, (_, k) => (k + 1) * 9 + (7 - k)), ...Array.from({ length: 9 }, (_, c) => 72 + c)];
+  const Z_STEP = 45, Z_TAIL = 6, Z_EVERY = 8000, Z_DUR = (Z_PATH.length + Z_TAIL) * Z_STEP;
+  const zPos = T => { const zt = T % (Z_DUR + Z_EVERY); return zt < Z_DUR ? zt / Z_STEP : -1; };
+  function drZ(g, t, look, open, smile, thinking) {
+    const { X0, Y0, CS, SIDE, EYE_Y, MOUTH_Y } = ZB, C = ZC, moving = !reduceMotion;
+    const tw = d => (moving ? 0.45 + 0.4 * Math.sin(t / 380 + d.p) : 0.7), lx = look.x * 1.5, ly = look.y;
+    g.save(); g.translate(56, 58); g.scale(1.18, 1.18); g.translate(-56, -58);
+    const hint = thinking && moving ? HINTS[Math.floor(t / 1200) % HINTS.length] : null;
+    if (hint) { g.fillStyle = `rgba(${C.main},.07)`; g.fillRect(X0 + lx, Y0 + hint.row * CS + ly, SIDE, CS); g.fillRect(X0 + hint.col * CS + lx, Y0 + ly, CS, SIDE);
+      g.fillStyle = `rgba(${C.main},.13)`; g.fillRect(X0 + (hint.box % 3) * 24 + lx, Y0 + Math.floor(hint.box / 3) * 24 + ly, 24, 24); }
+    for (const d of drz.frame) { g.fillStyle = `rgba(${C.main},${tw(d)})`; g.beginPath(); g.arc(d.x + lx, d.y + ly, d.r, 0, Math.PI * 2); g.fill(); }
+    for (const d of drz.lines) { g.fillStyle = `rgba(${C.main},${0.4 * tw(d)})`; g.beginPath(); g.arc(d.x + lx, d.y + ly, 0.7, 0, Math.PI * 2); g.fill(); }
+    const z = moving && !hint ? zPos(t) : -1, k = Math.floor(t / 520), glint = moving && !hint && z < 0 ? { i: (k * 37 + 11) % 81, a: Math.sin(Math.PI * (t % 520) / 520) } : null, front = (t / 9) % 200 - 30;
+    drz.cells.forEach((d, i) => {
+      let a = (d.dim ? 0.1 : 0.42) * (tw(d) + 0.2), r = 1, col = C.main;
+      if (hint && !d.dim && (d.row === hint.row || d.col === hint.col || d.box === hint.box)) { a = d.box === hint.box ? 0.95 : 0.7; r = 1.2; col = C.soft; }
+      if (glint && glint.i === i && !d.dim) { a = Math.max(a, glint.a); r = 1 + 0.5 * glint.a; col = C.soft; }
+      if (smile > 0.05 && moving && !d.dim) { const w = Math.max(0, 1 - Math.abs((d.row + d.col) * CS - front) / 14) * smile; if (w > 0) { a = Math.max(a, w); r = 1 + 0.4 * w; col = C.soft; } }
+      g.fillStyle = `rgba(${col},${a})`; g.beginPath(); g.arc(d.x + lx, d.y + ly, r, 0, Math.PI * 2); g.fill(); });
+    if (hint) { g.save(); g.strokeStyle = `rgba(${C.gold},.95)`; g.lineWidth = 1; g.shadowColor = `rgba(${C.gold},.85)`; g.shadowBlur = 5;
+      g.strokeRect(X0 + hint.col * CS + 0.8 + lx, Y0 + hint.row * CS + 0.8 + ly, CS - 1.6, CS - 1.6); g.restore(); }
+    if (z >= 0) { g.save(); g.shadowColor = `rgba(${C.main},.9)`; g.shadowBlur = 6;
+      Z_PATH.forEach((i, n) => { const dd = z - n; if (dd < 0 || dd >= Z_TAIL) return; const c = drz.cells[i], a = 1 - dd / Z_TAIL;
+        g.fillStyle = `rgba(236,255,241,${(c.dim ? 0.35 : 1) * a})`; g.beginPath(); g.arc(c.x + lx, c.y + ly, 1 + 0.9 * a, 0, Math.PI * 2); g.fill(); }); g.restore(); }
+    g.save(); g.shadowColor = `rgba(${C.main},.9)`; g.shadowBlur = 8; g.fillStyle = '#ecfff1';
+    const ex = look.x * 7, ey = look.y * 4;
+    for (const sx of [-1, 1]) { const h = Math.max(1.5, 13 * open), ox = 56 + sx * 12 + ex, oy = EYE_Y + ey; g.beginPath(); g.roundRect ? g.roundRect(ox - 3, oy - h / 2, 6, h, 3) : g.rect(ox - 3, oy - h / 2, 6, h); g.fill(); }
+    g.strokeStyle = '#ecfff1'; g.lineWidth = 2.2; g.lineCap = 'round'; g.beginPath();
+    const mx = 56 + look.x * 4, my = MOUTH_Y + look.y * 2; g.moveTo(mx - 7, my); g.quadraticCurveTo(mx, my + smile * 5, mx + 7, my); g.stroke();
+    g.restore(); g.restore();
+  }
+  return { vee, drZ };
+})();
+function buildAILab() {
+  const F = FLOORS[FI.l4];
+  const guides = [
+    { name: 'Vee', accent: '#5ff0ff', where: 'Ask Vee on quantumv.dev', url: 'https://quantumv.dev/', paint: WIDGET_FACES.vee },
+    { name: 'Dr. Z', accent: '#00ff41', where: 'Ask Dr. Z on kaizendoku.com', url: 'https://kaizendoku.com/', paint: WIDGET_FACES.drZ }];
+  guides.forEach((gd, i) => {
+    const x = AI_LAB.x, z = AI_LAB.zs[i], ry = AI_LAB.ry, A = new THREE.Color(gd.accent);
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; F.g.add(g);
+    F.blocks.push({ x0: x - 0.75, x1: x + 0.75, z0: z - 0.75, z1: z + 0.75 });
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.05, 0.42), colMat); ped.position.y = 0.525; g.add(ped);
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.025, 0.44), new THREE.MeshBasicMaterial({ color: A })); edge.position.y = 1.06; g.add(edge);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.03, 40), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.6 })); lens.position.y = 1.08; g.add(lens);   // the projector it floats over
+    // the face, as in the widget: painted at 4× onto a 448 px canvas, floating over the podium
+    const c = mk(448, 448), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
+    const faceM = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), faceM); face.position.y = 1.72; g.add(face);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.16, 0.6, 40, 1, true), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    beam.position.y = 1.39; g.add(beam);
+    const glow = new THREE.PointLight(A, 0.35, 3, 2); glow.position.set(0, 1.7, 0.5); g.add(glow);
+    const tag = textSprite([[`${gd.name.toUpperCase()} · PROTOTYPE`, '600 32px "IBM Plex Mono", monospace', gd.accent], [`${gd.where} · tap to open`, '26px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.4);
+    tag.position.set(0, 0.62, 0.31); g.add(tag);
+    const name = textSprite([[gd.name, '64px "Young Serif", Georgia, serif', '#f1e6cf']], 512, 110, 1.0);
+    name.position.set(0, 2.42, 0); g.add(name);
+    const stop = { exhibit: true, floor: FI.l4, center: new THREE.Vector3(x, F.y + 1.6, z), normal: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), standOff: 2.2, pitch: -0.02 };
+    AI_LAB.stops.push(stop);
+    hallLinks.push({ mesh: face, url: gd.url, floor: FI.l4, stop });
+    // the widget's idle life: glances, blinks, a smile now and then; Dr. Z also "thinks" through a hint
+    const look = { x: 0, y: 0 }; let aim = { x: 0, y: 0 }, nextGlance = 0, blinkAt = 1500 + i * 900, smile = 0, last = -1;
+    buildingUpdates.push((dt, t) => {
+      if (!F.g.visible) return;
+      const T = t * 1000 + i * 2600;
+      if (T - last < 33) return; last = T;   // ~30 fps is plenty for a face
+      if (!reduceMotion && T > nextGlance) { const sp = [[0, 0], [-0.9, 0], [0.9, 0], [-0.6, -0.5], [0.6, -0.5], [0, 0.4], [0, 0]][Math.floor(Math.random() * 7)]; aim = { x: sp[0], y: sp[1] }; nextGlance = T + 1200 + Math.random() * 2200; }
+      look.x += (aim.x - look.x) * 0.12; look.y += (aim.y - look.y) * 0.12;
+      if (T > blinkAt + 140) blinkAt = T + 2500 + Math.random() * 3000;
+      const open = !reduceMotion && T > blinkAt && T < blinkAt + 140 ? 0.12 : 1;
+      const cycle = T % 9000, thinking = gd.paint === WIDGET_FACES.drZ && cycle > 5200 && cycle < 7600;
+      smile += ((cycle > 7700 && cycle < 8900 ? 1 : 0.15) - smile) * 0.1;
+      p.clearRect(0, 0, 448, 448); p.save(); p.scale(4, 4); gd.paint(p, reduceMotion ? 0 : T, look, open, smile, thinking); p.restore(); tex.needsUpdate = true;
+      face.position.y = 1.72 + (reduceMotion ? 0 : Math.sin(T / 900 + i) * 0.03);
+    });
+  });
+  infoPanel(F.g, { eyebrow: 'TWO GUIDES · ONE ENGINE', title: 'Answers from a library',
+    body: 'One Cloudflare Worker, two personas. A question is matched against about 1,000 passages (the sites, the Quantum Library papers, research notes); a model answers from what it finds and links its sources. Vee guides this hall; Dr. Z coaches on kaizendoku.com.',
+    foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.x0 + 0.06, 2.6, (AI_LAB.zs[0] + AI_LAB.zs[1]) / 2, Math.PI / 2, 3.4);
+  floorSign(F.g, 'LEVEL 4', 'AI Lab', F.x0 + 0.06, 4.75, (AI_LAB.zs[0] + AI_LAB.zs[1]) / 2, Math.PI / 2, 3.6);
+}
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
 // watch to open the App Store, like the phone.
@@ -2607,11 +2727,11 @@ function buildPlatformWall() {
   hallLinks.push({ mesh: m, url: PLATFORM_WALL.url, floor: FI.l3, stop: PLATFORM_WALL.stop });
 }
 
-/* ---------- L4 · The builder's floor ----------
+/* ---------- L5 · The builder's floor (always the top floor) ----------
    The top floor: the office's glass door (see buildKiosk), a timeline of the builder's career along
    the west wall, the skills wall to the north, and a starry skylight over the atrium. */
-const L4 = FLOORS[FI.l4];
-floorSign(L4.g, 'LEVEL 4', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
+const L4 = FLOORS[FI.l5];
+floorSign(L4.g, 'LEVEL 5', "The Builder's Office", OFFICE_DOOR_X, 4.15, L4.z1 - 0.06, Math.PI, 3.6);
 {
   // the skylight: the Hurwitz dot field from the old steady-watch.com header, on the ceiling over the atrium.
   // A centre dot and 336 dots (VIPER™'s count) in a sunflower spiral, periwinkle at the centre to violet at
@@ -2846,7 +2966,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
   // B2: out of the lift (door at z -2.85), straight to the rack, and branches to the Recluda wall and Recluda VPN
   add(FI.b2, X, door, X, -1.2); add(FI.b2, X, -1.2, 0.3, -1.2); add(FI.b2, 2.5, -1.2, 2.5, 3.4); add(FI.b2, 2.5, -1.2, 2.5, -6.8);
-  add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
+  add(FI.l5, X, door, X, 0.4); add(FI.l5, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l5, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l5].z1 - 0.45);   // past her reception, right up to the office door
   return segs;
 })();
 {
@@ -3486,7 +3606,7 @@ function updateVee(v, dt, t) {
   for (const k of ['eyeX', 'eyeY', 'tilt', 'nod', 'swirl', 'bounce']) v.mp[k] += (MT[k] - v.mp[k]) * mk2;
   for (let i = 0; i < 3; i++) v.mp.tint[i] += (MT.tint[i] - v.mp.tint[i]) * mk2;
   const pose = MT.pose;
-  if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeDocked && v.restSpot ? v.restSpot : veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken (or back on L4 while she rests at reception)   // woken: she gathers beside you
+  if (v.wasAway && !v.away) { v.appearT = 0.8; v.vanishT = -1; v.heading = player.yaw; v.lastP = null; const fp = veeDocked && v.restSpot ? v.restSpot : veeFollowSpot(v); b.x = fp.x; b.z = fp.z; }   // woken (or back on L5 while she rests at reception)   // woken: she gathers beside you
   v.wasAway = v.away;
   // track whether you're walking; only then does her follow heading catch up with where you face
   const pp = camera.position;
@@ -3654,7 +3774,7 @@ function updateVee(v, dt, t) {
    In Mario 64, paintings lead to worlds and doors lead to rooms: displays here are products, and this
    door, on the top floor, leads to the person behind them. It swings open with light spilling out as you step through.
    (Internally it keeps the name "kiosk" so the tour, Vee and the About button stay wired to it.) */
-const DOOR = { x: OFFICE_DOOR_X, z: FLOORS[FI.l4].z1 - 0.14, w: 1.5, h: 2.75 };   // in the south wall of L4, at the end of Vee's station
+const DOOR = { x: OFFICE_DOOR_X, z: FLOORS[FI.l5].z1 - 0.14, w: 1.5, h: 2.75 };   // in the south wall of L4, at the end of Vee's station
 let kiosk = null;
 // A glass door: a tinted glass leaf with etched lettering in a slim steel frame, a long pull handle,
 // and the lit room beyond glowing through the glass. Hinged on its left edge; setOpen(0…1) swings it.
@@ -3700,7 +3820,7 @@ function makeGlassDoor(group, w, h, opts) {
   };
 }
 function buildKiosk() {
-  const F = FLOORS[FI.l4], normal = new THREE.Vector3(0, 0, -1);
+  const F = FLOORS[FI.l5], normal = new THREE.Vector3(0, 0, -1);
   const group = new THREE.Group(); group.position.set(DOOR.x, 0, DOOR.z); group.rotation.y = Math.PI; F.g.add(group);   // local +z faces into the room
   const { w, h } = DOOR, ft = 0.16;
   // light from the office, glowing through the glass and leaking under the door
@@ -3712,7 +3832,7 @@ function buildKiosk() {
   // the record the hall uses for walking up, the tour and stepping through (no ripple: it's a door)
   const center = new THREE.Vector3(DOOR.x, F.y + h * 0.5, DOOR.z - 0.06);
   const uniforms = { uTime: { value: 0 }, uAmp: { value: 0 }, uHit: { value: new THREE.Vector2(.5, .5) }, uGlow: { value: 0 } };
-  const pt = { p: ABOUT, mesh: leaf, uniforms, normal, center, amp: 0, kiosk: true, door: true, standOff: 3.4, pitch: 0.1, floor: FI.l4 };
+  const pt = { p: ABOUT, mesh: leaf, uniforms, normal, center, amp: 0, kiosk: true, door: true, standOff: 3.4, pitch: 0.1, floor: FI.l5 };
   leaf.userData.project = ABOUT;
   paintings.push(pt);
   kiosk = { pt, hinge, sillM, spill, open: 0,
@@ -3721,9 +3841,9 @@ function buildKiosk() {
 }
 
 /* ---------- Vee's reception ----------
-   In front of the builder's office on L4: her Nesting Station on the south wall leading up to the office door (the
+   In front of the builder's office on L5: her Nesting Station on the south wall leading up to the office door (the
    dock, her user manual and her technical description in one frame) and a reception desk in front of the dock,
-   with her landing pad behind it. Docked, she rests there on L4 and stays out of sight elsewhere. */
+   with her landing pad behind it. Docked, she rests there on L5 and stays out of sight elsewhere. */
 /* Vee's world: a loading program for Vee, entered from the plate in front of her reception desk (see buildVeeWorld).
    Its stations follow a question through how she thinks; the wording matches her 'How Vee works' panel. */
 const VEE_WORLD = {
@@ -3746,7 +3866,7 @@ let veeWorldPt = null;   // the loading plate, as an enterable target (made with
 const hallActs = [];   // things in the hall you can walk up to and act on (press E): her dock
 const RC = { dockX: -4.18, techX: 2.16 };   // the dock's and the technical page's centres along the wall (nest frame: + is to your right as you face the door)
 function buildReception() {
-  const L4 = FLOORS[FI.l4];
+  const L4 = FLOORS[FI.l5];
   // her Nesting Station on the south wall, ending at the office door: the dock (where her micro-drones rest and
   // recharge), her user manual and her technical description, side by side in one gold frame
   const nestG = new THREE.Group(); nestG.position.set(0, 0, L4.z1 - 0.04); nestG.rotation.y = Math.PI; L4.g.add(nestG);   // faces into the floor
@@ -3794,7 +3914,7 @@ function buildReception() {
   const sGeo = new THREE.BufferGeometry(); sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3)); sGeo.setAttribute('color', new THREE.BufferAttribute(sCol, 3));
   const stream = new THREE.Points(sGeo, new THREE.PointsMaterial({ size: 0.06, map: dotTex(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); stream.frustumCulled = false; L4.g.add(stream);
   const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _m = new THREE.Vector3();
-  const dockSt = { id: 'dock', info: { title: "Vee's Nesting Station" }, floor: FI.l4, standOff: 3.5, pitch: 0.06 };
+  const dockSt = { id: 'dock', info: { title: "Vee's Nesting Station" }, floor: FI.l5, standOff: 3.5, pitch: 0.06 };
   dockSt.center = new THREE.Vector3(-RC.dockX, L4.y + NY, L4.z1 - 0.1); dockSt.normal = new THREE.Vector3(0, 0, -1); dockSt.mesh = hexPanel;
   hallActs.push(dockSt); vee && (vee.restSpot = padPos);
   // the dock is a switch: dock her (she glides onto her pad and rests, here and everywhere else) or wake her
@@ -3825,7 +3945,7 @@ function buildReception() {
     panel();
     // masthead
     g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
-    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L5 · NESTING STATION', 60, 108);
     g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
     g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
     g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
@@ -3885,7 +4005,7 @@ function buildReception() {
     // page 2, on the dock's other side: her technical description
     const c2 = mk(1800, 1200), PX2 = RC.techX - RC.dockX; g = c2.getContext('2d'); panel();   // page 2, beside the manual
     g.fillStyle = ACC; g.fillRect(60, 56, 1680, 6);
-    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L4 · NESTING STATION', 60, 108);
+    g.font = mono(24); g.fillStyle = SOFT; g.fillText('QUANTUM HALL · L5 · NESTING STATION', 60, 108);
     g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
     g.fillStyle = INK; g.font = serif(84); g.fillText('How Vee works', 60, 210);
     g.fillStyle = SOFT; g.font = sans(27);
@@ -3923,7 +4043,7 @@ function buildReception() {
   buildingUpdates.push((dt, t) => {
     const v = vee; if (!v || world || !L4.g.visible) return;
     v.restSpot = padPos;
-    const docked = veeDocked && !tour && player.floor === FI.l4;
+    const docked = veeDocked && !tour && player.floor === FI.l5;
     v.resting = docked;
     if (docked && !nested) { nested = true; v.bodyTarget = padPos.clone(); }
     else if (!docked && nested) { nested = false; if (!tour) v.bodyTarget = null; }
@@ -4002,12 +4122,12 @@ function buildReception() {
     const motesM = new THREE.PointsMaterial({ color: 0x8ff7ff, size: 0.045, map: dotTex(), transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending });
     const motes = new THREE.Points(mGeo, motesM); motes.frustumCulled = false; L4.g.add(motes);
     const plateLabel = stationLabel('VEE · WORLD', 'Loading plate'); plateLabel.scale.multiplyScalar(0.34); plateLabel.position.set(PX, 1.45, PZ - 0.2); L4.g.add(plateLabel);
-    const plateSt = { id: 'veeworld', info: { title: "Vee's world" }, floor: FI.l4, standOff: 2.8, pitch: -0.35, actLift: 1.15 };
+    const plateSt = { id: 'veeworld', info: { title: "Vee's world" }, floor: FI.l5, standOff: 2.8, pitch: -0.35, actLift: 1.15 };
     plateSt.center = new THREE.Vector3(PX, L4.y + 0.05, PZ); plateSt.normal = new THREE.Vector3(0, 0, -1); plateSt.mesh = disc;
     plateSt.actVerb = () => "Load Vee's world";
     plateSt.act = () => { if (veeWorldPt) enter(veeWorldPt); };
     hallActs.push(plateSt);
-    veeWorldPt = { p: VEE_WORLD, floor: FI.l4, center: new THREE.Vector3(PX, L4.y + 0.06, PZ), normal: new THREE.Vector3(0, 0.94, -0.34).normalize(),
+    veeWorldPt = { p: VEE_WORLD, floor: FI.l5, center: new THREE.Vector3(PX, L4.y + 0.06, PZ), normal: new THREE.Vector3(0, 0.94, -0.34).normalize(),
                    uniforms: { uHit: { value: new THREE.Vector2(0.5, 0.5) }, uGlow: { value: 0 } }, amp: 0, setOpen: k => { boost = k; } };
     let plateAcc = 1, plateTold = false;
     buildingUpdates.push((dt, t) => {
@@ -4132,7 +4252,7 @@ function buildMascot() {
     ["Hi, I'm Vee. Welcome to the Quantum Hall.", 'Every display is a product, and every floor is a section.', null],
     ['Straight ahead: the Quantum V^ Platform.', 'Walk up to a display and step inside.', plat ? plat.center : null],
     ['The glass lift goes everywhere.', 'Apps on L2, the Platform Wing on L3, the Cryostat Lab and Recluda below.', liftAt],
-    ['Want a guided tour?', "Press T. The builder's office is on L4.", null]];
+    ['Want a guided tour?', "Press T. The builder's office is on L5.", null]];
   if (visit.returning) {   // a returning visitor gets a shorter welcome
     const u = unseenWorlds();
     vee.tour = [
@@ -4155,7 +4275,7 @@ function buildMascot() {
     if (i === FI.l2) lines.push(['Tap a phone to open the App Store.', 'Each one shows its app\'s real screenshots.', null]);
     lines.push(['Want a guided tour?', touchUI ? 'Tap ▶ Tour at the bottom.' : 'Press T, or click ▶ Tour.', null],
       ['Jump between floors.', 'The floor buttons at the bottom take you straight there.', null],
-      ['Need me out of the way?', 'Dock me at my Nesting Station, in the office on L4.', null]);
+      ['Need me out of the way?', 'Dock me at my Nesting Station, in the office on L5.', null]);
     return lines;
   };
   vee.talk = { vee: true, info: { title: 'Vee' }, mesh: vee.hitM, center: new THREE.Vector3(), normal: new THREE.Vector3(0, 0, 1),
@@ -4176,7 +4296,7 @@ function buildMascot() {
     if (!u.length) { vee.say(`That's all ${WORLD_IDS.length} worlds explored.`, 'Thanks for visiting.', null, null); veeMove(vee, 'cheer'); return; }
     const next = u[0], tgt = paintings.find(q => q.p.id === next);
     const onFloor = tgt && tgt.floor === player.floor, where = tgt && !onFloor ? ` Take the lift to ${FLOORS[tgt.floor].tag}.` : '';
-    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L4." : next === 'vee' ? 'Next up: my world. It loads from the plate at my reception, on L4.' : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
+    vee.say(`${n} of ${WORLD_IDS.length} worlds explored.`, next === 'about' ? "Next up: the builder's office, on L5." : next === 'vee' ? 'Next up: my world. It loads from the plate at my reception, on L5.' : `Next up: ${WORLD_NAMES[next]}.${where}`, null, onFloor ? tgt.center : null);
   };
   vee.arrive = () => { vee.vanishT = -1; vee.appearT = 0.8; vee.bodyTarget = null; vee.heading = player.yaw; vee.lastP = null; vee.body.position.copy(veeFollowSpot(vee)); vee.waveT = 2.4; };
   renderExplored();
@@ -4185,7 +4305,7 @@ function updateMascot(dt, t) {
   updateKiosk(dt, t);
   if (!vee) return;
   veeRoot.position.y = ride ? player.pos.y - 1.7 : FLOORS[player.floor].y;
-  vee.away = veeDocked && player.floor !== FI.l4;   // docked, she rests at her reception on L4
+  vee.away = veeDocked && player.floor !== FI.l5;   // docked, she rests at her reception on L5
   vee.glow = vee.pt.amp; updateVee(vee, dt, t);
   // her record follows her around
   vee.pt.center.set(vee.body.position.x, veeRoot.position.y + 1.75, vee.body.position.z);
@@ -4199,7 +4319,7 @@ function updateMascot(dt, t) {
 function hallTourStops() {
   const P = id => paintings.find(p => p.p.id === id), stops = [], plat = P('platform');
   stops.push({ floor: FI.l1, center: new THREE.Vector3(BANNER.pos.x, L1.y + BANNER.pos.y, BANNER.pos.z), normal: new THREE.Vector3(0, 0, 1), standOff: 7.2, pitch: 0.24,
-    line: 'This is the Quantum Hall.', sub: 'Six floors around an atrium, with a column of light up the middle.' });
+    line: 'This is the Quantum Hall.', sub: 'Seven floors around an atrium, with a column of light up the middle.' });
   stops.push({ ...SLIT_STOP, standOff: 5.4, line: 'The entrance: a double slit.', sub: 'Each photon lands at a random spot. That randomness is where it all starts.' });
   if (plat) stops.push({ floor: plat.floor, center: plat.center, normal: plat.normal, standOff: 4.6, pitch: 0.18, line: plat.p.name, sub: `${plat.p.tagline}. Step inside to explore it.` });
   stops.push({ ...CRYO_STOP, line: 'B1 · The Cryostat Lab.', sub: 'Cooled to about 10 mK. The light rises from its chip.' });
@@ -4210,10 +4330,10 @@ function hallTourStops() {
     stops.push({ floor: pt.floor, center: pt.center, normal: pt.normal, standOff: 4, pitch: 0.18, line: pt.p.name, sub: `${pt.p.tagline}. Step inside to explore it.`.replace('..', '.') });
   }
   stops.push({ ...wingStop, line: 'L3 · The Platform Wing.', sub: 'The column of light from the lab ends here, in three entropy pools.' });
-  stops.push({ floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05, line: 'L4 · The builder.', sub: 'From semiconductor fabrication in 2005 to quantum software today.' });
+  stops.push({ floor: FI.l5, center: new THREE.Vector3(FLOORS[FI.l5].x0, FLOORS[FI.l5].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05, line: 'L5 · The builder.', sub: 'From semiconductor fabrication in 2005 to quantum software today.' });
   const rcp = hallActs.find(a => a.id === 'dock');
-  if (rcp) stops.push({ floor: FI.l4, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. The plate in front of my desk loads my world.' });
-  if (kiosk) stops.push({ floor: FI.l4, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
+  if (rcp) stops.push({ floor: FI.l5, center: rcp.center, normal: rcp.normal, standOff: 4.6, pitch: 0.06, line: 'My reception.', sub: 'My Nesting Station, my user manual, and how I work. The plate in front of my desk loads my world.' });
+  if (kiosk) stops.push({ floor: FI.l5, center: kiosk.pt.center, normal: kiosk.pt.normal, standOff: 2.6, pitch: 0.12, line: "The builder's office.", sub: 'Step through for experience, the Resume and contact links.' });
   { const t = hallActs.filter(a => /^askvee-/.test(a.id)); if (t.length) stops.push({ floor: FI.l1, center: t[1].center.clone(), normal: t[1].normal.clone(), standOff: 4.2, pitch: 0.04,
     line: 'Take me with you.', sub: 'Scan a code and I open on that site, already answering. Press E at one to open it large.' }); }   // the QR wall on the west side
   if (plat) stops.push({ floor: FI.l1, center: plat.center, normal: plat.normal, standOff: START.pos.z - plat.center.z - 1.3, pitch: 0.05, home: true,
@@ -4328,7 +4448,7 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   const st = { id: 'vee', vee: v, info: { title: 'Vee' }, exhibit: true, standOff: 2.6, pitch: 0.1,
     center: new THREE.Vector3(pos.x, 1.75, pos.z), normal: v.normal.clone(), next() { k = (k + 1) % lines.length; say(); v.waveT = 1.2; } };
   v.hitM.userData.station = st; hit.push(v.hitM); stations.push(st);
-  updates.push((dt, t) => { v.away = p.kind === 'vee' ? !v.compiled : veeDocked; /* docked, she's resting at her reception on L4; in her own world, she's away until it has compiled */ updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
+  updates.push((dt, t) => { v.away = p.kind === 'vee' ? !v.compiled : veeDocked; /* docked, she's resting at her reception on L5; in her own world, she's away until it has compiled */ updateVee(v, dt, t); st.center.set(v.body.position.x, 1.75, v.body.position.z); });
   return v;
 }
 
@@ -4359,7 +4479,7 @@ addEventListener('keydown', e => {
   } else if (e.code === 'KeyT' && (mode === 'walk' || mode === 'auto')) { startTour(); return; }
   if (world && e.key === 'Escape') { exitWorld(); return; }
   if ((e.code === 'KeyE' || e.code === 'Enter') && near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near, new THREE.Vector2(.5, .5)); }
-  if (!liftPanel.hidden) { const k = { KeyR: FI.b2, KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
+  if (!liftPanel.hidden) { const k = { KeyR: FI.b2, KeyB: FI.b1, Digit1: FI.l1, Digit2: FI.l2, Digit3: FI.l3, Digit4: FI.l4, Digit5: FI.l5 }[e.code]; if (k !== undefined && k !== player.floor) startRide(k); }
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 // for Vee's idle nudges: when did the visitor last do anything?
@@ -4368,7 +4488,7 @@ for (const ev of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'
 const HALL_HINTS = [
   ['Psst, want a guided tour?', 'Press T, or tap ▶ Tour.'],
   ['Each display opens a world.', 'Walk up to one and press E to step inside.'],
-  ['Curious who built all this?', "The builder's office is on L4. Take the glass lift."]];
+  ['Curious who built all this?', "The builder's office is on L5. Take the glass lift."]];
 const WORLD_HINTS = [
   ['Want me to show you around?', 'Press T, or tap Tour.'],
   ['Tap any screen.', "I'll walk you over to it."],
@@ -4694,6 +4814,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
+  if (i === FI.l4) out.push(['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]]);
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
@@ -5376,7 +5497,7 @@ function buildProductWorld(p) {
 }
 
 /* ---------- Vee's world ----------
-   A loading program for Vee, entered from the plate in front of her reception desk on L4. It starts as a dark void
+   A loading program for Vee, entered from the plate in front of her reception desk on L5. It starts as a dark void
    with a seed of light; her nanobots stream out and compile the space around you in order (the hex floor, the
    path, each station, then Vee herself, gathering beside you). The path then follows a question through how she
    thinks, left to right, one station per step, each with a screen and an emblem. Ask her something here and a
@@ -5867,7 +5988,7 @@ function buildOfficeWorld(p) {
     { name: 'STEADYWATCH™ HANDHELD', icon: 'assets/steadywatch-icon.png', ver: 'v2.1 · App Store', date: '30 Oct 2026', since: 'first release 22 Dec 2025', line: 'Tuner and practice panel for iPhone and Apple Watch.' },
     { name: 'Quantum V^ Platform', icon: 'assets/quantumv-logo.png', ver: 'quantumv.dev', date: '3 Nov 2026', since: 'v2 hardware seeds 18 Nov 2026', line: 'QRNG API and QES-256: a quantum-seeded generator, seeded on IBM Quantum hardware.' },
     { name: 'Recluda Server', icon: 'assets/recluda-icon.png', ver: `v${INSTALL.version} · recluda.com`, date: 'Self-hosted', since: 'Linux or Raspberry Pi', line: 'Sign-in approval you host: RADIUS for VPNs, OpenID Connect for apps.' },
-    { name: 'Quantum Hall', icon: 'assets/quantumv-logo.png', ver: 'hall.quantumv.dev', date: '3 Nov 2026', since: 'begun 17 Aug 2026', line: 'This building: six floors, live data from the platform, and Vee.' }];
+    { name: 'Quantum Hall', icon: 'assets/quantumv-logo.png', ver: 'hall.quantumv.dev', date: '3 Nov 2026', since: 'begun 17 Aug 2026', line: 'This building: seven floors, live data from the platform, and Vee.' }];
   const BUILDING = [
     { t: 'Recluda 1.0', n: 'coming soon · iPhone, iPad and Mac', c: '#1d3f9e' },
     { t: 'Recluda 1.1: site keys made on your device', n: 'the server only relays what it can’t read', c: '#1d3f9e' },
@@ -6126,6 +6247,8 @@ function veeDestination(id) {
     case 'cryostat': return CRYO_STOP;
     case 'pool-storage': return POOL_STOP;
     case 'measurements': return MEAS_STOP;
+    case 'ai-lab': return AI_LAB.stops[0];
+    case 'dr-z': return AI_LAB.stops[1];
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -6134,7 +6257,7 @@ function veeDestination(id) {
     case 'server-rack': return RACK_STOP;
     case 'vpn-signin': return SIGNIN_STOP;
     case 'install': return INSTALL.stop;
-    case 'timeline': return { exhibit: true, floor: FI.l4, center: new THREE.Vector3(FLOORS[FI.l4].x0, FLOORS[FI.l4].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
+    case 'timeline': return { exhibit: true, floor: FI.l5, center: new THREE.Vector3(FLOORS[FI.l5].x0, FLOORS[FI.l5].y + 2.9, -2.0), normal: new THREE.Vector3(1, 0, 0), standOff: 4.2, pitch: 0.05 };
   }
   return null;
 }
@@ -6624,7 +6747,7 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildRecludaDevices(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildRecludaDevices(); buildAILab(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
