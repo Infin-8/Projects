@@ -15,7 +15,7 @@
 <link rel="canonical" href="https://hall.quantumv.dev/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&family=Caveat:wght@600&display=swap">
 <style>
 /* Layout: full-bleed WebGL hall; HUD pinned to edges; project "inside the painting" opens as a full overlay */
 :root {
@@ -598,7 +598,7 @@ const ABOUT = {
     ['Tools & practices', 'Xcode · Git · GitHub · LaTeX · Agile · Technical writing · Patent documentation']],
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v2.1', logo: 'assets/steadywatch-icon.png' },
-    { name: 'KaizenDoku', version: 'App Store v2.5.0', logo: 'assets/kaizendoku-icon.png' },
+    { name: 'KaizenDoku', version: 'App Store v2.6.2', logo: 'assets/kaizendoku-icon.png' },
     { name: 'Quantum V^ Platform', version: 'quantumv.dev', logo: 'assets/quantumv-logo.png' }],
   contactRows: [['EMAIL', 'nathaniel@quantumv.dev'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'quantumv.dev · steady-watch.com · recluda.com · kaizendoku.com']],
   extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store, and the Quantum V^ Platform.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
@@ -5860,6 +5860,82 @@ function buildOfficeWorld(p) {
   ob.group.position.set(RX - 0.12, 2.25, 0.9); ob.group.rotation.y = -Math.PI / 2; ws.add(ob.group);
   updates.push((dt, t) => ob.update(dt, t));
 
+  // the back wall (behind you as you face the desk): what has shipped, and a whiteboard of what's being built.
+  // Facing the wall, Shipped is on the left and Now building on the right: past, then next.
+  const SHIPPED = [
+    { name: 'KaizenDoku', icon: 'assets/kaizendoku-icon.png', ver: 'v2.6.2 · App Store', date: '11 Nov 2026', since: 'first release 17 Apr 2026', line: 'Sudoku with friends: Co-op, Versus and Challenge in iMessage; Time Attack leaderboards.' },
+    { name: 'STEADYWATCH™ HANDHELD', icon: 'assets/steadywatch-icon.png', ver: 'v2.1 · App Store', date: '30 Oct 2026', since: 'first release 22 Dec 2025', line: 'Tuner and practice panel for iPhone and Apple Watch.' },
+    { name: 'Quantum V^ Platform', icon: 'assets/quantumv-logo.png', ver: 'quantumv.dev', date: '3 Nov 2026', since: 'v2 hardware seeds 18 Nov 2026', line: 'QRNG API and QES-256: a quantum-seeded generator, seeded on IBM Quantum hardware.' },
+    { name: 'Recluda Server', icon: 'assets/recluda-icon.png', ver: `v${INSTALL.version} · recluda.com`, date: 'Self-hosted', since: 'Linux or Raspberry Pi', line: 'Sign-in approval you host: RADIUS for VPNs, OpenID Connect for apps.' },
+    { name: 'Quantum Hall', icon: 'assets/quantumv-logo.png', ver: 'hall.quantumv.dev', date: '3 Nov 2026', since: 'begun 17 Aug 2026', line: 'This building: six floors, live data from the platform, and Vee.' }];
+  const BUILDING = [
+    { t: 'Recluda 1.0', n: 'coming soon · iPhone, iPad and Mac', c: '#1d3f9e' },
+    { t: 'Recluda 1.1: site keys made on your device', n: 'the server only relays what it can’t read', c: '#1d3f9e' },
+    { t: 'STEADYWATCH 2.2: guitar mode', n: 'chord practice with finger numbers · on TestFlight', c: '#11602e' },
+    { t: 'Live reseeding of QES-256 from ANU', n: 'a light-based quantum source, folded in daily', c: '#11602e' },
+    { t: 'GOAL: Echo Resonance at 25 qubits on ibm_fez', n: 'validated on hardware so far: 7 qubits', c: '#b3261e' }];
+  const wallZ = RZ1 - 0.06, frameMat = new THREE.MeshStandardMaterial({ color: 0xb8bec8, metalness: 0.8, roughness: 0.3 });
+  function wallPanel(canvas, x, y, w, h, frame = bezel, depth = 0.05) {
+    const g = new THREE.Group(); g.position.set(x, y, wallZ); g.rotation.y = Math.PI; ws.add(g);
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, h + 0.1, depth), frame));
+    const tex = new THREE.CanvasTexture(canvas); tex.anisotropy = 8;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); scr.position.z = depth / 2 + 0.002; g.add(scr);
+    const normal = new THREE.Vector3(0, 0, -1);
+    return { g, scr, tex, center: new THREE.Vector3(x, y, wallZ - 0.04), normal, h };
+  }
+  // Shipped: a heading strip, then five framed release cards (3 + 2), on the left as you face the wall (+x)
+  {
+    const hc = mk(1024, 96), hg = hc.getContext('2d');
+    hg.fillStyle = '#07090f'; hg.fillRect(0, 0, 1024, 96); hg.fillStyle = '#5ff0ff'; hg.font = '600 44px "IBM Plex Mono", monospace'; hg.textAlign = 'left'; hg.fillText('SHIPPED', 8, 64);
+    hg.fillStyle = '#8e99b0'; hg.font = '600 26px "IBM Plex Mono", monospace'; hg.textAlign = 'right'; hg.fillText('LATEST RELEASES', 1016, 64);
+    const head = new THREE.Mesh(new THREE.PlaneGeometry(5.1, 5.1 * 96 / 1024), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(hc), transparent: true }));
+    head.position.set(3.05, 3.27, wallZ - 0.01); head.rotation.y = Math.PI; ws.add(head);
+    const CW2 = 1.6, CH2 = 1.0, slots = [[4.8, 2.55], [3.05, 2.55], [1.3, 2.55], [3.925, 1.4], [2.175, 1.4]];   // left to right as you face the wall
+    SHIPPED.forEach((r, i) => {
+      const c = mk(1024, 640), g = c.getContext('2d');
+      const draw = img => {
+        g.fillStyle = '#0b1220'; g.fillRect(0, 0, 1024, 640); g.strokeStyle = 'rgba(63,224,224,0.5)'; g.lineWidth = 4; g.strokeRect(14, 14, 996, 612);
+        if (img) { g.save(); rr(g, 56, 56, 150, 150, 32); g.clip(); g.drawImage(img, 56, 56, 150, 150); g.restore(); }
+        g.textAlign = 'left'; g.fillStyle = '#f1e6cf'; let px = 60; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.name).width > 760 && --px > 34); g.fillText(r.name, 236, 112);
+        g.fillStyle = '#5ff0ff'; g.font = '600 34px "IBM Plex Mono", monospace'; g.fillText(r.ver, 236, 170);
+        g.fillStyle = '#f1e6cf'; g.font = '600 40px "IBM Plex Mono", monospace'; g.fillText(r.date, 56, 300);
+        g.fillStyle = '#8e99b0'; g.font = '600 28px "IBM Plex Mono", monospace'; g.fillText(r.since.toUpperCase(), 56, 346);
+        g.fillStyle = '#c9d2e3'; g.font = '34px "IBM Plex Sans", sans-serif'; wrapText(g, r.line, 56, 440, 912, 46);
+      };
+      draw(null);
+      const [x, y] = slots[i], m = wallPanel(c, x, y, CW2, CH2);
+      const img = new Image(); img.onload = () => { draw(img); m.tex.needsUpdate = true; }; img.src = r.icon;
+      addStation(m, { id: 'shipped-' + i, info: { title: `Shipped · ${r.name}` }, exhibit: true, standOff: 2.2, pitch: y > 2 ? 0.2 : 0.02 });
+    });
+  }
+  // Now building: a whiteboard in marker, on the right as you face the wall (-x)
+  {
+    const c = mk(2048, 960), g = c.getContext('2d');
+    g.fillStyle = '#cfd5dd'; g.fillRect(0, 0, 2048, 960);   // a soft grey so it doesn't glare in the dim room
+    for (let i = 0; i < 9; i++) {   // faint smudges of old notes, wiped off
+      const x = 200 + ((i * 433) % 1700), y = 120 + ((i * 271) % 760), gr = g.createRadialGradient(x, y, 10, x, y, 180 + (i % 3) * 60);
+      gr.addColorStop(0, 'rgba(120,130,150,0.07)'); gr.addColorStop(1, 'rgba(120,130,150,0)'); g.fillStyle = gr; g.fillRect(x - 260, y - 260, 520, 520);
+    }
+    const marker = (text, x, y, px, color, rot = 0) => { g.save(); g.translate(x, y); g.rotate(rot); g.fillStyle = color; g.font = `600 ${px}px "Caveat", "Comic Sans MS", cursive`; g.fillText(text, 0, 0); g.restore(); };
+    g.textAlign = 'left';
+    marker('Now building', 90, 140, 118, '#1a1f2b', -0.012);
+    g.strokeStyle = '#1a1f2b'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(92, 168); g.quadraticCurveTo(400, 158, 700, 170); g.stroke();
+    BUILDING.forEach((b, i) => {
+      const y = 290 + i * 132, wob = (i % 2 ? 1 : -1) * 0.006;
+      g.strokeStyle = b.c; g.lineWidth = 5; g.strokeRect(98, y - 50, 46, 46);   // an open box: not done yet
+      marker(b.t, 180, y, 78, b.c, wob);
+      marker(b.n, 196, y + 50, 50, '#4a5160', wob);
+    });
+    marker('→ updated as things ship', 1500, 905, 54, '#4a5160', -0.01);
+    const m = wallPanel(c, -3.0, 1.95, 5.0, 5.0 * 960 / 2048, frameMat, 0.06);
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.05, 0.14), frameMat); tray.position.set(-3.0, 1.95 - 5.0 * 960 / 2048 / 2 - 0.09, wallZ - 0.08); ws.add(tray);
+    [['#1d3f9e', -4.2], ['#b3261e', -3.95], ['#11602e', -3.7]].forEach(([col, x]) => {
+      const mk3 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 10), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 }));
+      mk3.rotation.z = Math.PI / 2; mk3.position.set(x, tray.position.y + 0.045, wallZ - 0.1); ws.add(mk3);
+    });
+    addStation(m, { id: 'building', info: { title: 'Now building' }, exhibit: true, standOff: 3.4, pitch: 0.04 });
+  }
+
   // the door back to the hall, on the left wall
   const doorG = new THREE.Group(); doorG.position.set(-RX + 0.12, 0, 1.6); doorG.rotation.y = Math.PI / 2; ws.add(doorG);
   const DW = 1.4, DH = 2.6, ft = 0.15;
@@ -6541,7 +6617,7 @@ const LOGOS = {};
 const loadLogo = f => new Promise(res => { const i = new Image(); i.onload = () => { LOGOS[f] = i; res(); }; i.onerror = () => res(); i.src = f; });
 Promise.all([
   fontsReady, loadLogo('assets/kaizendoku-icon.png'), loadLogo('assets/steadywatch-icon.png'), loadLogo('assets/quantumv-logo.png'), loadLogo('assets/recluda-icon.png'),
-  document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"'].map(f => document.fonts.load(f).catch(() => {}))) : null
+  document.fonts ? Promise.all(['40px "Young Serif"', '20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"', '20px "IBM Plex Sans"', '600 40px "Caveat"'].map(f => document.fonts.load(f).catch(() => {}))) : null
 ]).then(() => {
   { const mono = makeMonogram(); ABOUT.logo = mono.toDataURL('image/png'); LOGOS[ABOUT.logo] = mono; }
   for (const P of WING_PROJECTS) {
