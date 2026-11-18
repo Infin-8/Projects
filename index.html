@@ -818,36 +818,6 @@ DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.
 
 
 /* ---------- Environment textures ---------- */
-// Textures for the surfaces that aren't crystal (the office world): dark terrazzo slabs and full-height panels
-// (since 2026-11-18, in place of the checkerboard and brick-like rows). The hall's own walls and floors are crystal.
-function floorTex() {   // one canvas = 4 m x 4 m: four 2 m slabs of dark terrazzo, joints barely there
-    const c = mk(1024, 1024), g = c.getContext('2d');
-    g.fillStyle = '#12151d'; g.fillRect(0, 0, 1024, 1024);
-    let x = 1234567; const rnd = () => ((x ^= x << 13, x ^= x >>> 17, x ^= x << 5) >>> 0) / 4294967296;
-    for (let i = 0; i < 9000; i++) {   // the speckle: tiny chips, a few lighter, a few darker
-      const r = rnd(), v = r < 0.55 ? '#181c26' : r < 0.85 ? '#0d1016' : r < 0.97 ? '#232836' : '#2e3546';
-      g.fillStyle = v; const s2 = 1 + rnd() * 2.2; g.fillRect(rnd() * 1024, rnd() * 1024, s2, s2);
-    }
-    g.fillStyle = 'rgba(255,255,255,0.025)'; g.fillRect(0, 0, 1024, 1024);
-    g.strokeStyle = '#1f2431'; g.lineWidth = 2;   // the slab joints
-    for (const k of [0, 512]) { g.beginPath(); g.moveTo(k + 1, 0); g.lineTo(k + 1, 1024); g.stroke(); g.beginPath(); g.moveTo(0, k + 1); g.lineTo(1024, k + 1); g.stroke(); }
-    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
-}
-function wallTex(glow) {
-  // one canvas = 4 m x 4 m: four full-height panels 1 m wide, thin recessed joints, a soft sheen
-    const c = mk(512, 512), g = c.getContext('2d');
-    g.fillStyle = glow ? '#000' : '#171b25'; g.fillRect(0, 0, 512, 512);
-    for (let col = 0; col < 4; col++) {
-      const x = col * 128;
-      if (!glow) {
-        const gr = g.createLinearGradient(x, 0, x + 128, 0); gr.addColorStop(0, '#161a23'); gr.addColorStop(0.5, '#1c2130'); gr.addColorStop(1, '#161a23');
-        g.fillStyle = gr; g.fillRect(x + 2, 0, 124, 512);
-        g.fillStyle = '#0a0c11'; g.fillRect(x, 0, 2, 512);   // the joint
-      }
-    }
-    if (glow) { g.fillStyle = '#3fe0e0'; g.fillRect(0, 254, 512, 2); }   // the one lit line, at the same height as before
-    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
-}
 function dotTex() {
   const c = mk(64, 64), g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1290,13 +1260,6 @@ function pulseStages(list, t) {   // a pulse of cold travels down the stages, to
    the group in the floor's own coordinates (its floor at y = 0). A round atrium opens up through every
    floor, and a glass lift beside it runs the full height of the building. */
 const buildingUpdates = [];
-const wt = wallTex(false), wg = wallTex(true);
-function wallAt(g, w, h, x, y, z, ry) {
-  const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
-  m.material.side = THREE.DoubleSide;
-  m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m;
-}
 // a floor (s = -1) or ceiling (s = 1) slab, with round openings for the atrium and the lift shaft
 function slabGeo(F, holes, s) {
   const sh = new THREE.Shape();
@@ -5786,17 +5749,14 @@ function buildOfficeWorld(p) {
   const updates = [], hit = [], stations = [];
   const RX = 6, RZ0 = -4.6, RZ1 = 5.4, RH = 3.6, deskZ = -2.6;   // room bounds and desk line
 
-  // the room: floor, ceiling, panelled walls (the hall's walls, warmer light)
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(RX * 2, RZ1 - RZ0), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.4, metalness: 0.3 }));
+  // the room: crystal floor and walls, like the hall's, under a dark ceiling (warmer light)
+  const OFFICE = { id: 'office', y: 0 };   // the crystal shader's frame for this room
+  updates.push((dt, t) => { latticeU.uTime.value = reduceMotion ? 0 : t; });   // the crystal's clock, while you're in here
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(RX * 2, RZ1 - RZ0), crystalMat(OFFICE, 5));
   floor.rotation.x = -Math.PI / 2; floor.position.z = (RZ0 + RZ1) / 2; ws.add(floor);
   const ceilM = new THREE.Mesh(new THREE.PlaneGeometry(RX * 2, RZ1 - RZ0), new THREE.MeshLambertMaterial({ color: 0x0b0d14 }));
   ceilM.rotation.x = Math.PI / 2; ceilM.position.set(0, RH, (RZ0 + RZ1) / 2); ws.add(ceilM);
-  const wt2 = wallTex(false), wg2 = wallTex(true);
-  const wall = (w, x, z, ry) => {
-    const t = wt2.clone(), e = wg2.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, RH / 4); e.repeat.copy(t.repeat);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, RH), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.4, roughness: 0.7, metalness: 0.1 }));
-    m.position.set(x, RH / 2, z); m.rotation.y = ry; ws.add(m);
-  };
+  const wall = (w, x, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, RH), crystalMat(OFFICE)); m.position.set(x, RH / 2, z); m.rotation.y = ry; ws.add(m); };
   wall(RZ1 - RZ0, -RX, (RZ0 + RZ1) / 2, Math.PI / 2); wall(RZ1 - RZ0, RX, (RZ0 + RZ1) / 2, -Math.PI / 2);
   wall(RX * 2, 0, RZ0, 0); wall(RX * 2, 0, RZ1, Math.PI);
   const lamp = new THREE.PointLight(0xffe2b0, 0.9, 12, 2); lamp.position.set(0, RH - 0.4, -0.9); ws.add(lamp);
