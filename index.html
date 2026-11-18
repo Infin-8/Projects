@@ -5777,10 +5777,16 @@ function buildOfficeWorld(p) {
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 12), silver); stem.position.y = 0.25; chair.add(stem);
 
   // monitors
-  const bezel = new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.35 });
+  // monitors are glass, like the back wall's panes: a tinted pane a little wider than the screen, its edges lit cyan;
+  // the screen inside stays dark and solid (smoked), so dense text and the key rain read cleanly
+  const paneMat = new THREE.MeshBasicMaterial({ color: 0x123848, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+  const paneEdge = new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6 });
   function monitor(canvas, x, y, z, w, h, yaw, arm = true) {
     const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = yaw; ws.add(g);
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.06), bezel));
+    const M = w > 1.5 ? 0.07 : 0.024,   // a thin margin on the small screens: they stand only about 6 cm apart
+       pg = new THREE.PlaneGeometry(w + 2 * M, h + 2 * M);
+    const pane = new THREE.Mesh(pg, paneMat); pane.position.z = 0.024; pane.renderOrder = 1; g.add(pane);
+    const ed = new THREE.LineSegments(new THREE.EdgesGeometry(pg), paneEdge); ed.position.z = 0.024; g.add(ed);
     const tex = new THREE.CanvasTexture(canvas); tex.anisotropy = 8;
     const scr = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); scr.position.z = 0.032; g.add(scr);
     if (arm) { const a = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, y - h / 2 - 0.82, 8), silver); a.position.set(0, -(y - h / 2 - 0.82) / 2 - h / 2, -0.06); g.add(a); }
