@@ -818,13 +818,9 @@ DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.
 
 
 /* ---------- Environment textures ---------- */
-// ?surfaces=new (a prototype, 2026-11-18): quieter surfaces so the floor's light seams are the only lines on it:
-// dark terrazzo slabs with faint joints in place of the checkerboard, and full-height wall panels in place of the
-// brick-like rows. The default keeps the old ones until this is chosen.
-const SURF_NEW = /[?&]surfaces=new\b/.test(location.search);
-const WALLS_MODE = (/[?&]walls=(lattice|open|crystal)\b/.exec(location.search) || [])[1] || null;   // see 'Crystal lattice walls'
-function floorTex() {
-  if (SURF_NEW) {   // one canvas = 4 m x 4 m: four 2 m slabs of dark terrazzo, joints barely there
+// Textures for the surfaces that aren't crystal (the office world): dark terrazzo slabs and full-height panels
+// (since 2026-11-18, in place of the checkerboard and brick-like rows). The hall's own walls and floors are crystal.
+function floorTex() {   // one canvas = 4 m x 4 m: four 2 m slabs of dark terrazzo, joints barely there
     const c = mk(1024, 1024), g = c.getContext('2d');
     g.fillStyle = '#12151d'; g.fillRect(0, 0, 1024, 1024);
     let x = 1234567; const rnd = () => ((x ^= x << 13, x ^= x >>> 17, x ^= x << 5) >>> 0) / 4294967296;
@@ -836,18 +832,9 @@ function floorTex() {
     g.strokeStyle = '#1f2431'; g.lineWidth = 2;   // the slab joints
     for (const k of [0, 512]) { g.beginPath(); g.moveTo(k + 1, 0); g.lineTo(k + 1, 1024); g.stroke(); g.beginPath(); g.moveTo(0, k + 1); g.lineTo(1024, k + 1); g.stroke(); }
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
-  }
-  // polished dark stone, still checkered so it reads as the castle floor
-  const c = mk(512, 512), g = c.getContext('2d');
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-    g.fillStyle = (x + y) % 2 ? '#20242f' : '#11141c'; g.fillRect(x * 128, y * 128, 128, 128);
-    g.strokeStyle = '#3a4357'; g.lineWidth = 1.5; g.strokeRect(x * 128 + 0.75, y * 128 + 0.75, 126.5, 126.5);
-  }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
 }
 function wallTex(glow) {
-  // dark slate panels; the glow version is black except for a few lit seams (used as emissive map)
-  if (SURF_NEW) {   // one canvas = 4 m x 4 m: four full-height panels 1 m wide, thin recessed joints, a soft sheen
+  // one canvas = 4 m x 4 m: four full-height panels 1 m wide, thin recessed joints, a soft sheen
     const c = mk(512, 512), g = c.getContext('2d');
     g.fillStyle = glow ? '#000' : '#171b25'; g.fillRect(0, 0, 512, 512);
     for (let col = 0; col < 4; col++) {
@@ -860,20 +847,6 @@ function wallTex(glow) {
     }
     if (glow) { g.fillStyle = '#3fe0e0'; g.fillRect(0, 254, 512, 2); }   // the one lit line, at the same height as before
     const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
-  }
-  const c = mk(512, 512), g = c.getContext('2d');
-  g.fillStyle = glow ? '#000' : '#181c27'; g.fillRect(0, 0, 512, 512);
-  for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
-    const x = col * 256, y = row * 128;
-    if (!glow) {
-      const gr = g.createLinearGradient(x, y, x, y + 128); gr.addColorStop(0, '#1e2330'); gr.addColorStop(1, '#151923');
-      g.fillStyle = gr; g.fillRect(x + 3, y + 3, 250, 122);
-      g.strokeStyle = '#0b0d13'; g.lineWidth = 3; g.strokeRect(x + 1.5, y + 1.5, 253, 125);
-    } else if (row === 1) {
-      g.fillStyle = '#3fe0e0'; g.fillRect(x, y + 126, 256, 2);
-    }
-  }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
 function dotTex() {
   const c = mk(64, 64), g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -1321,7 +1294,7 @@ const wt = wallTex(false), wg = wallTex(true);
 function wallAt(g, w, h, x, y, z, ry) {
   const t = wt.clone(), e = wg.clone(); t.needsUpdate = e.needsUpdate = true; t.repeat.set(w / 4, h / 4); e.repeat.copy(t.repeat);
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, emissiveMap: e, emissive: 0xffffff, emissiveIntensity: 0.55, roughness: 0.7, metalness: 0.1 }));
-  if (WALLS_MODE) m.material.side = THREE.DoubleSide;   // seen through the lattice from outside, a wall is still a wall
+  m.material.side = THREE.DoubleSide;
   m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m;
 }
 // a floor (s = -1) or ceiling (s = 1) slab, with round openings for the atrium and the lift shaft
@@ -1363,47 +1336,15 @@ function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
   sign.position.set(x, y, z); sign.rotation.y = ry; g.add(sign); return sign;
 }
 
-/* ---------- Crystal lattice walls (?walls=lattice | ?walls=open, a prototype, 2026-11-18) ----------
-   lattice: the hall becomes the crystal. Up to CRYSTAL_TOP (3.8 m; B2 all crystal) the wall is
-   solid crystal: dark and glassy, a Fresnel rim, faint facets, and the same lattice glowing inside it with parallax
-   (sampled at several depths along your line of sight); a bright growth edge where it opens into lattice, which
-   runs on to the ceiling on one world-aligned grid, so the inner and open lattice line up. open: the whole wall is
-   lattice. crystal: the whole wall is the quiet crystal, floor to ceiling, the lattice only inside it (no stars). The lattice is face-centred cubic (the 3D cousin of
-   the Hurwitz lattice behind the entropy pools), built outward from each wall with depth so it shifts as you
-   move: nodes as points twinkling in the shader, nearest-neighbour struts as lines, a starfield beyond. B2, the
-   sealed server room, stays solid. Default: solid walls. */
-const LATTICE_A = 1.25, LATTICE_D = 1.6;   // cell size, depth beyond the wall
-// where the crystal opens into lattice: 3.8 m everywhere (taller bands made the rooms feel smaller), B2 all crystal
-const CRYSTAL_TOP = { b2: Infinity }, CRYSTAL_TOP_DEFAULT = 3.8;
+/* ---------- The crystal hall (the default since 2026-11-18) ----------
+   Every wall and floor is quiet crystal: a dark glassy body with a face-centred cubic lattice (the 3D cousin of the
+   Hurwitz lattice behind the entropy pools) glowing faintly deep inside it, 0.8 to 3 m past the surface along your
+   line of sight, so you look into the wall rather than at it; a Fresnel rim and one faint set of cleavage planes.
+   The lobby's pillars are faceted glass. Explored on the way here and dropped: an open lattice above crystal walls,
+   all-lattice walls, and the checkerboard and brick textures. */
+const LATTICE_A = 1.25;   // the crystal's lattice cell, in metres
 const latticeU = { uTime: { value: 0 } };
-const latticeNodeMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  vertexShader: `attribute float aSeed; uniform float uTime; varying float vA;
-    void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = 26.0 / -mv.z;
-      vA = (0.4 + 0.6 * (0.5 + 0.5 * sin(uTime * 1.2 + aSeed * 6.283))) * clamp(1.0 - (-mv.z - 12.0) / 30.0, 0.15, 1.0); }`,
-  fragmentShader: `varying float vA; void main() { float r = length(gl_PointCoord - 0.5); if (r > 0.5) discard; gl_FragColor = vec4(vec3(0.37, 0.94, 1.0) * smoothstep(0.5, 0.0, r) * vA, 1.0); }` });
-const latticeLineMat = new THREE.LineBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending });
-function latticePanel(g, w, h, x, y, z, ry) {   // the lattice in a w x h wall's place, reaching LATTICE_D beyond it, on the floor's grid
-  const a = LATTICE_A, hs = a / 2, tx = Math.cos(ry), tz = -Math.sin(ry), nx = Math.sin(ry), nz = Math.cos(ry);   // along the wall, and into the room
-  const xs = [x + tx * w / 2, x - tx * w / 2, x - nx * LATTICE_D + tx * w / 2, x - nx * LATTICE_D - tx * w / 2], zs = [z + tz * w / 2, z - tz * w / 2, z - nz * LATTICE_D + tz * w / 2, z - nz * LATTICE_D - tz * w / 2];
-  const P = [];
-  for (let i = Math.floor(Math.min(...xs) / hs); i <= Math.ceil(Math.max(...xs) / hs); i++)
-    for (let j = Math.floor((y - h / 2) / hs); j <= Math.ceil((y + h / 2) / hs); j++)
-      for (let k = Math.floor(Math.min(...zs) / hs); k <= Math.ceil(Math.max(...zs) / hs); k++) {
-        if ((i + j + k) & 1) continue;   // face-centred cubic: integer points with an even sum, at half-cell spacing
-        const px = i * hs, py = j * hs, pz = k * hs, along = (px - x) * tx + (pz - z) * tz, depth = -((px - x) * nx + (pz - z) * nz);
-        if (Math.abs(along) <= w / 2 + 1e-6 && py >= y - h / 2 - 1e-6 && py <= y + h / 2 + 1e-6 && depth >= -1e-6 && depth <= LATTICE_D + 1e-6) P.push([px, py, pz]);
-      }
-  const pos = new Float32Array(P.length * 3), seed = new Float32Array(P.length), L = [], nn2 = a * a / 2;
-  P.forEach((q, i) => { pos.set(q, i * 3); seed[i] = Math.abs((Math.sin(q[0] * 12.9898 + q[1] * 78.233 + q[2] * 37.719) * 43758.5453) % 1); });
-  for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {   // struts between nearest neighbours
-    const dx = P[i][0] - P[j][0], dy = P[i][1] - P[j][1], dz = P[i][2] - P[j][2];
-    if (Math.abs(dx * dx + dy * dy + dz * dz - nn2) < 1e-3) L.push(...P[i], ...P[j]);
-  }
-  const ng = new THREE.BufferGeometry(); ng.setAttribute('position', new THREE.BufferAttribute(pos, 3)); ng.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
-  const nodes = new THREE.Points(ng, latticeNodeMat); nodes.frustumCulled = false; g.add(nodes);
-  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(L, 3)); g.add(new THREE.LineSegments(lg, latticeLineMat));
-}
-// solid crystal: a wall rectangle whose shader shows the lattice inside it (same grid as the open lattice above)
+// crystal: a wall or floor whose shader shows the lattice inside it
 const crystalVert = `varying vec3 vW; varying vec3 vN; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`;
 const crystalFrag = `uniform float uTime, uFloorY, uA, uTop, uLayers; varying vec3 vW; varying vec3 vN;
   vec3 nearestFCC(vec3 x) {   // the nearest point of Z^3 with an even sum (face-centred cubic at half-cell units)
@@ -1429,35 +1370,20 @@ function crystalMat(F, layers = 8) {   // walls look through eight depths; floor
   const key = F.id + ':' + layers;
   return crystalMats[key] || (crystalMats[key] = new THREE.ShaderMaterial({ side: THREE.DoubleSide, vertexShader: crystalVert, fragmentShader: crystalFrag,
     uniforms: { uTime: latticeU.uTime, uFloorY: { value: F.y }, uA: { value: LATTICE_A }, uLayers: { value: layers },
-      uTop: { value: WALLS_MODE === 'crystal' ? -100 : Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h) } } }));   // crystal: no growth edge
+      uTop: { value: -100 } } }));   // no growth edge (it marked where crystal opened into lattice)
 }
-const CRYSTAL_FLOOR = WALLS_MODE === 'crystal';   // ?walls=crystal: the floors are crystal too, the lattice glowing deep below
 function crystalWall(F, g, w, h, x, y, z, ry) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), crystalMat(F)); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m; }
-// a room's wall (the lobby annex): crystal in the lattice mode, panels otherwise
-function roomWall(F, g, w, h, x, y, z, ry) { return WALLS_MODE === 'lattice' || WALLS_MODE === 'crystal' ? crystalWall(F, g, w, h, x, y, z, ry) : wallAt(g, w, h, x, y, z, ry); }
-// a wall rectangle (centre x, y, z), solid or lattice by WALLS_MODE
-function wallBand(F, g, w, h, x, y, z, ry) {
-  const lo = y - h / 2, hi = y + h / 2, sealed = F.atrium === false;
-  const top = WALLS_MODE === 'crystal' ? Infinity : Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h);
-  const cut = !WALLS_MODE || (sealed && WALLS_MODE === 'open') ? hi : WALLS_MODE === 'open' ? lo : Math.max(lo, Math.min(hi, top));
-  if (cut > lo + 1e-3) (WALLS_MODE === 'lattice' || WALLS_MODE === 'crystal' ? crystalWall(F, g, w, cut - lo, x, (lo + cut) / 2, z, ry) : wallAt(g, w, cut - lo, x, (lo + cut) / 2, z, ry));
-  if (hi > cut + 1e-3) latticePanel(g, w, hi - cut, x, (cut + hi) / 2, z, ry);
-}
-if (WALLS_MODE === 'lattice' || WALLS_MODE === 'open') {   // beyond the lattice: a faint starfield (no fog, so it shows through)
-  const n = 1600, sp = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = 70 + Math.random() * 30, q = Math.sqrt(1 - u * u); sp.set([Math.cos(th) * q * r, 8 + u * r * 0.6, Math.sin(th) * q * r], i * 3); }
-  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0x9fdcff, size: 0.35, transparent: true, opacity: 0.55, fog: false, depthWrite: false })));
-}
+// a room's wall (the lobby annex) and a floor's wall: crystal
+function roomWall(F, g, w, h, x, y, z, ry) { return crystalWall(F, g, w, h, x, y, z, ry); }
+function wallBand(F, g, w, h, x, y, z, ry) { return crystalWall(F, g, w, h, x, y, z, ry); }
 FLOORS.forEach((F, i) => {
   const g = F.g = new THREE.Group(); g.position.y = F.y; scene.add(g);
   F.blocks = F.blocks || [];
   const bottom = i === 0, top = i === FLOORS.length - 1;
   const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2;
-  const fm = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }); fm.map.repeat.set(0.25, 0.25);
   // the atrium opens through a floor only between two floors that both have it (B1's floor is solid over B2)
   const openBelow = !bottom && F.atrium !== false && FLOORS[i - 1].atrium !== false, openAbove = !top && F.atrium !== false && FLOORS[i + 1].atrium !== false;
-  const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : openBelow ? [ATRIUM, liftHole] : [liftHole], -1), CRYSTAL_FLOOR ? crystalMat(F, 5) : fm); fl.rotation.x = -Math.PI / 2; g.add(fl);
+  const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : openBelow ? [ATRIUM, liftHole] : [liftHole], -1), crystalMat(F, 5)); fl.rotation.x = -Math.PI / 2; g.add(fl);
   const ce = new THREE.Mesh(slabGeo(F, top ? [] : openAbove ? [ATRIUM, liftHole] : [liftHole], 1), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.y = F.h; g.add(ce);
   if (F.annex) {   // the west wall around the annex doorway: south part, north part, lintel
     const D = F.annex.door, za = D.z - D.w / 2, zb = D.z + D.w / 2;
@@ -1558,7 +1484,7 @@ const liftCab = new THREE.Group(); liftCab.position.set(LIFT.x, 0, LIFT.z); scen
    You arrive through the glass entrance doors. Straight ahead stands the Quantum V^ Platform
    display, with the "Quantum V^" banner hanging above it and the atrium opening up behind. */
 const L1 = FLOORS[FI.l1];
-// a crystal pillar (?walls=): rings of points, each turned half a step from the one below, triangulated into glass
+// a crystal pillar: rings of points, each turned half a step from the one below, triangulated into glass
 // facets (no struts or node highlights), tapering from r0 at the floor to r1 at the top
 // the glass in each triangle: flat facets, a faint teal body, brighter at grazing angles, tinted by facet angle
 const pillarGlassMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -1587,8 +1513,7 @@ function latticePillar(g, x, z, h, r0, r1, n = 8, step = 0.32) {
 }
 const COLS_Z = [8, 2.5];
 for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
-  if (WALLS_MODE) latticePillar(L1.g, x, z, L1.h, 0.45, 0.38);   // in the crystal hall the pillars are lattice too
-  else { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.45, L1.h, 24), colMat); c.position.set(x, L1.h / 2, z); L1.g.add(c); }
+  latticePillar(L1.g, x, z, L1.h, 0.45, 0.38);   // faceted glass
   const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, L1.h - 0.15, z); L1.g.add(cap);
   const base = cap.clone(); base.position.y = 0.15; L1.g.add(base);
 }
@@ -2622,11 +2547,10 @@ function buildAILab() {
   // the room: floor, ceiling and walls, with the doorway in the lobby's west wall
   {
     const A = F.annex, D = A.door, w = A.x1 - A.x0, d = A.z1 - A.z0, cx = (A.x0 + A.x1) / 2, cz = (A.z0 + A.z1) / 2, g = F.g;
-    const fm = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }); fm.map.repeat.set(0.25, 0.25);
-    const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), CRYSTAL_FLOOR ? crystalMat(F, 5) : fm); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), crystalMat(F, 5)); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
     const ce = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.set(cx, A.h, cz); g.add(ce);
     roomWall(F, g, d, A.h, A.x0, A.h / 2, cz, Math.PI / 2); roomWall(F, g, w, A.h, cx, A.h / 2, A.z0, 0); roomWall(F, g, w, A.h, cx, A.h / 2, A.z1, Math.PI);
-    if (WALLS_MODE) { fl.material.side = THREE.DoubleSide; ce.material.side = THREE.DoubleSide; }
+    ce.material.side = THREE.DoubleSide;
     const za = D.z - D.w / 2, zb = D.z + D.w / 2, ex = A.x1 - 0.02;   // the lobby wall, seen from inside the room
     roomWall(F, g, za - A.z0, A.h, ex, A.h / 2, (A.z0 + za) / 2, -Math.PI / 2); roomWall(F, g, A.z1 - zb, A.h, ex, A.h / 2, (zb + A.z1) / 2, -Math.PI / 2);
     roomWall(F, g, D.w, A.h - D.h, ex, D.h + (A.h - D.h) / 2, D.z, -Math.PI / 2);
