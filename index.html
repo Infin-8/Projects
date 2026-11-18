@@ -2021,7 +2021,7 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
   });
   // 6 · the QES-256 library; tap to open its page
   screen(2, 1, p => {
-    head(p, 'QES-256 · RNG LIBRARY', 'STEADY-WATCH.COM/QES-RNG', null);
+    head(p, 'QES-256 · RNG LIBRARY', 'QUANTUMV.DEV/QES-RNG', null);
     p.fillStyle = '#c9d2e3'; p.font = '24px "IBM Plex Sans", sans-serif'; p.fillText('Drop-in replacements for Math.random() and Web Crypto,', 44, 112); p.fillText('drawing on the same quantum pool.', 44, 144);
     [['await QES.random()', 'Math.random()'], ['await QES.randomInt(1, 100)', 'random integer'], ['await QES.getRandomValues(arr)', 'crypto.getRandomValues()'],
      ['await QES.randomUUID()', 'crypto.randomUUID()'], ['await QES.shuffle([...])', 'Fisher–Yates'], ['await QES.pick([...])', 'random element']].forEach(([a, b], i) => {
