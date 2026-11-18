@@ -918,7 +918,8 @@ const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the ea
 const FLOORS = [
   { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -15, h: 6, x0: -3, x1: 8, z0: -9, z1: 5.5, atrium: false, lightX: 2.5, lightsZ: [2.5, -4.5], look: [2.5, 5.5, 0.08], hello: ['B2 · Recluda.', 'The server room. Follow a VPN sign-in along the wall on your right.'] },
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
-  { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05] },
+  { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
+    annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } } },   // the AI Workers room, through a doorway in the west wall,
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -1348,9 +1349,17 @@ FLOORS.forEach((F, i) => {
   const openBelow = !bottom && F.atrium !== false && FLOORS[i - 1].atrium !== false, openAbove = !top && F.atrium !== false && FLOORS[i + 1].atrium !== false;
   const fl = new THREE.Mesh(slabGeo(F, bottom ? [] : openBelow ? [ATRIUM, liftHole] : [liftHole], -1), fm); fl.rotation.x = -Math.PI / 2; g.add(fl);
   const ce = new THREE.Mesh(slabGeo(F, top ? [] : openAbove ? [ATRIUM, liftHole] : [liftHole], 1), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.y = F.h; g.add(ce);
-  wallAt(g, d, F.h, F.x0, F.h / 2, cz, Math.PI / 2); wallAt(g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
+  if (F.annex) {   // the west wall around the annex doorway: south part, north part, lintel
+    const D = F.annex.door, za = D.z - D.w / 2, zb = D.z + D.w / 2;
+    wallAt(g, za - F.z0, F.h, F.x0, F.h / 2, (F.z0 + za) / 2, Math.PI / 2); wallAt(g, F.z1 - zb, F.h, F.x0, F.h / 2, (zb + F.z1) / 2, Math.PI / 2);
+    wallAt(g, D.w, F.h - D.h, F.x0, D.h + (F.h - D.h) / 2, D.z, Math.PI / 2);
+  } else wallAt(g, d, F.h, F.x0, F.h / 2, cz, Math.PI / 2);
+  wallAt(g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
   wallAt(g, w, F.h, cx, F.h / 2, F.z0, 0); wallAt(g, w, F.h, cx, F.h / 2, F.z1, Math.PI);
-  for (const x of [F.x0 + 0.03, F.x1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(x, 0.9, cz); g.add(b); }
+  for (const x of [F.x0 + 0.03, F.x1 - 0.03]) {
+    const spans = x < cx && F.annex ? [[F.z0, F.annex.door.z - F.annex.door.w / 2], [F.annex.door.z + F.annex.door.w / 2, F.z1]] : [[F.z0, F.z1]];   // the light line stops at the doorway
+    for (const [a, b2] of spans) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, b2 - a), lineMat); b.position.set(x, 0.9, (a + b2) / 2); g.add(b); }
+  }
   // the atrium: a lit edge where the floor opens, and a glass railing around it (on B1, around the cryostat; none on B2)
   if (openBelow) {
     const edge = new THREE.Mesh(new THREE.CylinderGeometry(ATRIUM.r, ATRIUM.r, 0.4, 64, 1, true), edgeMat); edge.position.set(ATRIUM.x, -0.2, ATRIUM.z); g.add(edge);
@@ -1383,7 +1392,13 @@ for (const p of PROJECTS) if (p.stand) {
 // Where you can walk on a floor: inside its walls, outside the atrium railing and the lift's glass (except through its door)
 function walkable(x, z, f = player.floor) {
   const F = typeof f === 'number' ? FLOORS[f] : f;
-  if (x < F.x0 + 0.9 || x > F.x1 - 0.9 || z < F.z0 + 0.9 || z > F.z1 - 0.8) return false;
+  const inMain = !(x < F.x0 + 0.9 || x > F.x1 - 0.9 || z < F.z0 + 0.9 || z > F.z1 - 0.8);
+  if (!inMain) {
+    const A = F.annex; if (!A) return false;
+    const inRoom = x > A.x0 + 0.9 && x < A.x1 - 0.5 && z > A.z0 + 0.9 && z < A.z1 - 0.9;
+    const inDoor = x >= A.x1 - 0.9 && x <= F.x0 + 1.0 && Math.abs(z - A.door.z) < A.door.w / 2 - 0.35;
+    if (!inRoom && !inDoor) return false;
+  }
   if (F.atrium !== false && Math.hypot(x - ATRIUM.x, z - ATRIUM.z) < ATRIUM.r + 0.55) return false;
   const lx = x - LIFT.x, lz = z - LIFT.z, lr = Math.hypot(lx, lz);
   if (lr > LIFT.r - 0.45 && lr < LIFT.r + 0.45 && !(lz > 0 && Math.abs(lx) < 0.5)) return false;
@@ -1396,6 +1411,10 @@ for (const F of FLOORS) {
   for (const r of [ATRIUM.r + 1.3, ATRIUM.r + 3.3]) for (let k = 0; k < 12; k++) {
     const a = k / 12 * Math.PI * 2, x = ATRIUM.x + Math.cos(a) * r, z = ATRIUM.z + Math.sin(a) * r;
     if (walkable(x, z, F)) F.nodes.push(new THREE.Vector3(x, 0, z));
+  }
+  if (F.annex) {   // through the annex doorway: just outside, in it, just inside, and the middle of the room
+    const A = F.annex, z = A.door.z;
+    for (const x of [F.x0 + 1.4, F.x0, A.x1 - 1.4, (A.x0 + A.x1) / 2 + 1]) F.nodes.push(new THREE.Vector3(x, 0, z));
   }
 }
 
@@ -2444,13 +2463,14 @@ function buildRecludaDevices() {
   icon.add(new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.012, 6, 64), new THREE.MeshBasicMaterial({ color: A })));
   buildingUpdates.push((dt, t) => { if (!F.g.visible) return; icon.rotation.y = reduceMotion ? 0.3 + Math.PI / 2 : t * 0.6; icon.position.y = 2.85 + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.06); });
 }
-/* ---------- L1 · The AI guides, as prototypes (the lobby's west wall, between the columns, nearer the entrance) ----------
+/* ---------- L1 · The AI Workers room (the lobby annex, through the west wall between the columns) ----------
    Vee and Dr. Z are one RAG worker (vee-worker) with two personas: a question is matched against about 1,000
    passages in a Vectorize index and a model answers from what it finds, with links to its sources. Each stands
    on a podium like the apps on L2, shown in the form visitors meet it in the Ask chat widget: Vee's drone head
    (quantumv.dev and the other sites) and Dr. Z's Sudoku-board face (kaizendoku.com). The painters are ported
    from vee-worker/web/vee-widget.js (paintFace, paintDrz); keep the two in step. */
-const AI_LAB = { x: -5.4, zs: [3.9, 6.6], ry: Math.PI / 2, stops: [] };   // facing east into the lobby, in front of their panel between the west columns (z 2.5 and 8)
+// Four podiums in a row facing the doorway: Vee, Dr. Z, and two reserved for the next workers.
+const AI_LAB = { x: -13.4, zs: [2.6, 4.4, 6.2, 8.0], ry: Math.PI / 2, stops: [] };
 const WIDGET_FACES = (() => {
   const xs = seed => { let x = seed; return () => ((x ^= x << 13, x ^= x >>> 17, x ^= x << 5) >>> 0) / 4294967296; };
   // Vee: drones crowd the outline of her head, a few inside, with a hair cap swept to one side
@@ -2519,14 +2539,38 @@ function buildAILab() {
   const F = FLOORS[FI.l1];
   const guides = [
     { name: 'Vee', accent: '#5ff0ff', where: 'Ask Vee on quantumv.dev', url: 'https://quantumv.dev/', paint: WIDGET_FACES.vee },
-    { name: 'Dr. Z', accent: '#00ff41', where: 'Ask Dr. Z on kaizendoku.com', url: 'https://kaizendoku.com/', paint: WIDGET_FACES.drZ }];
+    { name: 'Dr. Z', accent: '#00ff41', where: 'Ask Dr. Z on kaizendoku.com', url: 'https://kaizendoku.com/', paint: WIDGET_FACES.drZ },
+    { reserved: true }, { reserved: true }];   // room for the next workers
+  // the room: floor, ceiling and walls, with the doorway in the lobby's west wall
+  {
+    const A = F.annex, D = A.door, w = A.x1 - A.x0, d = A.z1 - A.z0, cx = (A.x0 + A.x1) / 2, cz = (A.z0 + A.z1) / 2, g = F.g;
+    const fm = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.28, metalness: 0.35 }); fm.map.repeat.set(0.25, 0.25);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), fm); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
+    const ce = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshLambertMaterial({ color: 0x0b0d14 })); ce.rotation.x = Math.PI / 2; ce.position.set(cx, A.h, cz); g.add(ce);
+    wallAt(g, d, A.h, A.x0, A.h / 2, cz, Math.PI / 2); wallAt(g, w, A.h, cx, A.h / 2, A.z0, 0); wallAt(g, w, A.h, cx, A.h / 2, A.z1, Math.PI);
+    const za = D.z - D.w / 2, zb = D.z + D.w / 2, ex = A.x1 - 0.02;   // the lobby wall, seen from inside the room
+    wallAt(g, za - A.z0, A.h, ex, A.h / 2, (A.z0 + za) / 2, -Math.PI / 2); wallAt(g, A.z1 - zb, A.h, ex, A.h / 2, (zb + A.z1) / 2, -Math.PI / 2);
+    wallAt(g, D.w, A.h - D.h, ex, D.h + (A.h - D.h) / 2, D.z, -Math.PI / 2);
+    for (const z of [za, zb]) { const j = new THREE.Mesh(new THREE.BoxGeometry(0.34, D.h, 0.08), gold); j.position.set(A.x1, D.h / 2, z); g.add(j); }   // a gold frame round the doorway
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.08, D.w + 0.16), gold); top.position.set(A.x1, D.h, D.z); g.add(top);
+    for (const x of [A.x0 + 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(x, 0.9, cz); g.add(b); }
+    for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
+    const L = new THREE.PointLight(0xdfe8ff, 0.9, 12, 2); L.position.set(cx, A.h - 1, cz); g.add(L);
+    floorSign(g, 'THROUGH HERE', 'AI Workers', F.x0 + 0.06, D.h + 0.9, D.z, Math.PI / 2, 3.0);   // over the doorway, lobby side
+    floorSign(g, 'L1 · LOBBY ANNEX', 'AI Workers', A.x0 + 0.06, 5.35, D.z, Math.PI / 2, 3.4);    // over the panel on the back wall
+  }
   guides.forEach((gd, i) => {
-    const x = AI_LAB.x, z = AI_LAB.zs[i], ry = AI_LAB.ry, A = new THREE.Color(gd.accent);
+    const x = AI_LAB.x, z = AI_LAB.zs[i], ry = AI_LAB.ry, A = new THREE.Color(gd.reserved ? '#3a4256' : gd.accent);
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; F.g.add(g);
     F.blocks.push({ x0: x - 0.75, x1: x + 0.75, z0: z - 0.75, z1: z + 0.75 });
     const ped = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.05, 0.42), colMat); ped.position.y = 0.525; g.add(ped);
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.025, 0.44), new THREE.MeshBasicMaterial({ color: A })); edge.position.y = 1.06; g.add(edge);
     const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.03, 40), new THREE.MeshBasicMaterial({ color: A, transparent: true, opacity: 0.6 })); lens.position.y = 1.08; g.add(lens);   // the projector it floats over
+    if (gd.reserved) {   // waiting for its worker: projector off, a plain label
+      const tag = textSprite([['RESERVED · NEXT WORKER', '600 32px "IBM Plex Mono", monospace', '#8e99b0'], ['Space for the next AI worker', '26px "IBM Plex Sans", sans-serif', '#6b7489']], 768, 140, 1.4);
+      tag.position.set(0, 0.62, 0.31); g.add(tag);
+      return;
+    }
     // the face, as in the widget: painted at 4× onto a 448 px canvas, floating over the podium
     const c = mk(448, 448), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c);
     const faceM = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -2559,7 +2603,7 @@ function buildAILab() {
   });
   infoPanel(F.g, { eyebrow: 'TWO GUIDES · ONE ENGINE', title: 'Answers from a library',
     body: 'One Cloudflare Worker, two personas. A question is matched against about 1,000 passages (the sites, the Quantum Library papers, research notes); a model answers from what it finds and links its sources. Vee guides this hall; Dr. Z coaches on kaizendoku.com.',
-    foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.x0 + 0.06, 2.6, (AI_LAB.zs[0] + AI_LAB.zs[1]) / 2, Math.PI / 2, 3.4);   // behind the podiums, between the west columns
+    foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.annex.x0 + 0.06, 3.75, F.annex.door.z, Math.PI / 2, 3.0);   // on the room's back wall, high enough that the faces float below it seen from the doorway
 }
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
