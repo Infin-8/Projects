@@ -818,7 +818,24 @@ DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.
 
 
 /* ---------- Environment textures ---------- */
+// ?surfaces=new (a prototype, 2026-11-18): quieter surfaces so the floor's light seams are the only lines on it:
+// dark terrazzo slabs with faint joints in place of the checkerboard, and full-height wall panels in place of the
+// brick-like rows. The default keeps the old ones until this is chosen.
+const SURF_NEW = /[?&]surfaces=new\b/.test(location.search);
 function floorTex() {
+  if (SURF_NEW) {   // one canvas = 4 m x 4 m: four 2 m slabs of dark terrazzo, joints barely there
+    const c = mk(1024, 1024), g = c.getContext('2d');
+    g.fillStyle = '#12151d'; g.fillRect(0, 0, 1024, 1024);
+    let x = 1234567; const rnd = () => ((x ^= x << 13, x ^= x >>> 17, x ^= x << 5) >>> 0) / 4294967296;
+    for (let i = 0; i < 9000; i++) {   // the speckle: tiny chips, a few lighter, a few darker
+      const r = rnd(), v = r < 0.55 ? '#181c26' : r < 0.85 ? '#0d1016' : r < 0.97 ? '#232836' : '#2e3546';
+      g.fillStyle = v; const s2 = 1 + rnd() * 2.2; g.fillRect(rnd() * 1024, rnd() * 1024, s2, s2);
+    }
+    g.fillStyle = 'rgba(255,255,255,0.025)'; g.fillRect(0, 0, 1024, 1024);
+    g.strokeStyle = '#1f2431'; g.lineWidth = 2;   // the slab joints
+    for (const k of [0, 512]) { g.beginPath(); g.moveTo(k + 1, 0); g.lineTo(k + 1, 1024); g.stroke(); g.beginPath(); g.moveTo(0, k + 1); g.lineTo(1024, k + 1); g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 7); t.anisotropy = 8; return t;
+  }
   // polished dark stone, still checkered so it reads as the castle floor
   const c = mk(512, 512), g = c.getContext('2d');
   for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
@@ -829,6 +846,20 @@ function floorTex() {
 }
 function wallTex(glow) {
   // dark slate panels; the glow version is black except for a few lit seams (used as emissive map)
+  if (SURF_NEW) {   // one canvas = 4 m x 4 m: four full-height panels 1 m wide, thin recessed joints, a soft sheen
+    const c = mk(512, 512), g = c.getContext('2d');
+    g.fillStyle = glow ? '#000' : '#171b25'; g.fillRect(0, 0, 512, 512);
+    for (let col = 0; col < 4; col++) {
+      const x = col * 128;
+      if (!glow) {
+        const gr = g.createLinearGradient(x, 0, x + 128, 0); gr.addColorStop(0, '#161a23'); gr.addColorStop(0.5, '#1c2130'); gr.addColorStop(1, '#161a23');
+        g.fillStyle = gr; g.fillRect(x + 2, 0, 124, 512);
+        g.fillStyle = '#0a0c11'; g.fillRect(x, 0, 2, 512);   // the joint
+      }
+    }
+    if (glow) { g.fillStyle = '#3fe0e0'; g.fillRect(0, 254, 512, 2); }   // the one lit line, at the same height as before
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  }
   const c = mk(512, 512), g = c.getContext('2d');
   g.fillStyle = glow ? '#000' : '#181c27'; g.fillRect(0, 0, 512, 512);
   for (let row = 0; row < 4; row++) for (let col = 0; col < 2; col++) {
