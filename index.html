@@ -2559,7 +2559,7 @@ function buildAILab() {
   });
   infoPanel(F.g, { eyebrow: 'TWO GUIDES · ONE ENGINE', title: 'Answers from a library',
     body: 'One Cloudflare Worker, two personas. A question is matched against about 1,000 passages (the sites, the Quantum Library papers, research notes); a model answers from what it finds and links its sources. Vee guides this hall; Dr. Z coaches on kaizendoku.com.',
-    foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.x0 + 0.06, 2.6, (AI_LAB.zs[0] + AI_LAB.zs[1]) / 2, Math.PI / 2, 3.4);
+    foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.x0 + 0.06, 2.6, 5.25, Math.PI / 2, 3.4);   // between the west columns (z 2.5 and 8), where the Ask Vee wall was
 }
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
@@ -4180,7 +4180,7 @@ document.getElementById('qrCopy').addEventListener('click', async e => {
   setTimeout(() => { b.textContent = 'Copy link'; }, 1500);
 });
 function buildAskVeeWall() {
-  const L1 = FLOORS[FI.l1], PW = 4.4, PH = 2.5, CZ = 5.25, CY = 2.45, X = L1.x0 + 0.1;   // between the west columns (z 2.5 and 8)
+  const L1 = FLOORS[FI.l1], PW = 4.4, PH = 2.5, CZ = -4, CY = 2.45, X = L1.x0 + 0.1;   // on the west wall across the atrium from the lift, behind Vee and Dr. Z's podiums
   const c = mk(2200, 1250), g = c.getContext('2d');
   g.fillStyle = '#0b1220'; g.fillRect(0, 0, 2200, 1250);
   g.strokeStyle = 'rgba(95,240,255,.55)'; g.lineWidth = 4; g.strokeRect(14, 14, 2172, 1222);
