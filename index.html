@@ -1980,13 +1980,13 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
       p.fillStyle = '#f1e6cf'; p.font = '600 30px "IBM Plex Mono", monospace';
       p.fillText(String(h.prime), 250, y); p.fillText(String(h.satellites), 340, y); p.fillText(`${h.avg_entropy_bits.toFixed(2)} bits`, 560, y); p.fillText(`${(h.yield_efficiency * 100).toFixed(1)}%`, 800, y);
       p.fillStyle = 'rgba(63,224,224,0.14)'; p.fillRect(44, y + 22, 936, 8); p.fillStyle = hiveC[k]; p.fillRect(44, y + 22, 936 * h.yield_efficiency, 8);
-      small(p, `${h.total_jobs} JOBS · ${h.backend} · ${h.inferred_qubits} QUBITS`, 44, y + 60, '#8e99b0', 18);
+      small(p, `${h.seeds_per_job != null ? h.total_jobs + ' JOBS' : h.results_loaded + ' SEEDS'} · ${h.backend} · ${h.inferred_qubits} QUBITS${h.min_entropy_bits_per_seed_min != null ? ` · MIN-ENTROPY ≥ ${Math.round(h.min_entropy_bits_per_seed_min).toLocaleString('en-US')} BITS/SEED` : ''}`, 44, y + 60, '#8e99b0', 18);
     });
     p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText(`Yield: average entropy against the ${a.hives.VAULT ? a.hives.VAULT.theoretical_max_bits : 10}-bit maximum per measurement.`, 44, 590);
   });
   // 4 · real IBM Quantum job IDs, one highlighted at a time; tap to open it on IBM Quantum
   let jobK = 0;
-  const jobList = () => { const a = QRNG.att, out = []; if (a) for (const k of ['VAULT', 'VIPER', 'LOTUS']) for (const id of (a.hives[k] && a.hives[k].job_ids) || []) out.push([k, id]); return out; };
+  const jobList = () => { const a = QRNG.att, out = []; if (a) for (const k of ['VAULT', 'VIPER', 'LOTUS']) for (const id of (a.hives[k] && a.hives[k].job_ids) || []) if (!out.some(j => j[1] === id)) out.push([k, id]); return out; };   // batched runs share a job across seeds: list each once
   const jobs = screen(0, 1, p => {
     const list = jobList();
     head(p, 'IBM QUANTUM JOB IDS', list.length ? 'REAL JOBS' : '', list.length ? null : false);
@@ -2002,7 +2002,8 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
     });
     small(p, 'VERIFY ANY JOB AT QUANTUM.IBM.COM/JOBS/{JOB_ID}', 44, 452, '#5ff0ff');
     p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif';
-    p.fillText(`Showing 15 of ${list.length && QRNG.att ? (QRNG.att.total_satellites || 912) : 912} seed jobs on ${(QRNG.att && QRNG.att.hives.VAULT && QRNG.att.hives.VAULT.backend) || 'IBM hardware'}.`, 44, 500);
+    const hv = Object.values(QRNG.att.hives), totalJobs = hv.every(h => h.seeds_per_job != null) ? hv.reduce((n, h) => n + h.total_jobs, 0) : null;   // total_jobs counts jobs only on servers that report seeds_per_job
+    p.fillText(`${totalJobs ? `Showing ${list.length} of ${totalJobs}` : list.length} seed jobs on ${(QRNG.att.hives.VAULT && QRNG.att.hives.VAULT.backend) || 'IBM hardware'}, ${QRNG.att.total_satellites || 912} seeds.`, 44, 500);
     p.fillText(coarseUI ? 'Tap to open the highlighted job on IBM Quantum.' : 'Click to open the highlighted job on IBM Quantum.', 44, 540);
   }, () => { const list = jobList(); return list.length ? `https://quantum.ibm.com/jobs/${list[jobK % list.length][1]}` : 'https://quantum.ibm.com/'; });
   // 5 · stage temperatures (typical values, gently fluctuating)
@@ -2036,6 +2037,116 @@ const hallLinks = [];   // things in the hall that open a link when tapped up cl
     if (t - lastLive > 1) { lastLive = t; live.redraw(t); temps.redraw(reduceMotion ? 0 : t); }
     if (QRNG.att !== attSeen) { attSeen = QRNG.att; att.redraw(t); hives.redraw(t); jobs.redraw(t); }
     if (!reduceMotion && t - lastJob > 2.5) { lastJob = t; jobK++; jobs.redraw(t); }
+  });
+}
+/* ---------- Measurement record (east wall, past the floor guide) ----------
+   Two screens on what a measurement actually produces and how it becomes a seed. Left: the 1,024 shots of
+   one real display-only job on ibm_marrakesh (2026-11-18), revealed in the order they were measured. Those
+   bits are public and were never used for keys: shots behind the QES-256 pool are never published, since they
+   are the seeds' input. Right: from shots to seeds, the v1 and v2 seed methods and each hive's live numbers
+   from /qrng/attestation (static run figures until the attestation loads). */
+const MEAS = {
+  job: 'dbufig5arooc73fjr7bg', backend: 'ibm_marrakesh', when: '18 Nov 2026',
+  hex: 'b9f4c546b1d9a49fffc5fde87b5d1ac7651150e0ac0af91b961ecf5c4e45858079e7c22156f59dab0aa1e7851cc2fc21baa94431a191e0f0c208d984e9e415a2183110346c15c0e0217054d0941d0fa258c0ac9669707d794faac808d2586614ba0f4ae0b9154ce50ab120c18ce01030c4cd4cc4555362da1d9a21a5860a9839e2c142d69ddce12ec4a6ebf304992079081f2c6849e8a9e2c96e3fdc6d821c716a504b10785d460d0db54fdb24843bb416511c9f663231bf40e090e1c4f4963f29dbd10080c8643154cdd126a92644784043849dca933284c41fccf200a4a4e1142cfb534bf88e2359a61fe98cdc9fadc7f0ae0c11ca3178701417a988ae11eeb9456839b309b542c7ead10182a312c10421b63d1c98e04b1e4a8516283912b20900f9daaf5978f9694d749c4da431eab1284d2ea8c4d3ce4444c5ed1847489f93973295a71c80297c173c17506899c5a461a37fe656087768ccc78ca295ecef7d70dfad809595dddffed11b3ed9961015c3c0dd82ada5f1fbffca388cbda0e000281cc879ffa7d13db25fe9b097750e1a1bcb625ba8b81e925a3e88f4f159bd1920c144ead668ec00091c6cfb1d2335d410efc49744ea484760310050bc1bb994e62e73a930680dfef2487a947dcc55a3728eae9b5fe7115d2ad0a6315afaf9f995770b113438d258cd4da165b8c410e003d02144b9a5c2c362cfcbdc0f12a4e9b444238d5ee64cc66daa98b4498e4c859d84e1a9b00cc3d5dd8449ad8c089bc25fd1c840b9f7684face65a128e28554073cddd208df528992df1a56d0cd4c0f5a6bcf294c178a78d8a650043f067f96c202b74e1488d749ab8406e34415dcdf20d2b9d52fde1d38cc5b30a8ea699a4b0a52d3108a5300d25eff8302520a6811e51c91c896463f96575e059f1bb41189cbd498902c0d96e292c378338c42b2cda441f2e420640466d8aa48b7fa63720c965211d2148eb10a34e14671ce8559a5aacc16ccbaf544f97ad45100035f851b823882f5032bdb138c3e189e552153d4b13e19055689b2d84c91df124e170b02cf743dbc58c31b1b8d78467205408dd69b453fec30d840587485f44b013682f3097955c4988fdb239a4dddd2418844560e4681c8c98807c9303d8b0335da1a72f1fae57b8ad9d607c23baf180e0d9f2933c52ade41de4230dda9bdf8945c4a14e9a00f93dc1a8e13019fbbc28f74f651a188669f13a1863defde9d12169496daf05ebc4f15407812ed8b82084d35fc90f9b3020f86c974d3bff1ecc7893a8944d9f92482e3857ef84f70d24f294031b8b1925adcbf17e166624dde5ff25310965cc6841e3fbc5f6e1ec7ff481e18316bf34d2ea4e3a3a4b0485d835146d911abd65ea94b099a5743769c5f144c538bf7c8c6d0c9b5f9861f7945e7dcc75610c948ef89fd1e420dd4fe95015c5ecf472',
+  unique: 246, hmin: 5.62, shannon: 7.71,
+  ones: [0.4961, 0.3447, 0.4844, 0.4932, 0.4697, 0.4756, 0.4912, 0.5146],   // share of 1s per qubit, q0 first
+  run: { seeds: 912, jobs: 19, qpu: 287,
+         hives: { VAULT: [144, 5490], VIPER: [336, 5209], LOTUS: [432, 5342] } }   // [seeds, lowest min-entropy per seed]
+};
+MEAS.shots = MEAS.hex.match(/../g).map(h => parseInt(h, 16));
+let MEAS_STOP = null;
+{
+  const coarseUI = matchMedia('(pointer: coarse)').matches;
+  // stacked like the data wall, between the floor guide (z -2.0..0.3) and the south corner
+  const WX = B1.x1 - 0.08, SW = 3.0, SH = SW * 0.625, Z = 2.6, YS = [4.35, 2.3];   // A above, B at eye level
+  const hiveC = { VAULT: '#3fe0e0', VIPER: '#ff5a4e', LOTUS: '#ffc24a' };
+  const head = (p, eyebrow, right, color = '#5ff0ff') => {
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 640);
+    p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1004, 620);
+    p.textAlign = 'left'; p.fillStyle = color; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText(eyebrow, 44, 62);
+    if (right) { p.textAlign = 'right'; p.fillText(right, 980, 62); p.textAlign = 'left'; }
+  };
+  const small = (p, text, x, y, color = '#8e99b0', px = 18) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
+  const sans = (p, text, x, y, color = '#c9d2e3', px = 22) => { p.fillStyle = color; p.font = `${px}px "IBM Plex Sans", sans-serif`; p.fillText(text, x, y); };
+  const bits = v => v.toString(2).padStart(8, '0');
+  const hue = v => `hsl(${Math.round(v / 255 * 300)}, 72%, 56%)`;
+  const screens = [];
+  function screen(i, draw, link) {
+    const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex }));
+    m.position.set(WX, YS[i], Z); m.rotation.y = -Math.PI / 2; B1.g.add(m);
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, SH + 0.12, SW + 0.12), colMat); fr.position.set(WX + 0.04, YS[i], Z); B1.g.add(fr);
+    const s = { tex, redraw(t) { draw(p, t); tex.needsUpdate = true; } };
+    s.redraw(0); screens.push(s);
+    if (link) hallLinks.push({ mesh: m, url: link, floor: FI.b1, stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + YS[i], Z), normal: new THREE.Vector3(-1, 0, 0), standOff: 3.6, pitch: i ? 0.02 : 0.2 } });
+    return s;
+  }
+  // A · the shots: a 32 × 32 grid, one cell per shot, coloured by its 8-bit outcome, filled in measurement order
+  const N = MEAS.shots.length, CELL = 14, GX = 44, GY = 92;
+  const shotsScreen = screen(0, (p, t) => {
+    head(p, 'MEASUREMENT RECORD · 1,024 SHOTS', 'REAL JOB · DISPLAY ONLY');
+    const k = reduceMotion ? N : Math.floor((t * 24) % (N + 96));   // a pause with the grid full, then again
+    for (let i = 0; i < N; i++) {
+      const x = GX + (i % 32) * CELL, y = GY + Math.floor(i / 32) * CELL;
+      p.fillStyle = i < k ? hue(MEAS.shots[i]) : 'rgba(63,224,224,0.07)'; p.fillRect(x, y, CELL - 2, CELL - 2);
+    }
+    const cur = Math.min(k, N) - 1;
+    if (cur >= 0 && k <= N) { const x = GX + (cur % 32) * CELL, y = GY + Math.floor(cur / 32) * CELL; p.strokeStyle = '#ffffff'; p.lineWidth = 2; p.strokeRect(x - 2, y - 2, CELL + 2, CELL + 2); }
+    small(p, 'EACH CELL IS ONE SHOT · COLOUR = ITS 8-BIT OUTCOME', GX, 572, '#8e99b0', 15);
+    // right column
+    const RX = 540;
+    small(p, cur >= 0 ? `SHOT ${String(Math.min(k, N)).padStart(4, ' ')} OF ${N}` : 'MEASURING…', RX, 112, '#5ff0ff', 20);
+    p.fillStyle = cur >= 0 ? '#d8ffe6' : '#3a4256'; p.font = '600 52px "IBM Plex Mono", monospace'; p.fillText(cur >= 0 ? bits(MEAS.shots[cur]) : '········', RX, 172);
+    small(p, 'q7 ············· q0', RX + 4, 200, '#5b6680', 15);
+    [['OUTCOMES SEEN', `${MEAS.unique} of 256`], ['MIN-ENTROPY', `${MEAS.hmin.toFixed(2)} bits / shot`], ['IDEAL', '8 bits / shot']].forEach(([a, b], i) => {
+      small(p, a, RX, 252 + i * 34); p.textAlign = 'right'; small(p, b, 980, 252 + i * 34, '#f1e6cf', 20); p.textAlign = 'left';
+    });
+    // share of 1s per qubit: an ideal qubit sits on the 50% line
+    small(p, "EACH QUBIT'S SHARE OF 1s", RX, 376, '#5ff0ff', 17);
+    const BX = RX, BW = 440, BY = 392, BH = 90, bw = BW / 8;
+    p.fillStyle = 'rgba(63,224,224,0.08)'; p.fillRect(BX, BY, BW, BH);
+    MEAS.ones.forEach((v, q) => {
+      const h = BH * v, x = BX + (7 - q) * bw + 6, low = v < 0.4;   // q7 on the left, matching the bitstring
+      p.fillStyle = low ? '#ffc24a' : '#3fe0e0'; p.fillRect(x, BY + BH - h, bw - 12, h);
+      small(p, 'q' + q, x + 4, BY + BH + 20, low ? '#ffc24a' : '#8e99b0', 14);
+    });
+    p.fillStyle = '#c9d2e3'; p.fillRect(BX, BY + BH / 2, BW, 1.5); p.textAlign = 'right'; small(p, '50%', BX + BW - 4, BY + BH / 2 - 6, '#c9d2e3', 13); p.textAlign = 'left';
+    sans(p, 'Qubit 1 read 1 only 34% of the time: real hardware', RX, 536, '#c9d2e3', 19);
+    sans(p, 'is imperfect, so shots are hashed into seeds.', RX, 562, '#c9d2e3', 19);
+    small(p, `JOB ${MEAS.job} · ${MEAS.backend} · ${MEAS.when}`, 44, 606, '#9fdcb8', 15);
+    p.textAlign = 'right'; small(p, coarseUI ? 'TAP TO OPEN ON IBM QUANTUM' : 'CLICK TO OPEN ON IBM QUANTUM', 980, 606, '#5ff0ff', 15); p.textAlign = 'left';
+  }, `https://quantum.ibm.com/jobs/${MEAS.job}`);
+  // B · from shots to seeds: the old and new seed methods, and each hive's numbers
+  const seedsScreen = screen(1, p => {
+    const a = QRNG.att, live = !!(a && a.hives && Object.values(a.hives).some(h => h.seed_method === 'shots-v2'));
+    head(p, 'FROM SHOTS TO SEEDS', live ? 'LIVE' : MEAS.when.toUpperCase(), live ? '#00ff66' : '#5ff0ff');
+    // before and now
+    const box = (x, label, color, lines) => {
+      p.fillStyle = 'rgba(63,224,224,0.05)'; rr(p, x, 86, 452, 186, 14); p.fill(); p.strokeStyle = color; p.lineWidth = 2; rr(p, x, 86, 452, 186, 14); p.stroke();
+      small(p, label, x + 20, 120, color, 18); lines.forEach((l, i) => sans(p, l, x + 20, 158 + i * 32, i === lines.length - 1 ? '#8e99b0' : '#c9d2e3', 21));
+    };
+    box(44, 'BEFORE · v1', '#8e99b0', ['Count the outcomes, keep the', 'top few states, hash them.', 'Shot order thrown away.', 'Most of the randomness lost.']);
+    box(528, 'NOW · v2', '#00ff66', ['Every shot, in the order it', 'was measured, into SHA-256.', '1,024 shots → one 256-bit seed.', '~5,700 bits in, 256 out.']);
+    // per hive
+    small(p, 'HIVE', 44, 316); small(p, 'SEEDS', 250, 316); small(p, 'LOWEST MIN-ENTROPY / SEED', 400, 316); small(p, 'FULL ENTROPY', 790, 316);
+    ['VAULT', 'VIPER', 'LOTUS'].forEach((k, i) => {
+      const y = 360 + i * 50, h = live && a.hives[k], st = MEAS.run.hives[k];
+      const seeds = h ? h.results_loaded : st[0], lo = h && h.min_entropy_bits_per_seed_min != null ? Math.round(h.min_entropy_bits_per_seed_min) : st[1], full = h ? h.full_entropy_seeds : st[0];
+      p.fillStyle = hiveC[k]; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText(k + '™', 44, y);
+      p.fillStyle = '#f1e6cf'; p.font = '600 26px "IBM Plex Mono", monospace';
+      p.fillText(String(seeds), 250, y); p.fillText(`${lo.toLocaleString('en-US')} bits`, 400, y); p.fillText(`${full} / ${seeds}`, 790, y);
+      p.fillStyle = 'rgba(63,224,224,0.12)'; p.fillRect(400, y + 12, 340, 5); p.fillStyle = hiveC[k]; p.fillRect(400, y + 12, 340 * Math.min(1, lo / 8192), 5);   // out of 8 bits × 1,024 shots
+    });
+    small(p, `${MEAS.run.seeds} SEEDS · ${MEAS.run.jobs} IBM JOBS · ${MEAS.run.qpu} QPU-SECONDS · ${MEAS.backend.toUpperCase()}`, 44, 534, '#9fdcb8', 17);
+    sans(p, 'Full entropy: at least 256 + 64 bits in for 256 bits out.', 44, 572, '#c9d2e3', 19);
+    sans(p, 'Min-entropy: NIST SP 800-90B most-common-value estimate, shots assumed independent.', 44, 602, '#8e99b0', 16);
+  });
+  MEAS_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + (YS[0] + YS[1]) / 2, Z), normal: new THREE.Vector3(-1, 0, 0), standOff: 5.0, pitch: 0.1 };
+  let lastShot = -1, attSeenM = null;
+  buildingUpdates.push((dt, t) => {
+    if (!B1.g.visible) return;
+    if (!reduceMotion && t - lastShot > 1 / 12) { lastShot = t; shotsScreen.redraw(t); }
+    if (QRNG.att !== attSeenM) { attSeenM = QRNG.att; seedsScreen.redraw(t); }
   });
 }
 /* ---------- Entropy pool storage ----------
@@ -4567,7 +4678,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
-  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP]);
+  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
@@ -5922,6 +6033,7 @@ function veeDestination(id) {
     case 'double-slit': return SLIT_STOP;
     case 'cryostat': return CRYO_STOP;
     case 'pool-storage': return POOL_STOP;
+    case 'measurements': return MEAS_STOP;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, ATRIUM.z), normal: new THREE.Vector3(1, 0, 0), standOff: 5.4, pitch: 0.14 };
     case 'pools': return wingStop;
