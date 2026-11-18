@@ -1586,11 +1586,26 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
       vertexShader: bitVert, fragmentShader: bitFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const pts = new THREE.Points(geo, mat); pts.position.set(ln.x, 0, ln.z); pts.frustumCulled = false; L1.g.add(pts);
     // its label: etched glass at eye height on the pillar's lobby side
-    const c = mk(512, 128), g = c.getContext('2d');
-    etchedPlate(g, 512, 128, 10); g.textAlign = 'center'; etchText(g, ln.name, 256, 86, '66px "Young Serif", Georgia, serif');
-    const plate = etchedMesh(new THREE.CanvasTexture(c), 1.3, 0.325), side = ln.x < 0 ? 1 : -1;   // just the name, big enough to read across the lobby
+    const c = mk(512, 128), g = c.getContext('2d'), ptex = new THREE.CanvasTexture(c);
+    const drawPlate = live => {   // just the name, big enough to read across the lobby; QES-256 adds a green LIVE dot while live
+      etchedPlate(g, 512, 128, 10); g.textAlign = 'center';
+      if (ln.live && live) {
+        etchText(g, ln.name, 220, 86, '66px "Young Serif", Georgia, serif');
+        g.save(); g.shadowColor = '#6dffa8'; g.shadowBlur = 18; g.fillStyle = '#6dffa8'; g.beginPath(); g.arc(424, 64, 13, 0, Math.PI * 2); g.fill(); g.restore();
+        g.font = '600 22px "IBM Plex Mono", monospace'; g.fillStyle = '#6dffa8'; g.fillText('LIVE', 424, 108);
+      } else etchText(g, ln.name, 256, 86, '66px "Young Serif", Georgia, serif');
+      ptex.needsUpdate = true;
+    };
+    drawPlate(false);
+    const plate = etchedMesh(ptex, 1.3, 0.325), side = ln.x < 0 ? 1 : -1;
     plate.position.set(ln.x + side * 0.52, 2.2, ln.z); plate.rotation.y = side * Math.PI / 2; L1.g.add(plate);
-    ln.data = data; ln.tex = tex; ln.next = 4 + li;
+    if (ln.live) {   // the live ring: green round the pillar under its name, breathing while live, flashing as each new draw arrives
+      ln.ringM = new THREE.MeshBasicMaterial({ color: 0x6dffa8, transparent: true, opacity: 0.15, depthWrite: false, blending: THREE.AdditiveBlending });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.03, 8, 64), ln.ringM); ring.rotation.x = Math.PI / 2; ring.position.set(ln.x, 1.75, ln.z); L1.g.add(ring);
+      const halo = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.11, 8, 64), ln.ringM.clone()); halo.rotation.x = Math.PI / 2; halo.position.copy(ring.position); L1.g.add(halo);
+      ln.haloM = halo.material; ln.flash = 0; ln.plateLive = false;
+    }
+    ln.data = data; ln.tex = tex; ln.next = 4 + li; ln.drawPlate = drawPlate;
   });
   // the board that explains them: glass with glowing text on the east wall between VIPER™ and QES-256, across from the AI Workers doorway
   const BW2 = 3.9, BH2 = BW2 * 1144 / 2048, BZ = 5.25, BX = L1.x1 - 0.14, BY = 2.55;
@@ -1631,8 +1646,12 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
         if (live && QRNG.draws[0] && QRNG.draws[0] !== shownDraw) {   // the newest 32-byte draw, as 256 bits
           shownDraw = QRNG.draws[0];
           for (let i = 0; i < 256; i++) ln.data[i * 4] = ((parseInt(shownDraw[i >> 2], 16) >> (3 - (i & 3))) & 1) * 255;
-          ln.tex.needsUpdate = true;
+          ln.tex.needsUpdate = true; ln.flash = 1;   // a new draw: the ring flashes
         }
+        if (live !== ln.plateLive) { ln.plateLive = live; ln.drawPlate(live); ln.ringM.color.set(live ? 0x6dffa8 : 0x5a6478); ln.haloM.color.copy(ln.ringM.color); }
+        ln.flash = Math.max(0, ln.flash - dt / 1.2);
+        const breathe = live ? 0.55 + 0.25 * Math.sin(t * (reduceMotion ? 0 : 2.2)) : 0.12;
+        ln.ringM.opacity = Math.min(1, breathe + ln.flash * 0.6); ln.haloM.opacity = (live ? 0.12 : 0.03) + ln.flash * 0.45;
         if (!live && t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
         if (Date.now() - QRNG.last > 60000) qrngRefill();   // fresh bytes about once a minute while you're in the lobby (rate-limited inside)
       } else if (t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
