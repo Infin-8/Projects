@@ -6053,12 +6053,14 @@ function buildOfficeWorld(p) {
     { d: '3 Nov 2026', t: 'Quantum V^ Platform', n: 'QRNG API and QES-256 · quantumv.dev', icon: 'assets/quantumv-logo.png' },
     { d: '3 Nov 2026', t: 'Quantum Hall', n: 'this building · hall.quantumv.dev', icon: 'assets/quantumv-logo.png' },
     { d: '11 Nov 2026', t: 'KaizenDoku 2.6.2', n: 'Co-op, Versus and Challenge in iMessage', icon: 'assets/kaizendoku-icon.png' },
-    { d: '18 Nov 2026', t: 'QES-256 seed v2', n: 'new seeds from IBM Quantum hardware', icon: 'assets/quantumv-logo.png' }];
+    { d: '18 Nov 2026', t: 'QES-256 seed v2', n: 'new IBM hardware seeds · shots on B1', icon: 'assets/quantumv-logo.png' },
+    { d: '18 Nov 2026', t: 'AI Workers room', n: 'Vee and Dr. Z, off the lobby', icon: 'assets/quantumv-logo.png' },
+    { d: '18 Nov 2026', t: 'The crystal Hall', n: 'crystal walls, glass, entropy pillars', icon: 'assets/quantumv-logo.png' }];
   const BUILDING = [
     { t: 'Recluda 1.0', n: 'coming soon · iPhone, iPad and Mac', c: '#1d3f9e' },
     { t: 'Recluda 1.1: site keys made on your device', n: 'the server only relays what it can’t read', c: '#1d3f9e' },
     { t: 'STEADYWATCH 2.2: guitar mode', n: 'chord practice with finger numbers · on TestFlight', c: '#11602e' },
-    { t: 'Live reseeding of QES-256 from ANU', n: 'a light-based quantum source, folded in daily', c: '#11602e' },
+    { t: 'Live reseeding of QES-256 from ANU', n: 'built · waiting on an API key from ANU', c: '#11602e' },
     { t: 'GOAL: Echo Resonance at 25 qubits on ibm_fez', n: 'validated on hardware so far: 7 qubits', c: '#b3261e' }];
   const wallZ = RZ1 - 0.06;
   // a glass pane for the back wall: faintly tinted, edges lit cyan, standing a few centimetres off the wall on four steel standoffs
@@ -6104,9 +6106,9 @@ function buildOfficeWorld(p) {
         if (img) { g.save(); g.shadowColor = '#5ff0ff'; g.shadowBlur = 18; rr(g, x - 34, top, 68, 68, 15); g.clip(); g.drawImage(img, x - 34, top, 68, 68); g.restore(); }
         g.textAlign = 'center';
         glowText(g, r.d.toUpperCase(), x, top + 112, '600 28px "IBM Plex Mono", monospace', '#5ff0ff', 8);
-        let px = 42; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.t).width > 400 && --px > 26);
+        let px = 42; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(r.t).width > 340 && --px > 24);
         glowText(g, r.t, x, top + 162, g.font, '#f1e6cf', 10);
-        let pn = 27; do { g.font = `${pn}px "IBM Plex Sans", sans-serif`; } while (g.measureText(r.n).width > 410 && --pn > 18);
+        let pn = 27; do { g.font = `${pn}px "IBM Plex Sans", sans-serif`; } while (g.measureText(r.n).width > 340 && --pn > 17);
         g.fillStyle = '#9fc3d6'; g.fillText(r.n, x, top + 202);
       });
       g.restore();
