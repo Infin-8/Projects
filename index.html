@@ -822,7 +822,7 @@ DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.
 // dark terrazzo slabs with faint joints in place of the checkerboard, and full-height wall panels in place of the
 // brick-like rows. The default keeps the old ones until this is chosen.
 const SURF_NEW = /[?&]surfaces=new\b/.test(location.search);
-const WALLS_MODE = (/[?&]walls=(lattice|open)\b/.exec(location.search) || [])[1] || null;   // see 'Crystal lattice walls'
+const WALLS_MODE = (/[?&]walls=(lattice|open|crystal)\b/.exec(location.search) || [])[1] || null;   // see 'Crystal lattice walls'
 function floorTex() {
   if (SURF_NEW) {   // one canvas = 4 m x 4 m: four 2 m slabs of dark terrazzo, joints barely there
     const c = mk(1024, 1024), g = c.getContext('2d');
@@ -1368,7 +1368,7 @@ function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
    solid crystal: dark and glassy, a Fresnel rim, faint facets, and the same lattice glowing inside it with parallax
    (sampled at several depths along your line of sight); a bright growth edge where it opens into lattice, which
    runs on to the ceiling on one world-aligned grid, so the inner and open lattice line up. open: the whole wall is
-   lattice. The lattice is face-centred cubic (the 3D cousin of
+   lattice. crystal: the whole wall is the quiet crystal, floor to ceiling, the lattice only inside it (no stars). The lattice is face-centred cubic (the 3D cousin of
    the Hurwitz lattice behind the entropy pools), built outward from each wall with depth so it shifts as you
    move: nodes as points twinkling in the shader, nearest-neighbour struts as lines, a starfield beyond. B2, the
    sealed server room, stays solid. Default: solid walls. */
@@ -1427,20 +1427,20 @@ const crystalFrag = `uniform float uTime, uFloorY, uA, uTop; varying vec3 vW; va
 const crystalMats = {};
 function crystalMat(F) {
   return crystalMats[F.id] || (crystalMats[F.id] = new THREE.ShaderMaterial({ side: THREE.DoubleSide, vertexShader: crystalVert, fragmentShader: crystalFrag,
-    uniforms: { uTime: latticeU.uTime, uFloorY: { value: F.y }, uA: { value: LATTICE_A }, uTop: { value: Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h) } } }));
+    uniforms: { uTime: latticeU.uTime, uFloorY: { value: F.y }, uA: { value: LATTICE_A }, uTop: { value: WALLS_MODE === 'crystal' ? -100 : Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h) } } }));   // crystal: no growth edge
 }
 function crystalWall(F, g, w, h, x, y, z, ry) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), crystalMat(F)); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m; }
 // a room's wall (the lobby annex): crystal in the lattice mode, panels otherwise
-function roomWall(F, g, w, h, x, y, z, ry) { return WALLS_MODE === 'lattice' ? crystalWall(F, g, w, h, x, y, z, ry) : wallAt(g, w, h, x, y, z, ry); }
+function roomWall(F, g, w, h, x, y, z, ry) { return WALLS_MODE === 'lattice' || WALLS_MODE === 'crystal' ? crystalWall(F, g, w, h, x, y, z, ry) : wallAt(g, w, h, x, y, z, ry); }
 // a wall rectangle (centre x, y, z), solid or lattice by WALLS_MODE
 function wallBand(F, g, w, h, x, y, z, ry) {
   const lo = y - h / 2, hi = y + h / 2, sealed = F.atrium === false;
-  const top = Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h);
+  const top = WALLS_MODE === 'crystal' ? Infinity : Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h);
   const cut = !WALLS_MODE || (sealed && WALLS_MODE === 'open') ? hi : WALLS_MODE === 'open' ? lo : Math.max(lo, Math.min(hi, top));
-  if (cut > lo + 1e-3) (WALLS_MODE === 'lattice' ? crystalWall(F, g, w, cut - lo, x, (lo + cut) / 2, z, ry) : wallAt(g, w, cut - lo, x, (lo + cut) / 2, z, ry));
+  if (cut > lo + 1e-3) (WALLS_MODE === 'lattice' || WALLS_MODE === 'crystal' ? crystalWall(F, g, w, cut - lo, x, (lo + cut) / 2, z, ry) : wallAt(g, w, cut - lo, x, (lo + cut) / 2, z, ry));
   if (hi > cut + 1e-3) latticePanel(g, w, hi - cut, x, (cut + hi) / 2, z, ry);
 }
-if (WALLS_MODE) {   // beyond the lattice: a faint starfield (no fog, so it shows through)
+if (WALLS_MODE === 'lattice' || WALLS_MODE === 'open') {   // beyond the lattice: a faint starfield (no fog, so it shows through)
   const n = 1600, sp = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = 70 + Math.random() * 30, q = Math.sqrt(1 - u * u); sp.set([Math.cos(th) * q * r, 8 + u * r * 0.6, Math.sin(th) * q * r], i * 3); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
