@@ -1558,10 +1558,10 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
 {
   const N = 480, R = 0.3, H = L1.h;
   const lanes = [
-    { x: L1.x0 + 0.5, z: 8, name: 'VAULT™', sub: 'p = 5 · pool', col: POOLS[0].color2 },   // the light tint, so it shows against the cyan glass
-    { x: L1.x1 - 0.5, z: 8, name: 'VIPER™', sub: 'p = 13 · pool', col: POOLS[1].color },
-    { x: L1.x0 + 0.5, z: 2.5, name: 'LOTUS™', sub: 'p = 17 · pool', col: POOLS[2].color },
-    { x: L1.x1 - 0.5, z: 2.5, name: 'QES-256', sub: 'the mix of all three', col: '#e8fdff', live: true }];
+    { x: L1.x0 + 0.5, z: 8, name: 'VAULT™', sub: 'p = 5 · 144 nodes', where: 'by the entrance, left', col: POOLS[0].color2 },   // the light tint, so it shows against the cyan glass
+    { x: L1.x1 - 0.5, z: 8, name: 'VIPER™', sub: 'p = 13 · 336 nodes', where: 'by the entrance, right', col: POOLS[1].color },
+    { x: L1.x0 + 0.5, z: 2.5, name: 'LOTUS™', sub: 'p = 17 · 432 nodes', where: 'by the lift, left', col: POOLS[2].color },
+    { x: L1.x1 - 0.5, z: 2.5, name: 'QES-256', sub: 'the mix of all three', where: 'by the lift, right', col: '#e8fdff', live: true }];
   const bitVert = `uniform float uTime, uH; uniform sampler2D uBits; attribute vec4 seed; varying float vOn; varying float vA;
     void main() {
       float y = mod(seed.y * uH + uTime * (0.45 + 0.35 * seed.w), uH), a = seed.x * 6.2832 + y * 0.9;
@@ -1586,16 +1586,45 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
       vertexShader: bitVert, fragmentShader: bitFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     const pts = new THREE.Points(geo, mat); pts.position.set(ln.x, 0, ln.z); pts.frustumCulled = false; L1.g.add(pts);
     // its label: etched glass at eye height on the pillar's lobby side
-    const c = mk(512, 128), g = c.getContext('2d'), lt = new THREE.CanvasTexture(c);
-    const draw = live => { etchedPlate(g, 512, 128, 10); g.textAlign = 'center'; etchText(g, ln.name, 256, 58, '34px "Young Serif", Georgia, serif');
-      etchText(g, ln.live && live ? 'LIVE · the mix of all three' : ln.sub, 256, 98, '600 20px "IBM Plex Mono", monospace', 0.6); lt.needsUpdate = true; };
-    draw(false);
-    const plate = etchedMesh(lt, 0.9, 0.225), side = ln.x < 0 ? 1 : -1;
-    plate.position.set(ln.x + side * 0.52, 1.55, ln.z); plate.rotation.y = side * Math.PI / 2; L1.g.add(plate);
-    ln.data = data; ln.tex = tex; ln.draw = draw; ln.wasLive = false; ln.next = 4 + li;
+    const c = mk(512, 128), g = c.getContext('2d');
+    etchedPlate(g, 512, 128, 10); g.textAlign = 'center'; etchText(g, ln.name, 256, 86, '66px "Young Serif", Georgia, serif');
+    const plate = etchedMesh(new THREE.CanvasTexture(c), 1.3, 0.325), side = ln.x < 0 ? 1 : -1;   // just the name, big enough to read across the lobby
+    plate.position.set(ln.x + side * 0.52, 2.2, ln.z); plate.rotation.y = side * Math.PI / 2; L1.g.add(plate);
+    ln.data = data; ln.tex = tex; ln.next = 4 + li;
   });
+  // the board that explains them: glass with glowing text on the east wall between VIPER™ and QES-256, across from the AI Workers doorway
+  const BW2 = 3.9, BH2 = BW2 * 1144 / 2048, BZ = 5.25, BX = L1.x1 - 0.14, BY = 2.55;
+  const bc = mk(2048, 1144), bg = bc.getContext('2d'), btex = new THREE.CanvasTexture(bc); btex.anisotropy = 8;
+  const glow = (text, x, y, font, col, blur) => { bg.font = font; bg.shadowColor = col; bg.shadowBlur = blur; bg.fillStyle = col; bg.fillText(text, x, y); bg.shadowBlur = 0; bg.fillStyle = 'rgba(255,255,255,0.45)'; bg.fillText(text, x, y); };
+  const drawBoard = (live, hex) => {
+    bg.clearRect(0, 0, 2048, 1144); bg.fillStyle = 'rgba(18,55,72,0.3)'; bg.fillRect(0, 0, 2048, 1144);
+    const sh = bg.createLinearGradient(0, 0, 2048, 1144); sh.addColorStop(0, 'rgba(255,255,255,0.06)'); sh.addColorStop(0.4, 'rgba(255,255,255,0)'); bg.fillStyle = sh; bg.fillRect(0, 0, 2048, 1144);
+    bg.textAlign = 'left';
+    glow('THE PILLARS', 90, 112, '600 46px "IBM Plex Mono", monospace', '#5ff0ff', 10);
+    glow('Entropy, rising', 90, 236, '120px "Young Serif", Georgia, serif', '#f1e6cf', 18);
+    bg.fillStyle = '#d6ecf3'; bg.font = '50px "IBM Plex Sans", sans-serif';
+    wrapText(bg, 'Bits rise from B1, where entropy is measured, toward the pools on L3. Bright is 1, faint is 0.', 90, 322, 1880, 62);
+    lanes.forEach((ln, i) => {
+      const y = 540 + i * 150;
+      bg.save(); bg.shadowColor = ln.col; bg.shadowBlur = 30; bg.fillStyle = ln.col; bg.beginPath(); bg.arc(122, y - 22, 26, 0, Math.PI * 2); bg.fill(); bg.restore();
+      glow(ln.name, 180, y, '80px "Young Serif", Georgia, serif', ln.col, 16);
+      bg.fillStyle = '#9fc3d6'; bg.font = '600 38px "IBM Plex Mono", monospace'; bg.fillText(ln.where.toUpperCase(), 720, y - 22);
+      bg.fillStyle = '#d6ecf3'; bg.font = '44px "IBM Plex Sans", sans-serif';
+      const note = ln.live ? (live ? 'live draw ' + hex.slice(0, 16) + '…' : 'the mix of all three · waiting for live data') : ln.sub + ' · random bits, for show';
+      bg.fillText(note, 720, y + 36);
+      if (ln.live && live) { glow('LIVE', 1800, y - 8, '600 52px "IBM Plex Mono", monospace', '#6dffa8', 16); }
+    });
+    btex.needsUpdate = true;
+  };
+  drawBoard(false, '');
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(BW2, BH2), new THREE.MeshBasicMaterial({ map: btex, transparent: true, depthWrite: false }));
+  board.position.set(BX, BY, BZ); board.rotation.y = -Math.PI / 2; L1.g.add(board);
+  glassFrame(L1.g, BW2, BH2, BX, BY, BZ, -Math.PI / 2, 0.06, 0.12);
+  let boardLive = null, boardDraw = '';
   buildingUpdates.push((dt, t) => {
     if (!L1.g.visible) return;
+    const live = qrngLive();
+    if (live !== boardLive || (live && shownDraw !== boardDraw)) { boardLive = live; boardDraw = shownDraw; drawBoard(live, shownDraw); }
     for (const ln of lanes) {
       if (ln.live) {
         const live = qrngLive();
@@ -1604,7 +1633,6 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
           for (let i = 0; i < 256; i++) ln.data[i * 4] = ((parseInt(shownDraw[i >> 2], 16) >> (3 - (i & 3))) & 1) * 255;
           ln.tex.needsUpdate = true;
         }
-        if (live !== ln.wasLive) { ln.wasLive = live; ln.draw(live); }
         if (!live && t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
         if (Date.now() - QRNG.last > 60000) qrngRefill();   // fresh bytes about once a minute while you're in the lobby (rate-limited inside)
       } else if (t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
