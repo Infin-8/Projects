@@ -1289,7 +1289,28 @@ function drawFaceScan(g, cx, cy, s) {
   g.beginPath(); g.arc(cx, cy + half * 0.02, half * 0.42, 160 * Math.PI / 180, 20 * Math.PI / 180, true); g.stroke();
 }
 // mark: optionally draws an emblem at the plaque's left (mark(g, cx, cy, size)), and the text moves over beside it
+/* Glass displays (rolling out floor by floor since 2026-11-18): no gold or dark bezels; a pane of tinted glass a
+   little wider than the display, its edges lit cyan, standing off the wall on four steel standoffs. Dense displays
+   keep their dark solid screen inside the pane (smoked); text-light signs are clear glass with glowing letters.
+   Add a floor's id to GLASS_FLOORS when its pass is done. The Quantum V^ platform exhibit keeps its gold. */
+const GLASS_FLOORS = new Set(['l1']);
+const glassy = g => FLOORS.some(F => F.g === g && GLASS_FLOORS.has(F.id));
+const glassPaneMat = new THREE.MeshBasicMaterial({ color: 0x123848, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
+const glassEdgeMat = new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6 });
+const glassSteel = new THREE.MeshStandardMaterial({ color: 0xb8bec8, metalness: 0.85, roughness: 0.25 });
+// the glass behind a w x h display centred at (x, y, z) facing ry (its front is local +z); margin m; standoffs reach `back` to the wall
+function glassFrame(g, w, h, x, y, z, ry, m = 0.07, back = 0.07) {
+  const G = new THREE.Group(); G.position.set(x, y, z); G.rotation.y = ry; g.add(G);
+  const pg = new THREE.PlaneGeometry(w + 2 * m, h + 2 * m), pane = new THREE.Mesh(pg, glassPaneMat); pane.position.z = -0.008; G.add(pane);
+  const ed = new THREE.LineSegments(new THREE.EdgesGeometry(pg), glassEdgeMat); ed.position.z = -0.008; G.add(ed);
+  for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, back, 14), glassSteel); st.rotation.x = Math.PI / 2;
+    st.position.set(sx * (w / 2 + m - 0.1), sy * (h / 2 + m - 0.1), -0.008 - back / 2); G.add(st);
+  }
+  return G;
+}
 function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
+  if (glassy(g)) return glassSign(g, eyebrow, title, x, y, z, ry, w, mark);
   const sc = mk(1024, 200), sg = sc.getContext('2d'), tx = mark ? 600 : 512, tw = mark ? 760 : 940;
   sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
   if (mark) mark(sg, 112, 100, 148);
@@ -1297,6 +1318,21 @@ function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
   let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > tw && --px > 30); sg.fillText(title, tx, 158);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
   sign.position.set(x, y, z); sign.rotation.y = ry; g.add(sign); return sign;
+}
+function glassSign(g, eyebrow, title, x, y, z, ry, w, mark) {   // floorSign on a glass floor: clear glass, letters glowing
+  const sc = mk(1024, 200), sg = sc.getContext('2d'), tx = mark ? 600 : 512, tw = mark ? 760 : 940;
+  sg.fillStyle = 'rgba(18,55,72,0.3)'; rr(sg, 6, 6, 1012, 188, 20); sg.fill();
+  sg.strokeStyle = 'rgba(95,240,255,0.75)'; sg.lineWidth = 4; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
+  if (mark) mark(sg, 112, 100, 148);
+  sg.textAlign = 'center';
+  const glow = (text, yy, font, col, blur) => { sg.font = font; sg.shadowColor = col; sg.shadowBlur = blur; sg.fillStyle = col; sg.fillText(text, tx, yy); sg.shadowBlur = 0; sg.fillStyle = 'rgba(255,255,255,0.5)'; sg.fillText(text, tx, yy); };
+  glow(eyebrow, 76, '600 32px "IBM Plex Mono", monospace', '#5ff0ff', 10);
+  let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > tw && --px > 30);
+  glow(title, 158, sg.font, '#f1e6cf', 16);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+  sign.position.set(x, y, z); sign.rotation.y = ry; sign.translateZ(0.04); g.add(sign);   // a few centimetres off the wall
+  for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.05, 12), glassSteel); st.rotation.x = Math.PI / 2; st.position.set(sx * (w / 2 - 0.15), 0, -0.025); sign.add(st); }
+  return sign;
 }
 
 /* ---------- The crystal hall (the default since 2026-11-18) ----------
@@ -1526,11 +1562,8 @@ const slitUpdates = [];
   // panels either side of the barrier, facing into the lobby
   const panel = (tex, x) => {
     const pw = 2.9, ph = 2.175, m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), new THREE.MeshBasicMaterial({ map: tex }));
-    m.position.set(x, 2.3, SLIT.z - 0.06); m.rotation.y = Math.PI; g.add(m);
-    const ft = 0.16;
-    [[pw + ft * 2, ft, 0, ph / 2 + ft / 2], [pw + ft * 2, ft, 0, -ph / 2 - ft / 2], [ft, ph, pw / 2 + ft / 2, 0], [ft, ph, -pw / 2 - ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
-      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(x + fx, 2.3 + fy, SLIT.z - 0.05); g.add(f);
-    });
+    m.position.set(x, 2.3, SLIT.z - 0.14); m.rotation.y = Math.PI; g.add(m);
+    glassFrame(g, pw, ph, x, 2.3, SLIT.z - 0.14, Math.PI, 0.08, 0.13);   // glass, standing off the wall
   };
   // the caption, on your right as you face the entrance
   const cc = mk(768, 576), c = cc.getContext('2d');
@@ -1588,7 +1621,8 @@ for (const HERE of FLOORS) {
   const W = 2.3, H = W * 1024 / 768, gd = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
   const gz = LIFT.z + LIFT.r + 2.0;
   gd.position.set(HERE.x1 - 0.08, 2.4, gz); gd.rotation.y = -Math.PI / 2; HERE.g.add(gd);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(HERE.x1 - 0.04, 2.4, gz); HERE.g.add(fr);
+  if (GLASS_FLOORS.has(HERE.id)) { gd.position.x -= 0.06; glassFrame(HERE.g, W, H, gd.position.x, 2.4, gz, -Math.PI / 2, 0.06, 0.07); }
+  else { const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(HERE.x1 - 0.04, 2.4, gz); HERE.g.add(fr); }
 }
 // the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
 const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
@@ -1938,7 +1972,8 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
   if (foot) { p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText(foot, 48, 530); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.75), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
   m.position.set(x, y, z); m.rotation.y = ry; g.add(m);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, w * 0.75 + 0.12, 0.06), colMat); fr.position.copy(m.position); fr.rotation.y = ry; fr.translateZ(-0.04); g.add(fr);
+  if (glassy(g)) { m.translateZ(0.06); glassFrame(g, w, w * 0.75, m.position.x, y, m.position.z, ry, 0.06, 0.06); }
+  else { const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, w * 0.75 + 0.12, 0.06), colMat); fr.position.copy(m.position); fr.rotation.y = ry; fr.translateZ(-0.04); g.add(fr); }
   return m;
 }
 // the story, left to right on the far wall: cold, measure, key
@@ -4109,7 +4144,7 @@ function buildAskVeeWall() {
   g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('OR ASK HER RIGHT HERE · SHE ANSWERS FROM QUANTUM V^ RESEARCH', 1100, 1170);
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); panel.position.set(X, CY, CZ); panel.rotation.y = Math.PI / 2; L1.g.add(panel);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, PH + 0.14, PW + 0.14), gold); fr.position.set(L1.x0 + 0.03, CY, CZ); L1.g.add(fr);
+  glassFrame(L1.g, PW, PH, X, CY, CZ, Math.PI / 2, 0.08, 0.09);   // glass, standing off the wall
   const glow = new THREE.PointLight(0x5ff0ff, 0.5, 6, 2); glow.position.set(X + 1.6, CY, CZ); L1.g.add(glow);
   // each code is something to walk up to: its centre on the wall, facing into the lobby
   ASK_VEE_LINKS.forEach((it, i) => {
