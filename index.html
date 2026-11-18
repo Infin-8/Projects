@@ -1561,6 +1561,18 @@ const L1 = FLOORS[FI.l1];
 // a lattice pillar (?walls=): rings of nodes, each turned half a step from the one below, joined by ring struts
 // and diagonals into a triangulated tower, tapering from r0 at the floor to r1 at the top
 const pillarLineMat = new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.38, depthWrite: false, blending: THREE.AdditiveBlending });
+// the glass in each triangle: flat facets, a faint teal body, brighter at grazing angles, tinted by facet angle
+const pillarGlassMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  vertexShader: `varying vec3 vW; varying vec3 vN; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float uTime; varying vec3 vW; varying vec3 vN;
+    void main() {
+      vec3 V = normalize(cameraPosition - vW), N = normalize(vN); if (!gl_FrontFacing) N = -N;
+      float fres = pow(1.0 - abs(dot(N, V)), 2.5);
+      float facet = 0.5 + 0.5 * sin(dot(N, vec3(3.1, 1.7, 2.3)) * 3.0);                           // each facet its own shade
+      float shimmer = 0.85 + 0.15 * sin(uTime * 0.8 + vW.y * 1.6 + dot(N, vec3(1.0, 0.0, 1.0)) * 2.0);
+      vec3 col = mix(vec3(0.10, 0.42, 0.55), vec3(0.45, 0.95, 1.0), fres) * (0.55 + 0.45 * facet) * shimmer;
+      gl_FragColor = vec4(col, (0.16 + 0.5 * fres) * (0.8 + 0.2 * facet));
+    }` });
 function latticePillar(g, x, z, h, r0, r1, n = 8, step = 0.32) {
   const rings = Math.max(2, Math.round(h / step)), P = [], L = [], seed = [];
   for (let i = 0; i <= rings; i++) {
@@ -1575,6 +1587,11 @@ function latticePillar(g, x, z, h, r0, r1, n = 8, step = 0.32) {
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(P.flat(), 3)); pg.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
   const pts = new THREE.Points(pg, latticeNodeMat); pts.frustumCulled = false; g.add(pts);
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(L, 3)); g.add(new THREE.LineSegments(lg, pillarLineMat));
+  // glass in every triangle between two rings: (A[k], A[k+1], B[k+d]) and (A[k+1], B[k+d], B[k+d+1]), d = this ring's half-step
+  const T = [];
+  for (let i = 0; i < rings; i++) { const d = i % 2; for (let k = 0; k < n; k++) T.push(...at(i, k), ...at(i, k + 1), ...at(i + 1, k + d), ...at(i, k + 1), ...at(i + 1, k + d + 1), ...at(i + 1, k + d)); }
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(T, 3)); tg.computeVertexNormals();   // unindexed: flat facets
+  const glass = new THREE.Mesh(tg, pillarGlassMat); glass.renderOrder = -1; g.add(glass);   // drawn before the lines and nodes, so they glow over it
 }
 const COLS_Z = [8, 2.5];
 for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
