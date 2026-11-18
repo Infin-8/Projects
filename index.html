@@ -3117,7 +3117,8 @@ void main() {
 
 /* ---------- Light paths ----------
    Light seams inlaid in the floor (since 2026-11-18, in place of glowing carpets and photons): on L1 two lines
-   along the main runner from the entrance to the Quantum V^ Platform display and one to the lift; on every
+   along the main runner from the entrance to the Quantum V^ Platform display, one to the lift and one into the
+   AI Workers room, along its podiums; on every
    other floor, one line out of the lift to each display. A slow pulse runs along them toward where they
    lead, animated in the shader (one uniform, no per-frame JavaScript). When you're walking somewhere, your
    route on this floor lights up as its own brighter seam (showRoute) and fades when you arrive. */
@@ -3128,6 +3129,8 @@ const LIGHT_PATHS = (() => {
   const plat = PROJECTS.find(q => q.id === 'platform'), front = ATRIUM.z + ATRIUM.r + 0.6;
   add(FI.l1, 0, L1.z1 - 0.6, 0, plat.pos[2] + 3.4, PATH_W.main);
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
+  { const A = L1.annex, zd = A.door.z, px = AI_LAB.x + 1.3;   // to the AI Workers room: across the lobby, through its doorway, then along the podiums
+    add(FI.l1, -PATH_W.main / 2, zd, px, zd); add(FI.l1, px, zd, px, AI_LAB.zs[0] - 0.4); add(FI.l1, px, zd, px, AI_LAB.zs[AI_LAB.zs.length - 1] + 0.4); }
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
