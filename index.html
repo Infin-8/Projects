@@ -1378,7 +1378,7 @@ const CRYSTAL_TOP = { b2: Infinity }, CRYSTAL_TOP_DEFAULT = 3.8;
 const latticeU = { uTime: { value: 0 } };
 const latticeNodeMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   vertexShader: `attribute float aSeed; uniform float uTime; varying float vA;
-    void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = 42.0 / -mv.z;
+    void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = 26.0 / -mv.z;
       vA = (0.4 + 0.6 * (0.5 + 0.5 * sin(uTime * 1.2 + aSeed * 6.283))) * clamp(1.0 - (-mv.z - 12.0) / 30.0, 0.15, 1.0); }`,
   fragmentShader: `varying float vA; void main() { float r = length(gl_PointCoord - 0.5); if (r > 0.5) discard; gl_FragColor = vec4(vec3(0.37, 0.94, 1.0) * smoothstep(0.5, 0.0, r) * vA, 1.0); }` });
 const latticeLineMat = new THREE.LineBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -1410,7 +1410,7 @@ const crystalFrag = `uniform float uTime, uFloorY, uA, uTop, uLayers; varying ve
     vec3 r = floor(x + 0.5); if (mod(r.x + r.y + r.z, 2.0) > 0.5) { vec3 e = x - r, ae = abs(e);
       if (ae.x >= ae.y && ae.x >= ae.z) r.x += sign(e.x); else if (ae.y >= ae.z) r.y += sign(e.y); else r.z += sign(e.z); }
     return r; }
-  float node(vec3 p) { vec3 x = p / (uA * 0.5); float d = length(x - nearestFCC(x)) * uA * 0.5; return exp(-d * d / 0.006); }
+  float node(vec3 p) { vec3 x = p / (uA * 0.5); float d = length(x - nearestFCC(x)) * uA * 0.5; return exp(-d * d / 0.0025); }   // node size inside the crystal (smaller: 0.0025)
   void main() {
     vec3 V = normalize(vW - cameraPosition), N = normalize(vN), p = vW - vec3(0.0, uFloorY, 0.0);
     // the lattice deep inside, set back from the surface (0.8 to 3 m along your line of sight) so you look into the
