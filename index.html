@@ -1307,12 +1307,10 @@ function drawFaceScan(g, cx, cy, s) {
   g.beginPath(); g.arc(cx, cy + half * 0.02, half * 0.42, 160 * Math.PI / 180, 20 * Math.PI / 180, true); g.stroke();
 }
 // mark: optionally draws an emblem at the plaque's left (mark(g, cx, cy, size)), and the text moves over beside it
-/* Glass displays (rolling out floor by floor since 2026-11-18): no gold or dark bezels; a pane of tinted glass a
+/* Glass displays (since 2026-11-18): no gold or dark bezels; a pane of tinted glass a
    little wider than the display, its edges lit cyan, standing off the wall on four steel standoffs. Dense displays
    keep their dark solid screen inside the pane (smoked); text-light signs are clear glass with glowing letters.
-   Add a floor's id to GLASS_FLOORS when its pass is done. The Quantum V^ platform exhibit keeps its gold. */
-const GLASS_FLOORS = new Set(['l1']);
-const glassy = g => FLOORS.some(F => F.g === g && GLASS_FLOORS.has(F.id));
+   Used on every floor; big art displays get crystal frames instead (see 'Crystal frames'). */
 const glassPaneMat = new THREE.MeshBasicMaterial({ color: 0x123848, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
 const glassEdgeMat = new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.6 });
 const glassSteel = new THREE.MeshStandardMaterial({ color: 0xb8bec8, metalness: 0.85, roughness: 0.25 });
@@ -1502,6 +1500,36 @@ const pillarGlassMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparen
       vec3 col = mix(vec3(0.10, 0.42, 0.55), vec3(0.45, 0.95, 1.0), fres) * (0.55 + 0.45 * facet) * shimmer;
       gl_FragColor = vec4(col, (0.24 + 0.5 * fres) * (0.8 + 0.2 * facet));   // a little more body now that it stands alone
     }` });
+/* Crystal frames (since 2026-11-18, in place of gold): every display frame, the pillar caps and bases and the
+   doorway trims are solid faceted crystal, the pillars' glass with more body, with a faint amber line of light
+   running inside each bar: the Hall's one warm accent, now as light rather than metal. Gold stays only on
+   hardware that really is gilded (the cryostat's plates, pins and chip lids in the worlds). */
+const crystalFrameMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false,
+  vertexShader: pillarGlassMat.vertexShader,
+  fragmentShader: `uniform float uTime; varying vec3 vW; varying vec3 vN;
+    void main() {
+      vec3 V = normalize(cameraPosition - vW), N = normalize(vN);
+      float fres = pow(1.0 - abs(dot(N, V)), 2.0);
+      float facet = 0.5 + 0.5 * sin(dot(N, vec3(3.1, 1.7, 2.3)) * 3.0);
+      float shimmer = 0.88 + 0.12 * sin(uTime * 0.7 + vW.y * 1.3 + vW.x * 0.9);
+      vec3 col = mix(vec3(0.08, 0.30, 0.40), vec3(0.62, 0.97, 1.0), fres) * (0.6 + 0.4 * facet) * shimmer;
+      gl_FragColor = vec4(col, 0.42 + 0.5 * fres);
+    }` });
+const amberMat = new THREE.MeshBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 0.85 });
+// one bar of crystal (a box fw x fh x fd centred at x, y, z) with its amber line along its length, reaching into the bars it meets
+function crystalBar(g, fw, fh, fd, x, y, z) {
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, fd), crystalFrameMat); bar.position.set(x, y, z); g.add(bar);
+  const t = 0.022, dims = [fw, fh, fd], k = dims.indexOf(Math.max(...dims));
+  const len = k === 1 ? fh + Math.min(fw, fd) : dims[k] - (k === 0 ? fh : fw), sd = [t, t, t]; sd[k] = Math.max(len, t);
+  const line = new THREE.Mesh(new THREE.BoxGeometry(...sd), amberMat); line.position.set(x, y, z); g.add(line);
+  return bar;
+}
+// a crystal frame round a w x h opening centred at (cx, cy), bars ft wide and fd deep at depth z
+function crystalFrame(g, w, h, ft, fd, cx, cy, z, bottom = true) {
+  const bars = [[w + ft * 2, ft, 0, h / 2 + ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]];
+  if (bottom) bars.push([w + ft * 2, ft, 0, -h / 2 - ft / 2]);
+  for (const [fw, fh, fx, fy] of bars) crystalBar(g, fw, fh, fd, cx + fx, cy + fy, z);
+}
 function latticePillar(g, x, z, h, r0, r1, n = 8, step = 0.32) {
   const rings = Math.max(2, Math.round(h / step)), P = [];
   for (let i = 0; i <= rings; i++) {
@@ -1518,8 +1546,10 @@ function latticePillar(g, x, z, h, r0, r1, n = 8, step = 0.32) {
 const COLS_Z = [8, 2.5];
 for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
   latticePillar(L1.g, x, z, L1.h, 0.45, 0.38);   // faceted glass
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), gold); cap.position.set(x, L1.h - 0.15, z); L1.g.add(cap);
-  const base = cap.clone(); base.position.y = 0.15; L1.g.add(base);
+  for (const y of [0.15, L1.h - 0.15]) {   // crystal blocks, top and bottom, with a ring of amber light where the glass meets them
+    const blk = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.3, 1.1), crystalFrameMat); blk.position.set(x, y, z); L1.g.add(blk);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.014, 6, 48), amberMat); ring.rotation.x = Math.PI / 2; ring.position.set(x, y < 1 ? 0.31 : L1.h - 0.31, z); L1.g.add(ring);
+  }
 }
 // The entrance is Young's double slit: you arrive through a dark barrier cut by two tall lit slits.
 // On the floor in front of it, the two waves from the slits add up (the real two-source pattern),
@@ -1530,9 +1560,7 @@ const slitUpdates = [];
 {
   const g = L1.g, bz = SLIT.z - 0.05, BW = 4.6, BH = 4.4;
   const barrier = new THREE.Mesh(new THREE.BoxGeometry(BW, BH, 0.1), colMat); barrier.position.set(0, BH / 2, bz); g.add(barrier);
-  [[BW + 0.4, 0.2, 0, BH + 0.1], [0.2, BH + 0.2, -BW / 2 - 0.1, BH / 2], [0.2, BH + 0.2, BW / 2 + 0.1, BH / 2]].forEach(([w, h, x, y]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.14), gold); f.position.set(x, y, bz - 0.02); g.add(f);
-  });
+  [[BW + 0.4, 0.2, 0, BH + 0.1], [0.2, BH + 0.2, -BW / 2 - 0.1, BH / 2], [0.2, BH + 0.2, BW / 2 + 0.1, BH / 2]].forEach(([w, h, x, y]) => crystalBar(g, w, h, 0.14, x, y, bz - 0.02));
   // the slits: bright light pouring through, with a soft halo either side
   const hc = mk(128, 512), hg = hc.getContext('2d'), hgr = hg.createLinearGradient(0, 0, 128, 0);
   hgr.addColorStop(0, 'rgba(95,240,255,0)'); hgr.addColorStop(0.5, 'rgba(160,250,255,0.9)'); hgr.addColorStop(1, 'rgba(95,240,255,0)');
@@ -1626,8 +1654,7 @@ for (const HERE of FLOORS) {
   const W = 2.3, H = W * 1024 / 768, gd = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
   const gz = LIFT.z + LIFT.r + 2.0;
   gd.position.set(HERE.x1 - 0.08, 2.4, gz); gd.rotation.y = -Math.PI / 2; HERE.g.add(gd);
-  if (GLASS_FLOORS.has(HERE.id)) { gd.position.x -= 0.06; glassFrame(HERE.g, W, H, gd.position.x, 2.4, gz, -Math.PI / 2, 0.06, 0.07); }
-  else { const fr = new THREE.Mesh(new THREE.BoxGeometry(0.06, H + 0.14, W + 0.14), gold); fr.position.set(HERE.x1 - 0.04, 2.4, gz); HERE.g.add(fr); }
+  gd.position.x -= 0.06; glassFrame(HERE.g, W, H, gd.position.x, 2.4, gz, -Math.PI / 2, 0.06, 0.07);
 }
 // the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
 const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
@@ -1977,8 +2004,7 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
   if (foot) { p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.fillText(foot, 48, 530); }
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.75), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
   m.position.set(x, y, z); m.rotation.y = ry; g.add(m);
-  if (glassy(g)) { m.translateZ(0.06); glassFrame(g, w, w * 0.75, m.position.x, y, m.position.z, ry, 0.06, 0.06); }
-  else { const fr = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, w * 0.75 + 0.12, 0.06), colMat); fr.position.copy(m.position); fr.rotation.y = ry; fr.translateZ(-0.04); g.add(fr); }
+  m.translateZ(0.06); glassFrame(g, w, w * 0.75, m.position.x, y, m.position.z, ry, 0.06, 0.06);
   return m;
 }
 // the story, left to right on the far wall: cold, measure, key
@@ -2424,9 +2450,7 @@ for (const z of [-6.5]) {
   x.fillStyle = '#8e99b0'; x.font = '40px "Young Serif", Georgia, serif'; x.fillText('Coming soon', 256, 296);
   const face = new THREE.Mesh(new THREE.PlaneGeometry(S, S), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); face.position.z = 0.06; g.add(face);
   const ft = 0.24;
-  [[S + ft * 2, ft, 0, S / 2 + ft / 2], [S + ft * 2, ft, 0, -S / 2 - ft / 2], [ft, S, -S / 2 - ft / 2, 0], [ft, S, S / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.16), gold); f.position.set(fx, fy, 0.08); g.add(f);
-  });
+  crystalFrame(g, S, S, ft, 0.16, 0, 0, 0.08);
 }
 
 // Beside each app: a phone on a stand, cycling through its App Store screenshots (tap it to open the
@@ -2557,8 +2581,8 @@ function buildAILab() {
     const za = D.z - D.w / 2, zb = D.z + D.w / 2, ex = A.x1 - 0.02;   // the lobby wall, seen from inside the room
     roomWall(F, g, za - A.z0, A.h, ex, A.h / 2, (A.z0 + za) / 2, -Math.PI / 2); roomWall(F, g, A.z1 - zb, A.h, ex, A.h / 2, (zb + A.z1) / 2, -Math.PI / 2);
     roomWall(F, g, D.w, A.h - D.h, ex, D.h + (A.h - D.h) / 2, D.z, -Math.PI / 2);
-    for (const z of [za, zb]) { const j = new THREE.Mesh(new THREE.BoxGeometry(0.34, D.h, 0.08), gold); j.position.set(A.x1, D.h / 2, z); g.add(j); }   // a gold frame round the doorway
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.08, D.w + 0.16), gold); top.position.set(A.x1, D.h, D.z); g.add(top);
+    for (const z of [za, zb]) crystalBar(g, 0.34, D.h, 0.08, A.x1, D.h / 2, z);   // a crystal frame round the doorway
+    crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x1, D.h, D.z);
     for (const x of [A.x0 + 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(x, 0.9, cz); g.add(b); }
     for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
     const L = new THREE.PointLight(0xdfe8ff, 0.9, 12, 2); L.position.set(cx, A.h - 1, cz); g.add(L);
@@ -2708,9 +2732,7 @@ function buildRecludaWall() {
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(2.5, y, z - 0.01); m.rotation.y = Math.PI; F.g.add(m);
   const ft = 0.14;
-  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.1), gold); f.position.set(2.5 + fx, y + fy, z - 0.04); F.g.add(f);
-  });
+  crystalFrame(F.g, w, h, ft, 0.1, 2.5, y, z - 0.04);
   RECLUDA_WALL.stop = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(2.5, F.y + y, F.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: 0.1 };
   hallLinks.push({ mesh: m, url: RECLUDA_WALL.url, floor: FI.b2, stop: RECLUDA_WALL.stop });
 }
@@ -2766,10 +2788,8 @@ function buildPlatformWall() {
   });
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(0, y, z + 0.04); F.g.add(m);
-  const ft = 0.16;   // a gold frame, like the paintings'
-  [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, fx, fy]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.12), gold); f.position.set(fx, y + fy, z + 0.06); F.g.add(f);
-  });
+  const ft = 0.16;   // a crystal frame, like the paintings'
+  crystalFrame(F.g, w, h, ft, 0.12, 0, y, z + 0.06);
   PLATFORM_WALL.stop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(0, F.y + y, z), normal: new THREE.Vector3(0, 0, 1), standOff: 3.9, pitch: 0.3 };   // between the wall and the atrium railing, looking up at it
   hallLinks.push({ mesh: m, url: PLATFORM_WALL.url, floor: FI.l3, stop: PLATFORM_WALL.stop });
 }
@@ -3096,7 +3116,6 @@ function updateQuantum(dt, t) {
 
 /* ---------- Paintings ---------- */
 const paintings = [];
-const frameMat = gold;
 function buildPaintings() {
   [...PROJECTS, ...WING_PROJECTS].forEach(p => {
     const art = p.id === 'platform' ? mk() : mk(1024, 1024); DRAW[p.id](art, LOGOS[p.logo], p);
@@ -3109,9 +3128,7 @@ function buildPaintings() {
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h, 96, 72), mat);
     mesh.position.z = 0.06; mesh.userData.project = p; group.add(mesh);
     const ft = 0.28, fd = 0.18;
-    [[w + ft * 2, ft, 0, h / 2 + ft / 2], [w + ft * 2, ft, 0, -h / 2 - ft / 2], [ft, h, -w / 2 - ft / 2, 0], [ft, h, w / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
-      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, fd), frameMat); f.position.set(x, y, 0.09); group.add(f);
-    });
+    crystalFrame(group, w, h, ft, fd, 0, 0, 0.09);
     if (p.stand) {   // freestanding: a dark back, and a plinth it stands on
       const back = new THREE.Mesh(new THREE.BoxGeometry(w + ft * 2, h + ft * 2, 0.12), colMat); back.position.z = -0.02; group.add(back);
       const ph = p.pos[1] - h / 2 - ft, plinth = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, ph, 0.7), colMat); plinth.position.set(0, -h / 2 - ft - ph / 2, -0.32); group.add(plinth);
@@ -3816,7 +3833,7 @@ const RC = { dockX: -4.18, techX: 2.16 };   // the dock's and the technical page
 function buildReception() {
   const L4 = FLOORS[FI.l4];
   // her Nesting Station on the south wall, ending at the office door: the dock (where her micro-drones rest and
-  // recharge), her user manual and her technical description, side by side in one gold frame
+  // recharge), her user manual and her technical description, side by side in one crystal frame
   const nestG = new THREE.Group(); nestG.position.set(0, 0, L4.z1 - 0.04); nestG.rotation.y = Math.PI; L4.g.add(nestG);   // faces into the floor
   const dockG = new THREE.Group(); dockG.position.x = RC.dockX; nestG.add(dockG);   // the dock's own frame of reference
   const deskMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.35 });
@@ -3840,9 +3857,7 @@ function buildReception() {
   }
   drawHex(0);
   const hexPanel = new THREE.Mesh(new THREE.PlaneGeometry(NW, NH), new THREE.MeshBasicMaterial({ map: hexTex })); hexPanel.position.set(0, NY, 0.03); dockG.add(hexPanel);
-  [[0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => {   // side posts; the rails over and under are shared with her manual, below
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); dockG.add(f);
-  });
+  [[0.12, NH, NW / 2 + 0.06, 0], [0.12, NH, -NW / 2 - 0.06, 0]].forEach(([fw, fh, x, y]) => crystalBar(dockG, fw, fh, 0.14, x, NY + y, 0.05));   // side posts; the rails over and under are shared with her manual, below
   const nestLabel = stationLabel('VEE · RECEPTION', 'Nesting Station'); nestLabel.scale.multiplyScalar(0.48); nestLabel.position.set(0, NY + NH / 2 + 0.42, 0.1); dockG.add(nestLabel);
   // parked drones resting in the cells
   const parkU = { uTime: { value: 0 }, uDim: { value: 1 }, uGlow: { value: 0 }, uPx: { value: 800 }, uSize: { value: 0.012 }, uScatter: { value: 0 }, uColor: { value: new THREE.Color(0x8ff7ff) } };
@@ -3978,13 +3993,11 @@ function buildReception() {
     g.textAlign = 'right'; g.fillText('P. 2', 1740, 1140); g.textAlign = 'left';
     const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
     const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); dockG.add(page2);
-    // one gold rail across the top of all three, passing over the office door; bottom rails and posts frame each side
+    // one crystal rail across the top of all three, passing over the office door; bottom rails and posts frame each side
     const x0 = -NW / 2 - 0.12, x1 = PX2 + PW / 2 + 0.12;   // dock, manual and page 2 side by side: one frame round all three
     for (const bx of [PX, PX2]) { const back = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x05080d })); back.position.set(bx, NY, 0.02); dockG.add(back); }
     [[x1 - x0, 0.12, (x0 + x1) / 2, NH / 2 + 0.06], [x1 - x0, 0.12, (x0 + x1) / 2, -NH / 2 - 0.06],
-     [0.12, NH, PX + PW / 2 + 0.06, 0], [0.12, NH, x1 - 0.06, 0]].forEach(([fw, fh, x, y]) => {
-      const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.14), gold); f.position.set(x, NY + y, 0.05); dockG.add(f);
-    });
+     [0.12, NH, PX + PW / 2 + 0.06, 0], [0.12, NH, x1 - 0.06, 0]].forEach(([fw, fh, x, y]) => crystalBar(dockG, fw, fh, 0.14, x, NY + y, 0.05));
     nestLabel.position.x = 0;   // over the dock
   }
   let nested = false, explained = false;
@@ -4018,7 +4031,7 @@ function buildReception() {
     sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
   });
 
-  // the reception desk: a curved counter in front of her dock, dark metal with a lit edge and a gold top rail; she rests behind it
+  // the reception desk: a curved counter in front of her dock, dark metal with a lit edge and an amber top rail; she rests behind it
   {
     const DXw = -RC.dockX, DZ = L4.z1 - 1.75, DR = 1.25, ARC = 1.9;   // centre on the floor, radius, how much of a circle
     const metal = new THREE.MeshStandardMaterial({ color: 0x141a26, metalness: 0.7, roughness: 0.35 });
@@ -4026,7 +4039,7 @@ function buildReception() {
     const front = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, 1.0, 64, 1, true, -ARC / 2, ARC), metal); front.position.y = 0.5; front.material.side = THREE.DoubleSide; desk.add(front);
     const top = new THREE.Mesh(new THREE.RingGeometry(DR - 0.32, DR + 0.04, 64, 1, -ARC / 2 + Math.PI / 2, ARC), new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }));
     top.rotation.x = -Math.PI / 2; top.position.y = 1.0; desk.add(top);
-    const rail = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.02, 0.022, 8, 64, ARC), gold); rail.rotation.x = Math.PI / 2; rail.rotation.z = -ARC / 2 + Math.PI / 2; rail.position.y = 1.01; desk.add(rail);
+    const rail = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.02, 0.022, 8, 64, ARC), amberMat); rail.rotation.x = Math.PI / 2; rail.rotation.z = -ARC / 2 + Math.PI / 2; rail.position.y = 1.01; desk.add(rail);
     const glow = new THREE.Mesh(new THREE.TorusGeometry(DR + 0.005, 0.01, 6, 64, ARC), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); glow.rotation.x = Math.PI / 2; glow.rotation.z = -ARC / 2 + Math.PI / 2; glow.position.y = 0.12; desk.add(glow);
     // her name on the front of the desk
     const nc = mk(1024, 192), ng = nc.getContext('2d');
@@ -4890,9 +4903,7 @@ function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
   const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH, 64, 84), new THREE.ShaderMaterial({ uniforms: portalU, vertexShader: vert, fragmentShader: frag }));
   canvasMesh.position.set(0, 2.05, 0.06); portalG.add(canvasMesh);
   const ft = 0.22;
-  [[PW + ft * 2, ft, 0, PH / 2 + ft / 2], [PW + ft * 2, ft, 0, -PH / 2 - ft / 2], [ft, PH, -PW / 2 - ft / 2, 0], [ft, PH, PW / 2 + ft / 2, 0]].forEach(([fw, fh, x, y]) => {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.16), gold); f.position.set(x, 2.05 + y, 0.08); portalG.add(f);
-  });
+  crystalFrame(portalG, PW, PH, ft, 0.16, 0, 2.05, 0.08);
   const easel = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.9, 0.12, 0.9), pedMat); easel.position.set(0, 0.06, 0.2); portalG.add(easel);
   const pl = stationLabel('EXIT DISPLAY', 'Quantum Hall'); pl.position.set(0, 4.55, 0); portalG.add(pl);
   const portalLight = new THREE.PointLight(0xe6eeff, 1.0, 7, 2); portalLight.position.set(0, 3.6, 1.6); portalG.add(portalLight);
@@ -4914,7 +4925,7 @@ function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
   return { portal, hallShot };
 }
 
-const SHARED_MATS = new Set([gold, colMat, silver, copper]);   // also used by the hall
+const SHARED_MATS = new Set([gold, colMat, silver, copper, crystalFrameMat, amberMat, glassSteel]);   // also used by the hall
 function buildPlatformWorld() {
   const ws = new THREE.Scene();
   ws.background = new THREE.Color(0x05060c); ws.fog = new THREE.Fog(0x05060c, 22, 60);
