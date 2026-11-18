@@ -3514,7 +3514,7 @@ function paintVeeFace(g, f, open, wide) {
   g.clearRect(0, 0, 256, 256); g.save();
   g.shadowColor = 'rgba(95,240,255,.95)'; g.shadowBlur = 30; g.fillStyle = '#e8ffff';
   const ex = f.lx * 29, ey = f.ly * 17, w = 25 * wide, h = Math.max(6, 55 * open);
-  for (const sx of [-1, 1]) {
+  if (!f.eyesAway) for (const sx of [-1, 1]) {   // (her eyes, unless they've flown off to point at something)
     const x = 128 + sx * 50 + ex - w / 2, y = 84 + ey - h / 2, r = Math.min(w, h) / 2;
     g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); g.fill();
   }
@@ -3527,8 +3527,8 @@ function paintVeeFace(g, f, open, wide) {
 /* ---------- Vee as her chat-widget face, in 3D (?vee=face) ----------
    The drones of her widget face (VeeFace.veeDots, from vee-face.js, shared with the Ask widget) lifted onto a head
    shell with a little depth, her eyes and mouth (paintVeeFace: talking, moods, looking) on a plane in front. The
-   face turns toward you on the vertical axis and floats; when she points, a beam of light runs from her face to the
-   spot. Everything else (moving, speaking, tours, docking) is the same Vee object as the body. */
+   face turns toward you on the vertical axis and floats; when she points, her eyes fly off her face to the spot,
+   hover there, and fly back. Everything else (moving, speaking, tours, docking) is the same Vee object as the body. */
 const VEE_FACE_S = 0.0097, VEE_FACE_Y = 1.55, VEE_FACE_D = 0.22;   // metres per widget pixel, face centre height, shell depth
 function buildVeeFace3D(v, addBlend) {
   v.fig.visible = false; for (const r of v.rings) r.visible = false;
@@ -3546,12 +3546,15 @@ function buildVeeFace3D(v, addBlend) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 256; const tex = new THREE.CanvasTexture(cv);
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshBasicMaterial({ map: tex, ...addBlend })); plane.position.set(0, -0.083, VEE_FACE_D + 0.02); faceG.add(plane);
   v.face.g = cv.getContext('2d'); v.face.tex = tex;
-  // pointing: a beam of light from her face to the spot
-  const beamM = new THREE.LineBasicMaterial({ color: 0x5ff0ff, opacity: 0, ...addBlend });
-  const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), beamM); beam.frustumCulled = false; v.parent.add(beam);
+  // her eyes, as sprites that can leave her face: when she points they fly to the spot and back
+  const ec = document.createElement('canvas'); ec.width = 64; ec.height = 128; const eg = ec.getContext('2d');
+  eg.shadowColor = 'rgba(95,240,255,.95)'; eg.shadowBlur = 18; eg.fillStyle = '#e8ffff';
+  eg.beginPath(); if (eg.roundRect) eg.roundRect(20, 22, 24, 84, 12); else eg.rect(20, 22, 24, 84); eg.fill();
+  const eyeM = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(ec), ...addBlend });
+  const eyes = [-1, 1].map(sx => { const e = new THREE.Sprite(eyeM); e.scale.set(0.075, 0.15, 1); e.visible = false; v.parent.add(e); return { sp: e, sx }; });
   const rest = pos.slice(), dir = new Float32Array(n * 3), rnd = new Float32Array(n);
   for (let i = 0; i < n; i++) { const x = rest[i * 3], y = rest[i * 3 + 1], z = rest[i * 3 + 2], L = Math.hypot(x, y, z) || 1; dir[i * 3] = x / L; dir[i * 3 + 1] = y / L; dir[i * 3 + 2] = z / L; rnd[i] = (Math.sin(i * 12.9898) * 43758.5453) % 1; }
-  v.faceMode = { faceG, pts, col, base, n, plane, beam, beamM, rest, dir, rnd, spin: 0, move: null, next: null };
+  v.faceMode = { faceG, pts, col, base, n, plane, eyes, eyeK: 0, rest, dir, rnd, spin: 0, move: null, next: null };
 }
 const veeFaceQ = new THREE.Quaternion(), veeFaceQ2 = new THREE.Quaternion(), veeFaceP = new THREE.Vector3(), veeFaceUp = new THREE.Vector3(0, 1, 0);
 function updateVeeFace3D(v, dt, t) {
@@ -3576,7 +3579,13 @@ function updateVeeFace3D(v, dt, t) {
   M.faceG.position.y = VEE_FACE_Y + lift + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.025);
   // turn toward the camera, on the vertical axis only, whatever way her body faces
   M.faceG.getWorldPosition(veeFaceP);
-  const yaw = Math.atan2(camera.position.x - veeFaceP.x, camera.position.z - veeFaceP.z);
+  let yaw = Math.atan2(camera.position.x - veeFaceP.x, camera.position.z - veeFaceP.z);
+  // pointing: her eyes go to the spot (see updateVee) and her face turns partway toward it
+  M.pointK = (M.pointK || 0) + (((v.pointT > 0 && v.pointTarget) ? 1 : 0) - (M.pointK || 0)) * Math.min(1, dt * 4);
+  if (M.pointK > 0.001 && v.pointTarget) {
+    const ty = Math.atan2(v.pointTarget.x - veeFaceP.x, v.pointTarget.z - veeFaceP.z);
+    yaw += Math.atan2(Math.sin(ty - yaw), Math.cos(ty - yaw)) * 0.4 * M.pointK;
+  }
   v.body.getWorldQuaternion(veeFaceQ).invert(); veeFaceQ2.setFromEuler(new THREE.Euler(tiltX, yaw + spin, tiltZ, 'YXZ')); M.faceG.quaternion.copy(veeFaceQ).multiply(veeFaceQ2);
   // scattering: the body's vanish / appear / dock cue (droneU.uScatter), plus a cheer's burst and a stretch's drift
   const sc = (v.droneU ? v.droneU.uScatter.value : 0) + burst + gather * 0.6, P = M.pts.geometry.attributes.position;
@@ -3585,18 +3594,28 @@ function updateVeeFace3D(v, dt, t) {
     P.needsUpdate = true; M.scattered = sc > 0.002;
   }
   M.plane.material.opacity = Math.max(0, 1 - sc * 1.2);   // her eyes and mouth fade while she's scattered
+  // pointing: her eyes leave her face, arc over to the spot, hover there a little larger, and fly back when she's done
+  const goEyes = v.pointT > 0 && v.pointTarget && !reduceMotion;
+  if (goEyes) M.eyeTarget = v.pointTarget.clone();
+  M.eyeK = Math.max(0, Math.min(1, M.eyeK + (goEyes ? 1 : -1) * dt / 0.6));
+  const ek = M.eyeK * M.eyeK * (3 - 2 * M.eyeK);   // eased
+  v.face.eyesAway = ek > 0.02;
+  if (v.face.eyesAway && M.eyeTarget) {
+    const toCam = camera.position.clone().sub(M.eyeTarget); toCam.y = 0; toCam.normalize();
+    const right = new THREE.Vector3(toCam.z, 0, -toCam.x), hover = M.eyeTarget.clone().addScaledVector(toCam, 0.35);
+    hover.y += 0.12 * Math.max(1.7, hover.distanceTo(camera.position) * 0.18 + 1);   // just above the spot, looking at it, not over it
+    for (const e of M.eyes) {
+      const from = M.faceG.localToWorld(new THREE.Vector3(e.sx * 0.117, 0.019, VEE_FACE_D + 0.03));
+      const to = hover.clone().addScaledVector(right, e.sx * 0.14 * Math.max(1, hover.distanceTo(camera.position) * 0.18));   // spaced to match their size
+      const wp = from.lerp(to, ek); wp.y += Math.sin(Math.PI * ek) * 0.45;   // an arc, not a straight line
+      const grow = 1 + ek * Math.max(0.7, wp.distanceTo(camera.position) * 0.18);   // larger the farther off the spot is, so you can find them
+      e.sp.position.copy(v.parent.worldToLocal(wp)); e.sp.scale.set(0.075 * grow, 0.15 * grow, 1); e.sp.visible = true;
+    }
+  } else for (const e of M.eyes) e.sp.visible = false;
   // the drones twinkle, as in the widget; a little brighter while she talks
   const bright = 1 + 0.35 * (v.face.talk || 0);
   for (let i = 0; i < M.n; i++) { const a = (reduceMotion ? 0.7 : 0.45 + 0.4 * Math.sin(T / 380 + dots[i].p)) * bright, c = M.base[i]; M.col[i * 3] = c[0] * a; M.col[i * 3 + 1] = c[1] * a; M.col[i * 3 + 2] = c[2] * a; }
   M.pts.geometry.attributes.color.needsUpdate = true;
-  // the pointing beam
-  const on = v.pointT > 0 && v.pointTarget;
-  M.beamM.opacity += ((on ? 0.75 : 0) - M.beamM.opacity) * Math.min(1, dt * 6);
-  M.beam.visible = M.beamM.opacity > 0.01;
-  if (M.beam.visible && v.pointTarget) {
-    M.plane.getWorldPosition(veeFaceP); const a = M.beam.geometry.attributes.position, pp = v.parent.worldToLocal(veeFaceP.clone()), tp = v.parent.worldToLocal(v.pointTarget.clone());
-    a.setXYZ(0, pp.x, pp.y - 0.15, pp.z); a.setXYZ(1, tp.x, tp.y, tp.z); a.needsUpdate = true;
-  }
 }
 function updateVee(v, dt, t) {
   if (v.faceMode) updateVeeFace3D(v, dt, t);
@@ -3727,8 +3746,9 @@ function updateVee(v, dt, t) {
   // where she looks: up and away while she thinks, at what she points to, else at you, keeping her eyes on you as her head turns
   let ax = 0.55, ay = -0.75;
   if (v.mood !== 'thinking') {
-    const lp = v.headG.worldToLocal(veeLookP.copy(pointing ? v.pointTarget : cam));
-    ax = Math.max(-1, Math.min(1, Math.atan2(lp.x, Math.max(0.05, lp.z)) / 0.6)); ay = Math.max(-1, Math.min(1, -Math.atan2(lp.y, Math.hypot(lp.x, lp.z)) / 0.5));
+    const lp = (v.faceMode ? v.faceMode.faceG : v.headG).worldToLocal(veeLookP.copy(pointing ? v.pointTarget : cam));
+    const span = v.faceMode && pointing ? 0.4 : 0.6;   // pointing with her eyes: they go all the way toward the spot
+    ax = Math.max(-1, Math.min(1, Math.atan2(lp.x, Math.max(0.05, lp.z)) / span)); ay = Math.max(-1, Math.min(1, -Math.atan2(lp.y, Math.hypot(lp.x, lp.z)) / (span * 0.85)));
   }
   const lk = Math.min(1, dt * 8); F.lx += (ax - F.lx) * lk; F.ly += (ay - F.ly) * lk;
   const smileT = { happy: 1, excited: 1, curious: 0.4, apologetic: -0.5, thinking: 0 }[v.mood] ?? (isNear ? 0.45 : 0.15);
@@ -4010,7 +4030,7 @@ function buildReception() {
     g.fillStyle = SOFT; g.font = sans(27);
     wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
     line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
-    [['EMBODIMENT', 'Her chat-widget face in 3D: 350 drones, eyes and a mouth that talk, moods, a beam to point, spins and bursts.'],
+    [['EMBODIMENT', 'Her chat-widget face in 3D: 350 drones, eyes and a mouth that talk, moods, eyes that fly to what she points at, spins and bursts.'],
      ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
      ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
      ['RETRIEVAL', 'RAG over ~1,000 passages in Vectorize; AI tools like Claude can search them (and private notes) via MCP.'],
