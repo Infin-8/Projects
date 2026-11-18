@@ -828,13 +828,31 @@ function labelTex(text) {
   g.fillStyle = '#a3adc2'; g.font = '600 30px "IBM Plex Mono", monospace'; g.textAlign = 'left'; g.textBaseline = 'middle';
   g.fillText(text, 8, 34); return new THREE.CanvasTexture(c);
 }
+/* Etched glass (since 2026-11-18, in place of gold plate): every wall sign and exhibit plaque is a clear glass
+   plate with a bright polished edge, its letters frosted into it so they catch the light, standing a few
+   centimetres off the wall on small steel pins. */
+function etchedPlate(g, W, H, r) {   // the plate: a faint tint, a polished edge, a soft reflection
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = 'rgba(150,215,230,0.10)'; rr(g, 4, 4, W - 8, H - 8, r); g.fill();
+  const sh = g.createLinearGradient(0, 0, W, H); sh.addColorStop(0, 'rgba(255,255,255,0.10)'); sh.addColorStop(0.4, 'rgba(255,255,255,0)'); sh.addColorStop(0.7, 'rgba(255,255,255,0.04)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = sh; rr(g, 4, 4, W - 8, H - 8, r); g.fill();
+  g.strokeStyle = 'rgba(205,250,255,0.7)'; g.lineWidth = 4; rr(g, 4, 4, W - 8, H - 8, r); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,0.14)'; g.lineWidth = 2; rr(g, 14, 14, W - 28, H - 28, Math.max(2, r - 8)); g.stroke();
+}
+function etchText(g, text, x, y, font, strong = 1) {   // frosted letters: pale and a little soft, as etching looks when light hits it
+  g.font = font; g.shadowColor = 'rgba(200,245,255,0.55)'; g.shadowBlur = 8 * strong;
+  g.fillStyle = `rgba(228,246,250,${0.62 + 0.25 * strong})`; g.fillText(text, x, y); g.shadowBlur = 0;
+}
+function etchedMesh(tex, w, h) {   // the plate, plus two steel pins that hold it off the wall (behind it, toward local -z)
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+  for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.05, 12), glassSteel); st.rotation.x = Math.PI / 2; st.position.set(sx * (w / 2 - Math.min(0.15, w * 0.08)), 0, -0.025); m.add(st); }
+  return m;
+}
 function plaqueTex(p) {
   const c = mk(512, 128), g = c.getContext('2d');
-  g.fillStyle = '#c8933a'; g.fillRect(0, 0, 512, 128);
-  g.strokeStyle = '#7a5520'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
-  g.fillStyle = '#2a1b08'; g.textAlign = 'center';
-  let px = 34; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(p.name).width > 476 && --px > 18); g.fillText(p.name, 256, 58);   // full names, shrunk to fit
-  g.font = '20px "IBM Plex Mono", monospace'; g.fillText(p.tagline, 256, 96);
+  etchedPlate(g, 512, 128, 10); g.textAlign = 'center';
+  let px = 34; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(p.name).width > 476 && --px > 18); etchText(g, p.name, 256, 58, g.font);   // full names, shrunk to fit
+  etchText(g, p.tagline, 256, 96, '20px "IBM Plex Mono", monospace', 0.6);
   return new THREE.CanvasTexture(c);
 }
 
@@ -1309,29 +1327,16 @@ function glassFrame(g, w, h, x, y, z, ry, m = 0.07, back = 0.07) {
   }
   return G;
 }
-function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
-  if (glassy(g)) return glassSign(g, eyebrow, title, x, y, z, ry, w, mark);
+function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {   // etched glass (see 'Etched glass')
   const sc = mk(1024, 200), sg = sc.getContext('2d'), tx = mark ? 600 : 512, tw = mark ? 760 : 940;
-  sg.fillStyle = '#c8933a'; rr(sg, 6, 6, 1012, 188, 20); sg.fill(); sg.strokeStyle = '#7a5520'; sg.lineWidth = 8; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
-  if (mark) mark(sg, 112, 100, 148);
-  sg.fillStyle = '#2a1b08'; sg.textAlign = 'center'; sg.font = '600 32px "IBM Plex Mono", monospace'; sg.fillText(eyebrow, tx, 76);
-  let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > tw && --px > 30); sg.fillText(title, tx, 158);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc) }));
-  sign.position.set(x, y, z); sign.rotation.y = ry; g.add(sign); return sign;
-}
-function glassSign(g, eyebrow, title, x, y, z, ry, w, mark) {   // floorSign on a glass floor: clear glass, letters glowing
-  const sc = mk(1024, 200), sg = sc.getContext('2d'), tx = mark ? 600 : 512, tw = mark ? 760 : 940;
-  sg.fillStyle = 'rgba(18,55,72,0.3)'; rr(sg, 6, 6, 1012, 188, 20); sg.fill();
-  sg.strokeStyle = 'rgba(95,240,255,0.75)'; sg.lineWidth = 4; rr(sg, 6, 6, 1012, 188, 20); sg.stroke();
+  etchedPlate(sg, 1024, 200, 20);
   if (mark) mark(sg, 112, 100, 148);
   sg.textAlign = 'center';
-  const glow = (text, yy, font, col, blur) => { sg.font = font; sg.shadowColor = col; sg.shadowBlur = blur; sg.fillStyle = col; sg.fillText(text, tx, yy); sg.shadowBlur = 0; sg.fillStyle = 'rgba(255,255,255,0.5)'; sg.fillText(text, tx, yy); };
-  glow(eyebrow, 76, '600 32px "IBM Plex Mono", monospace', '#5ff0ff', 10);
+  etchText(sg, eyebrow, tx, 76, '600 32px "IBM Plex Mono", monospace', 0.6);
   let px = 70; do { sg.font = `${px}px "Young Serif", Georgia, serif`; } while (sg.measureText(title).width > tw && --px > 30);
-  glow(title, 158, sg.font, '#f1e6cf', 16);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.195), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+  etchText(sg, title, tx, 158, sg.font);
+  const sign = etchedMesh(new THREE.CanvasTexture(sc), w, w * 0.195);
   sign.position.set(x, y, z); sign.rotation.y = ry; sign.translateZ(0.04); g.add(sign);   // a few centimetres off the wall
-  for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.05, 12), glassSteel); st.rotation.x = Math.PI / 2; st.position.set(sx * (w / 2 - 0.15), 0, -0.025); sign.add(st); }
   return sign;
 }
 
@@ -3112,8 +3117,8 @@ function buildPaintings() {
       const ph = p.pos[1] - h / 2 - ft, plinth = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6, ph, 0.7), colMat); plinth.position.set(0, -h / 2 - ft - ph / 2, -0.32); group.add(plinth);
       const edge = new THREE.Mesh(new THREE.BoxGeometry(w * 0.6 + 0.02, 0.03, 0.03), lineMat); edge.position.set(0, -h / 2 - ft - 0.02, 0.04); group.add(edge);
     }
-    const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.4), new THREE.MeshBasicMaterial({ map: plaqueTex(p) }));
-    plaque.position.set(0, -h / 2 - 0.75, 0.05); group.add(plaque);
+    const plaque = etchedMesh(plaqueTex(p), 1.6, 0.4);
+    plaque.position.set(0, -h / 2 - 0.75, 0.08); group.add(plaque);
     const light = new THREE.PointLight(0xe6eeff, 1.1, 9, 2);
     light.position.set(0, h / 2 + 0.8, 1.6); group.add(light);
     const normal = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.rotY);
