@@ -3271,247 +3271,21 @@ function makeVee(parent, pos, facing) {
   };
   v.setLine = (title, sub, step) => v.say(title, sub, step, null);
   v.draw = drawBubble;
-  if (VEE_RIG_ON) { if (veeRigGltf) attachVeeRig(v); else { veeRigWaiting.push(v); v.rigWait = performance.now(); } }
-  if (VEE_FACE) buildVeeFace3D(v, addBlend);   // her rigged body: she waits, dissolved, until it has loaded (up to 6 s)
+  if (VEE_FACE) buildVeeFace3D(v, addBlend);   // her face, in place of the body (see 'How Vee looks')
   return v;
 }
 
-/* ---------- Vee's rigged body ----------
-   Her nanobots ride a motion-captured skeleton (three.js's Xbot, rigged by Mixamo; its idle clip) instead of her
-   built shapes, so she has real weight. She still floats: her legs hang loose and trail the way she's flying, on a
-   spring, so they swing back as she sets off and settle when she stops. Her arms carry more drones, so gestures read. Each drone is a point on the body's surface carrying
-   that spot's bone weights, and the GPU moves it with the skeleton. Her own head (eyes, mouth, hair) sits on the
-   skeleton's neck, and the gestures her code makes with her built arms are mirrored onto the bones, so moods,
-   pointing, waving and lip sync all carry over. It loads after the hall; until then (or if it can't), she keeps
-   her built body. ?vee=classic shows the built body. */
-// ?vee=face: her chat-widget face in 3D in place of the body (a prototype; no rig download). ?vee=classic: the built body.
-const VEE_FACE = /[?&]vee=face\b/.test(location.search) && typeof VeeFace !== 'undefined';
-const VEE_RIG_ON = !/[?&]vee=classic\b/.test(location.search) && !VEE_FACE, VEE_RIG_URL = 'models/vee-body.glb', VEE_HEIGHT = 1.81;
-let veeRigGltf = null; const veeRigWaiting = [];
-function loadVeeRig() {
-  if (!VEE_RIG_ON || loadVeeRig.p) return loadVeeRig.p;
-  const js = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
-  const base = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/';
-  return (loadVeeRig.p = js(base + 'loaders/GLTFLoader.js').then(() => js(base + 'utils/SkeletonUtils.js'))
-    .then(() => new Promise((res, rej) => new THREE.GLTFLoader().load(VEE_RIG_URL, res, undefined, rej)))
-    .then(g => { veeRigGltf = g; veeRigWaiting.splice(0).forEach(attachVeeRig); })
-    .catch(e => { console.warn('Vee: rigged body unavailable, keeping her built one', e); veeRigWaiting.splice(0).forEach(v => { v.rigWait = 0; }); }));
-}
-const droneSkinVert = `
-#include <common>
-#include <skinning_pars_vertex>
-uniform float uTime; uniform float uPx; uniform float uSize; uniform float uScatter; uniform float uUnit;
-attribute float aRnd; attribute vec3 aDir;
-varying float vB;
-void main(){
-  #include <skinbase_vertex>
-  #include <begin_vertex>
-  #include <skinning_vertex>
-  vec4 w = modelMatrix * vec4(transformed, 1.0);
-  float s = length(modelMatrix[1].xyz) * uUnit;                           // her current scale (she shrinks as she vanishes)
-  float t = uTime * (1.4 + aRnd * 2.2) + aRnd * 40.0;
-  w.xyz += vec3(sin(t), sin(t * 1.31 + 1.7), cos(t * 0.87)) * 0.003 * s;  // each drone hovers in place
-  w.xyz += aDir * uScatter * (0.2 + aRnd * 0.6) * s;                      // and scatters outward on cue
-  vec4 mv = viewMatrix * w;
-  gl_Position = projectionMatrix * mv;
-  gl_PointSize = max(1.0, uSize * uPx / max(0.1, -mv.z));
-  vB = 0.5 + 0.5 * sin(uTime * (3.0 + aRnd * 6.0) + aRnd * 20.0);         // twinkle
-}`;
-// points over a skinned mesh's surface, spread by area, each with the bone weights of its triangle's nearest corner;
-// points belonging to the skipped bones (the head, which is hers) are left out
-function sampleSkinned(mesh, n, skip, keep) {
-  const geo = mesh.geometry, pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, idx = geo.index;
-  const tris = (idx ? idx.count : pos.count) / 3, cum = new Float32Array(tris), A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
-  const vi = k => (idx ? idx.getX(k) : k), get = (attr, i, j) => [attr.getX, attr.getY, attr.getZ, attr.getW][j].call(attr, i);   // plain or interleaved
-  let tot = 0;
-  for (let t = 0; t < tris; t++) { A.fromBufferAttribute(pos, vi(3 * t)); B.fromBufferAttribute(pos, vi(3 * t + 1)); C.fromBufferAttribute(pos, vi(3 * t + 2)); tot += B.sub(A).cross(C.sub(A)).length() / 2; cum[t] = tot; }
-  const P = [], SI = [], SW = [], R = [], D = [];
-  for (let tries = 0; R.length < n && tries < n * 12; tries++) {
-    const r = Math.random() * tot; let lo = 0, hi = tris - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < r) lo = m + 1; else hi = m; }
-    let a = Math.random(), b = Math.random(); if (a + b > 1) { a = 1 - a; b = 1 - b; }
-    const w = [1 - a - b, a, b], k = [vi(3 * lo), vi(3 * lo + 1), vi(3 * lo + 2)], main = k[w.indexOf(Math.max(...w))];
-    let top = 0; for (let j = 1; j < 4; j++) if (get(sw, main, j) > get(sw, main, top)) top = j;
-    const jt = get(si, main, top); if (skip.has(jt) || Math.random() > keep(jt)) continue;   // keep: how much of each bone's surface to keep
-    for (let c = 0; c < 3; c++) P.push(w[0] * get(pos, k[0], c) + w[1] * get(pos, k[1], c) + w[2] * get(pos, k[2], c));
-    for (let j = 0; j < 4; j++) { SI.push(get(si, main, j)); SW.push(get(sw, main, j)); }
-    R.push(Math.random()); const z = Math.random() * 2 - 1, an = Math.random() * Math.PI * 2, rr2 = Math.sqrt(1 - z * z); D.push(Math.cos(an) * rr2, z, Math.sin(an) * rr2);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('skinIndex', new THREE.Float32BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
-  g.setAttribute('aRnd', new THREE.Float32BufferAttribute(R, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(D, 3));
-  return g;
-}
-function attachVeeRig(v) {
-  if (v.rig || !veeRigGltf) return;
-  const root = THREE.SkeletonUtils.clone(veeRigGltf.scene), rigG = new THREE.Group(); rigG.add(root);
-  root.updateMatrixWorld(true);
-  const bone = n => { let b = null; root.traverse(o => { if (!b && o.isBone && o.name.replace(/^mixamorig:?/, '') === n) b = o; }); return b; };
-  const B = { head: bone('Head'), top: bone('HeadTop_End'), armR: bone('RightArm'), foreR: bone('RightForeArm'), armL: bone('LeftArm'), foreL: bone('LeftForeArm'), handL: bone('LeftHand'), handR: bone('RightHand'), legR: bone('RightLeg'),
-    upLegL: bone('LeftUpLeg'), legL: bone('LeftLeg'), footL: bone('LeftFoot'), upLegR: bone('RightUpLeg'), footR: bone('RightFoot'),
-    spine: [bone('Spine'), bone('Spine1'), bone('Spine2')], shL: bone('LeftShoulder'), shR: bone('RightShoulder') };
-  // her height, measured on the skeleton: the mesh is authored in centimetres under a 0.01 armature
-  rigG.scale.setScalar(VEE_HEIGHT / B.top.getWorldPosition(new THREE.Vector3()).y); rigG.updateMatrixWorld(true);
-  // the drones, on the body below her head
-  const skinned = []; root.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
-  const area = m => { const bb = new THREE.Box3().setFromBufferAttribute(m.geometry.attributes.position); return bb.getSize(new THREE.Vector3()).lengthSq(); };
-  skinned.forEach(m => {
-    const share = /surface/i.test(m.name) ? 0.8 : 0.2, skip = new Set([B.head, B.top].map(b => m.skeleton.bones.indexOf(b)));
-    const u = v.droneU, mat = new THREE.ShaderMaterial({ uniforms: { uTime: u.uTime, uPx: u.uPx, uSize: u.uSize, uScatter: u.uScatter, uColor: u.uColor, uDim: u.uDim, uGlow: u.uGlow,
-      uUnit: { value: 1 / new THREE.Vector3().setFromMatrixColumn(m.matrixWorld, 1).length() } }, vertexShader: droneSkinVert, fragmentShader: droneFrag, skinning: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    const limb = new Set(m.skeleton.bones.map((b, i) => /(Arm|Hand)/.test(b.name) ? i : -1));   // arms and hands get ~2.5x the density, so gestures read
-    const pts = new THREE.Points(sampleSkinned(m, Math.round(v.droneCount * 0.82 * share), skip, j => (limb.has(j) ? 1 : 0.4)), mat);
-    Object.assign(pts, { isSkinnedMesh: true, skeleton: m.skeleton, bindMatrix: m.bindMatrix, bindMatrixInverse: m.bindMatrixInverse, bindMode: m.bindMode });
-    pts.frustumCulled = false; pts.position.copy(m.position); pts.quaternion.copy(m.quaternion); pts.scale.copy(m.scale); m.parent.add(pts);
-    m.visible = false;
-  });
-  // her own head on the skeleton's neck: a mount on the head bone, upright, where her head sat on her built body
-  const tp = B.top.getWorldPosition(new THREE.Vector3()), mount = new THREE.Group();
-  new THREE.Matrix4().copy(B.head.matrixWorld).invert().multiply(new THREE.Matrix4().makeTranslation(tp.x, tp.y - 0.15, tp.z + 0.01)).decompose(mount.position, mount.quaternion, mount.scale);
-  B.head.add(mount); v.headG.position.set(0, 0, 0); mount.add(v.headG);
-  // the built body steps aside: its drones and waist seam hide (its joints stay, invisibly, to drive the gestures)
-  v.bodyDrones.forEach(p => { p.visible = false; }); if (v.seam) v.seam.visible = false;
-  v.fig.add(rigG);
-  if (v.rigWait) { v.rigWait = 0; v.appearT = 0.8; }   // she was waiting for this body: now she shimmers in, in it
-  const mixer = new THREE.AnimationMixer(root), clip = n => veeRigGltf.animations.find(a => a.name === n);
-  const idle = mixer.clipAction(clip('idle')), walk = null;   // she floats, so only the idle clip; her legs are posed in code
-  idle.play(); mixer.update(Math.random() * 3);   // not all in step
-  const W = new THREE.Vector3(), rest = (x, y) => new THREE.Vector3(x, y, 0).normalize();
-  v.rig = { rigG, mixer, idle, walk, B, walkW: 0, spd: 0, pointK: 0, sway: new THREE.Vector2(), swayV: new THREE.Vector2(), vel: new THREE.Vector3(), move: null, next: null, waveLen: 2.4, lastWaveT: 0, waveK: 0, fast: 0, fidgetT: 25 + Math.random() * 20, lx: v.body.position.x, lz: v.body.position.z, moveYaw: null,
-    // her built limbs at rest, in her own frame: a gesture is how far they've moved from these
-    rest: { upR: rest(0.045, -0.27), foreR: rest(0.015, -0.24), upL: rest(-0.045, -0.27), foreL: rest(-0.015, -0.24), shin: rest(0, -1) }, W };
-}
-
-/* ---------- Her moves ----------
-   Full-body moves on the rigged body, like her wave: each is a pose over time, eased in and out. Arm directions are
-   in her own frame (x: toward the side she waves with, y: up, z: forward); spine is [bend forward, bend sideways,
-   twist] in radians; lift is metres off her float; spin is turns; tuck draws her knees up. Pointing always wins. */
-const ease3 = x => x * x * (3 - 2 * x);
-const VEE_MOVES = {
-  cheer:   { dur: 1.8, pose: p => { const hop = Math.abs(Math.sin(p * Math.PI * 2)); return { a: [0.42, 1, 0.12], af: [0.25, 1, 0.2], b: [-0.42, 1, 0.12], bf: [-0.25, 1, 0.2], spine: [-0.14, 0, 0], head: -0.18, lift: 0.16 * hop, tuck: hop }; } },
-  clap:    { dur: 1.5, pose: (p, t) => { const o = 0.3 + 0.3 * Math.abs(Math.sin(t * 9)); return { a: [0.3, -0.5, 0.8], af: [-o, 0.25, 0.7], b: [-0.3, -0.5, 0.8], bf: [o, 0.25, 0.7], spine: [0.08, 0, 0], head: -0.08, lift: 0.03 * Math.abs(Math.sin(t * 9)) }; } },
-  twirl:   { dur: 1.5, pose: p => ({ a: [1, 0.15, 0], af: [1, 0.3, 0], b: [-1, 0.15, 0], bf: [-1, 0.3, 0], spin: ease3(p), lift: 0.1 * Math.sin(Math.PI * p), together: 1, head: -0.1 }) },
-  wave2:   { dur: 2.2, pose: (p, t) => { const sw = Math.sin(t * 9) * 0.5; return { a: [0.42, -0.8, 0.28], af: [0.12 + sw, 1, 0.3], b: [-0.42, -0.8, 0.28], bf: [-0.12 + sw, 1, 0.3], spine: [-0.06, 0, 0], head: -0.12, lift: 0.04 * Math.abs(Math.sin(t * 4.5)) }; } },   // both hands up, waving goodbye
-  present: { dur: 2.0, pose: p => { const k = ease3(Math.min(1, p * 1.6)); return { a: [0.55 + 0.25 * k, 0.05 + 0.2 * k, 0.75 - 0.3 * k], af: [0.7 + 0.2 * k, 0.3 + 0.15 * k, 0.6 - 0.3 * k], b: [-0.6, -0.75, -0.05], bf: [0.75, -0.15, 0.25], spine: [0.1, -0.12 * k, 0.15 * k], head: -0.05 }; } },
-  shrug:   { dur: 1.6, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.15)); return { a: [0.6, -0.65, 0.3], af: [0.55, 0.2 + 0.2 * k, 0.75], b: [-0.6, -0.65, 0.3], bf: [-0.55, 0.2 + 0.2 * k, 0.75], shoulders: 0.3 * k, spine: [0.05, 0, 0], tilt: 0.2 * k, head: 0.12 * k }; } },
-  lean:    { dur: 2.6, pose: () => ({ a: [0.25, -0.9, -0.45], af: [-0.7, -0.15, -0.45], b: [-0.25, -0.9, -0.45], bf: [0.7, -0.15, -0.45], spine: [0.55, 0, 0], head: -0.1, tilt: -0.18 }) },
-  stretch: { dur: 2.6, pose: p => { const k = Math.sin(Math.PI * Math.min(1, p * 1.1)), sway = Math.sin(p * Math.PI * 2) * k; return { a: [0.25, 1, 0.08], af: [-0.4, 1, 0.08], b: [-0.25, 1, 0.08], bf: [0.4, 1, 0.08], spine: [-0.06 * k, 0.28 * sway, 0], head: -0.06 * k, tilt: 0.22 * sway, lift: 0.06 * k, together: 1 }; } },   // a cute reach: hands meet overhead and she sways side to side
-  land:    { dur: 0.8, pose: p => { const k = Math.sin(Math.PI * p); return { tuck: 0.7 * k, spine: [0.18 * k, 0, 0], head: 0.1 * k, lift: -0.06 * k }; } },
-};
+/* ---------- How Vee looks ----------
+   Since 2026-11-18 she is her chat-widget face, in 3D (buildVeeFace3D, below): the same face visitors meet in the
+   Ask widget on the sites, from vee-face.js. ?vee=body shows her older built body (?vee=classic too). The rigged
+   body (a 2.2 MB Mixamo skeleton) was removed in favour of the face. */
+const VEE_FACE = !/[?&]vee=(body|classic)\b/.test(location.search) && typeof VeeFace !== 'undefined';
+// her moments (finishing the worlds, starting a tour, waking from the dock, idle fidgets) as moves of the face
+const VEE_MOVES = { cheer: 1.6, twirl: 1.5, wave2: 1.6, present: 1.4, shrug: 1.4, lean: 1.8, stretch: 2.4, land: 0.8 };
 function veeMove(v, name) {
-  if (!v || !v.rig || !VEE_MOVES[name] || v.away || reduceMotion) return false;
-  if (v.rig.move) { v.rig.next = name; return true; }   // one at a time: the next waits for this one to finish, so nothing snaps
-  v.rig.move = { name, t: 0 }; v.pointT = 0; return true;   // a move takes over from a point (a wave fades out on its own)
-}
-const _wq = new THREE.Quaternion(), _wp = new THREE.Quaternion(), _wd = new THREE.Quaternion(), _wa = new THREE.Vector3();
-function turnBone(bone, axisLocal, angle, frameQ) {   // rotate a bone about an axis given in her frame
-  if (!bone || Math.abs(angle) < 1e-4) return;
-  _wa.copy(axisLocal).applyQuaternion(frameQ); bone.getWorldQuaternion(_wq); bone.parent.getWorldQuaternion(_wp).invert();
-  _wd.setFromAxisAngle(_wa, angle); bone.quaternion.copy(_wp.multiply(_wd.multiply(_wq))); bone.updateMatrixWorld(true);
-}
-const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
-// aim a bone (toward its child) along a direction: turn it the shortest way from where the animation has it, by k.
-// Turning from the current pose keeps the animation's twist, so easing in and out can never spin the limb round.
-const _rq = new THREE.Quaternion(), _rp = new THREE.Quaternion(), _rax = new THREE.Vector3(), _rd = new THREE.Vector3(), _rI = new THREE.Quaternion(), _rw = new THREE.Quaternion();
-function aimBone(bone, dirWorld, k) {
-  const child = bone.children.find(c => c.isBone); if (!child || k <= 0.001) return;
-  bone.getWorldPosition(_rd); child.getWorldPosition(_rax); _rax.sub(_rd).normalize();          // where it points now
-  _rq.setFromUnitVectors(_rax, _rd.copy(dirWorld).normalize());                                  // the shortest turn to the target
-  if (k < 1) _rq.copy(_rI.set(0, 0, 0, 1).slerp(_rq, k));
-  bone.getWorldQuaternion(_rw); bone.parent.getWorldQuaternion(_rp).invert();
-  bone.quaternion.copy(_rp.multiply(_rq.multiply(_rw))); bone.updateMatrixWorld(true);
-}
-// a pointing hand: index straight, the other fingers curled into the palm and the thumb tucked. Fingers run along
-// the hand's local axis (±X here) with the palm facing -Y at rest, so each curls about the axis across its knuckles.
-const _hq = new THREE.Quaternion(), _hx = new THREE.Vector3(), _hn = new THREE.Vector3(0, -1, 0), _hI = new THREE.Quaternion();
-// an open hand: every finger straight, the thumb relaxed alongside (for waving, cheering, clapping)
-const _hO = new THREE.Quaternion();
-function openHand(hand, k) {
-  if (!hand || k <= 0.001) return;
-  hand.traverse(o => { if (o.isBone && o !== hand && /Hand(Index|Middle|Ring|Pinky|Thumb)\d$/.test(o.name)) o.quaternion.slerp(_hO, Math.min(1, k) * (/Thumb/.test(o.name) ? 0.6 : 1)); });
-}
-function pointHand(hand, k) {
-  if (!hand || k <= 0.001) return;
-  const fingers = {}; hand.traverse(o => { const m = o.isBone && /Hand(Thumb|Index|Middle|Ring|Pinky)(\d)$/.exec(o.name); if (m) fingers[m[1] + m[2]] = o; });
-  for (const f of ['Middle', 'Ring', 'Pinky', 'Index', 'Thumb']) for (let j = 1; j <= 3; j++) {
-    const bone = fingers[f + j], child = fingers[f + (j + 1)]; if (!bone || !child) continue;
-    if (f === 'Index') { bone.quaternion.slerp(_hI, k); continue; }                       // straight
-    _hx.copy(child.position).normalize().cross(_hn).normalize();                          // the knuckle axis
-    const amt = f === 'Thumb' ? (j === 1 ? -0.35 : -0.6) : [0, 1.35, 1.5, 1.1][j];        // fingers fold right in; the thumb lies along them
-    bone.quaternion.multiply(_hq.setFromAxisAngle(_hx, amt * k));
-  }
-}
-const _ra = new THREE.Vector3(), _rb = new THREE.Vector3(), _rfq = new THREE.Quaternion();
-function updateVeeRig(v, dt) {
-  const R = v.rig, b = v.body.position;
-  // she floats: the idle clip moves her upper body, and her legs hang loose and trail the way she's flying
-  if (dt > 0) { R.vel.set((b.x - R.lx) / dt, 0, (b.z - R.lz) / dt); R.vel.clampLength(0, 6); }
-  R.lx = b.x; R.lz = b.z;
-  R.mixer.update(dt * (reduceMotion ? 0.5 : 1));
-  // her gestures: wherever her built arms and knee have moved from rest, aim the matching bones the same way
-  v.fig.updateMatrixWorld(true); v.fig.getWorldQuaternion(_rfq).invert();
-  const seg = (g, x, y, out) => { g.getWorldPosition(_ra); out.set(x, y, 0); g.localToWorld(out); return out.sub(_ra); };   // a limb's direction in the world
-  const away = (dirWorld, rest) => _rb.copy(dirWorld).normalize().applyQuaternion(_rfq).angleTo(rest);
-  const ease = a => Math.max(0, Math.min(1, (a - 0.08) / 0.3));
-  for (const [sh, el, sx, arm, fore, up, fo] of [[v.shoulder, v.elbow, 1, R.B.armL, R.B.foreL, R.rest.upR, R.rest.foreR], [v.shoulderL, v.elbowL, -1, R.B.armR, R.B.foreR, R.rest.upL, R.rest.foreL]]) {
-    const dU = seg(sh, 0.045 * sx, -0.27, new THREE.Vector3()), dF = seg(el, 0.015 * sx, -0.24, new THREE.Vector3());
-    const waving = sx > 0 && (v.waveT > 0 || R.waveK > 0.005) && !(v.pointT > 0 && v.pointTarget);   // the rig has its own wave (below): don't copy the old overhead one
-    const k = waving ? 0 : ease(Math.max(away(dU, up), away(dF, fo)));
-    if (k > 0) { aimBone(arm, dU, k); aimBone(fore, dF, k); }
-  }
-  // her current move: its pose this frame, and how far it's eased in (e: half a second in, a little less out, so moves are soft)
-  let M = null, e = 0;
-  if (R.move) {
-    const mv = VEE_MOVES[R.move.name]; R.move.t += dt; const p = R.move.t / mv.dur;
-    if (p >= 1) { R.move = R.next ? { name: R.next, t: 0 } : null; R.next = null; }
-    else { M = mv.pose(p, R.move.t); e = ease3(Math.min(1, R.move.t / 0.5)) * ease3(Math.min(1, (mv.dur - R.move.t) / 0.45)); }
-  }
-  R.rigG.position.y = M && M.lift ? M.lift * e : 0;
-  R.rigG.rotation.y = M && M.spin ? M.spin * Math.PI * 2 : 0;
-  R.rigG.updateMatrixWorld(true);
-  // a landing, when a fast flight comes to a stop; and now and then, while idle and unhurried, a stretch or a twirl
-  const spd = R.vel.length(); R.fast = spd > 2.4 ? 1 : R.fast * Math.exp(-dt * 1.5);
-  if (!R.move && R.fast > 0.3 && spd < 0.4) { R.fast = 0; veeMove(v, 'land'); }
-  R.fidgetT -= dt;
-  if (R.fidgetT < 0) { R.fidgetT = 35 + Math.random() * 30; if (!R.move && !tour && !v.asking && (!v.text || v.doneT > 8)) veeMove(v, Math.random() < 0.5 ? 'stretch' : 'twirl'); }   // only when she isn't talking or guiding
-  // legs: her velocity in her own frame swings them the other way (they trail), on a spring so they overshoot and settle
-  const vl = _rb.copy(R.vel).applyQuaternion(_rfq), m = reduceMotion ? 0.3 : 1;
-  const tx = Math.max(-0.7, Math.min(0.7, -vl.x * 0.2)), tz = Math.max(-0.8, Math.min(0.8, -vl.z * 0.2)), tt = performance.now() / 1000;
-  R.swayV.x += (tx + Math.sin(tt * 1.1) * 0.04 * m - R.sway.x) * 28 * dt; R.swayV.y += (tz + Math.sin(tt * 0.8 + 1) * 0.05 * m - R.sway.y) * 28 * dt;
-  R.swayV.multiplyScalar(Math.exp(-3.2 * dt)); R.sway.addScaledVector(R.swayV, dt);
-  const figQ = R.rigG.getWorldQuaternion(new THREE.Quaternion());   // her frame, turning with any spin
-  const pop = Math.max(0, v.knee.rotation.x);   // her wave's knee pop, on her right leg
-  for (const [up, low, foot, sx, extra] of [[R.B.upLegL, R.B.legL, R.B.footL, 1, 0], [R.B.upLegR, R.B.legR, R.B.footR, -1, pop]]) {
-    const tuck = M && M.tuck ? M.tuck * e : 0, apart = 1 - (M && M.together ? M.together * e : 0);
-    const thigh = new THREE.Vector3(0.05 * sx * apart + R.sway.x, -1 + tuck * 0.55, -0.1 + R.sway.y + tuck * 0.8).normalize().applyQuaternion(figQ);        // hanging, a little behind
-    const shin = new THREE.Vector3(0.03 * sx * apart + R.sway.x * 1.4, -1, -0.38 - extra * 1.1 + R.sway.y * 1.4 - tuck * 0.4).normalize().applyQuaternion(figQ);   // knees softly bent
-    aimBone(up, thigh, 1); aimBone(low, shin, 1);
-    aimBone(foot, new THREE.Vector3(0, -1, -0.55 + R.sway.y).normalize().applyQuaternion(figQ), 1);   // toes pointed down
-  }
-  // and when she points (with the arm on her built right, the rig's left), her hand makes a proper point
-  R.pointK += ((v.pointT > 0 && v.pointTarget ? 1 : 0) - R.pointK) * Math.min(1, dt * 6);
-  // the move's upper body: spine, shoulders, arms (not while she's pointing) and a nod or tilt of her head
-  if (M) {
-    if (M.spine) R.B.spine.forEach(sb => { turnBone(sb, AX, M.spine[0] * e / 3, figQ); turnBone(sb, AZ, -M.spine[1] * e / 3, figQ); turnBone(sb, AY, M.spine[2] * e / 3, figQ); });
-    if (M.shoulders) { turnBone(R.B.shL, AZ, M.shoulders * e, figQ); turnBone(R.B.shR, AZ, -M.shoulders * e, figQ); }
-    const k = e * (1 - R.pointK), dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
-    if (M.a) { aimBone(R.B.armL, dir(M.a), k); aimBone(R.B.foreL, dir(M.af), k); }
-    if (M.b) { aimBone(R.B.armR, dir(M.b), k); aimBone(R.B.foreR, dir(M.bf), k); }
-    v.headG.rotation.x += (M.head || 0) * e; v.headG.rotation.z += (M.tilt || 0) * e;
-    if (['cheer', 'clap', 'twirl', 'wave2'].includes(R.move && R.move.name)) { openHand(R.B.handL, k); openHand(R.B.handR, k); }
-  }
-  // her wave, on the rigged body: elbow tucked near her side, forearm up, waving from the elbow (not the whole arm overhead)
-  if (v.waveT > R.lastWaveT + 0.01) R.waveLen = v.waveT;   // a new wave: remember its length (1.2 to 2.4 s), so it always eases in
-  R.lastWaveT = v.waveT;
-  // the wave eases in and out on its own, so a move or a point taking over never snaps her arm
-  const waveOn = v.waveT > 0 && !(v.pointT > 0 && v.pointTarget) && !(M && M.a);
-  R.waveK += ((waveOn ? ease3(Math.max(0, Math.min(1, Math.min(R.waveLen - v.waveT, v.waveT) * 2.5))) : 0) - R.waveK) * Math.min(1, dt * 7);
-  if (R.waveK > 0.005) {
-    const wk = R.waveK * (1 - R.pointK), sw = Math.sin(performance.now() / 1000 * 9) * 0.5 * (reduceMotion ? 0.3 : 1);
-    const dir = a => new THREE.Vector3(...a).normalize().applyQuaternion(figQ);
-    aimBone(R.B.armL, dir([0.42, -0.8, 0.3]), wk); aimBone(R.B.foreL, dir([0.12 + sw, 1, 0.3]), wk);
-    openHand(R.B.handL, wk);   // fingers straight as she waves
-  }
-  pointHand(R.B.handL, R.pointK);
+  if (!v || !v.faceMode || !VEE_MOVES[name] || v.away || reduceMotion) return false;
+  const M = v.faceMode; if (M.move) { M.next = name; return true; }   // one at a time; the next waits its turn
+  M.move = { name, t: 0, dur: VEE_MOVES[name] }; v.pointT = 0; return true;
 }
 // A pulse of light where Vee points: a ring spreading on the floor and a fading beam
 function veePing(v, target) {
@@ -3608,20 +3382,45 @@ function buildVeeFace3D(v, addBlend) {
   // pointing: a beam of light from her face to the spot
   const beamM = new THREE.LineBasicMaterial({ color: 0x5ff0ff, opacity: 0, ...addBlend });
   const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), beamM); beam.frustumCulled = false; v.parent.add(beam);
-  v.faceMode = { faceG, pts, col, base, n, plane, beam, beamM };
+  const rest = pos.slice(), dir = new Float32Array(n * 3), rnd = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = rest[i * 3], y = rest[i * 3 + 1], z = rest[i * 3 + 2], L = Math.hypot(x, y, z) || 1; dir[i * 3] = x / L; dir[i * 3 + 1] = y / L; dir[i * 3 + 2] = z / L; rnd[i] = (Math.sin(i * 12.9898) * 43758.5453) % 1; }
+  v.faceMode = { faceG, pts, col, base, n, plane, beam, beamM, rest, dir, rnd, spin: 0, move: null, next: null };
 }
 const veeFaceQ = new THREE.Quaternion(), veeFaceQ2 = new THREE.Quaternion(), veeFaceP = new THREE.Vector3(), veeFaceUp = new THREE.Vector3(0, 1, 0);
 function updateVeeFace3D(v, dt, t) {
   const M = v.faceMode; if (!M) return;
   const T = t * 1000, dots = VeeFace.veeDots;
-  M.faceG.position.y = VEE_FACE_Y + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.025);
+  // her moments: a move plays over its duration, then the next queued one
+  let burst = 0, tiltZ = 0, tiltX = 0, lift = 0, spin = 0, gather = 0, grin = 0;
+  if (M.move) {
+    const mv = M.move; mv.t += dt; const p = Math.min(1, mv.t / mv.dur), bell = Math.sin(Math.PI * p), ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    if (mv.name === 'cheer') { burst = 0.45 * bell; grin = bell; lift = 0.12 * bell; }
+    else if (mv.name === 'twirl' || mv.name === 'wave2' || mv.name === 'present') { spin = ease * Math.PI * 2; grin = 0.6 * bell; }
+    else if (mv.name === 'shrug') tiltZ = 0.28 * Math.sin(p * Math.PI * 2) * bell;
+    else if (mv.name === 'lean') tiltX = 0.22 * bell;
+    else if (mv.name === 'stretch') { gather = bell; grin = 0.5 * bell; }   // waking: her drones drift apart and gather again
+    else if (mv.name === 'land') lift = -0.06 * bell;
+    if (p >= 1) { M.move = null; if (M.next) { const nx = M.next; M.next = null; veeMove(v, nx); } }
+  }
+  if (grin > 0) v.face.smile = Math.max(v.face.smile, grin);
+  // the welcome-back spin and the greeting wave (a little side-to-side tilt), carried over from the body
+  if (v.spinT > 0) spin += (1 - v.spinT / 0.9) * Math.PI * 2;
+  if (v.waveT > 0 && !reduceMotion) tiltZ += Math.sin(t * 9) * 0.12 * Math.min(1, v.waveT);
+  M.faceG.position.y = VEE_FACE_Y + lift + (reduceMotion ? 0 : Math.sin(t * 1.3) * 0.025);
   // turn toward the camera, on the vertical axis only, whatever way her body faces
   M.faceG.getWorldPosition(veeFaceP);
   const yaw = Math.atan2(camera.position.x - veeFaceP.x, camera.position.z - veeFaceP.z);
-  v.body.getWorldQuaternion(veeFaceQ).invert(); veeFaceQ2.setFromAxisAngle(veeFaceUp, yaw); M.faceG.quaternion.copy(veeFaceQ).multiply(veeFaceQ2);
+  v.body.getWorldQuaternion(veeFaceQ).invert(); veeFaceQ2.setFromEuler(new THREE.Euler(tiltX, yaw + spin, tiltZ, 'YXZ')); M.faceG.quaternion.copy(veeFaceQ).multiply(veeFaceQ2);
+  // scattering: the body's vanish / appear / dock cue (droneU.uScatter), plus a cheer's burst and a stretch's drift
+  const sc = (v.droneU ? v.droneU.uScatter.value : 0) + burst + gather * 0.6, P = M.pts.geometry.attributes.position;
+  if (sc > 0.002 || M.scattered) {
+    for (let i = 0; i < M.n; i++) { const k = sc * (0.2 + M.rnd[i] * 0.6); P.array[i * 3] = M.rest[i * 3] + M.dir[i * 3] * k; P.array[i * 3 + 1] = M.rest[i * 3 + 1] + M.dir[i * 3 + 1] * k; P.array[i * 3 + 2] = M.rest[i * 3 + 2] + M.dir[i * 3 + 2] * k; }
+    P.needsUpdate = true; M.scattered = sc > 0.002;
+  }
+  M.plane.material.opacity = Math.max(0, 1 - sc * 1.2);   // her eyes and mouth fade while she's scattered
   // the drones twinkle, as in the widget; a little brighter while she talks
-  const lift = 1 + 0.35 * (v.face.talk || 0);
-  for (let i = 0; i < M.n; i++) { const a = (reduceMotion ? 0.7 : 0.45 + 0.4 * Math.sin(T / 380 + dots[i].p)) * lift, c = M.base[i]; M.col[i * 3] = c[0] * a; M.col[i * 3 + 1] = c[1] * a; M.col[i * 3 + 2] = c[2] * a; }
+  const bright = 1 + 0.35 * (v.face.talk || 0);
+  for (let i = 0; i < M.n; i++) { const a = (reduceMotion ? 0.7 : 0.45 + 0.4 * Math.sin(T / 380 + dots[i].p)) * bright, c = M.base[i]; M.col[i * 3] = c[0] * a; M.col[i * 3 + 1] = c[1] * a; M.col[i * 3 + 2] = c[2] * a; }
   M.pts.geometry.attributes.color.needsUpdate = true;
   // the pointing beam
   const on = v.pointT > 0 && v.pointTarget;
@@ -3675,8 +3474,7 @@ function updateVee(v, dt, t) {
   v.pos.copy(b);
   // shimmer in when she arrives somewhere, shrink away when she zips into a display
   let scatter = 0;
-  if (v.rigWait && performance.now() - v.rigWait < 6000) { v.scale = 0; scatter = 1.4; v.appearT = 0.8; }   // waiting for her rigged body, so she doesn't appear in the old one first
-  else if (v.away) { v.scale = Math.max(0, v.scale - dt * 2.5); scatter = (1 - v.scale) * 1.4; }   // docked elsewhere: she's not here
+  if (v.away) { v.scale = Math.max(0, v.scale - dt * 2.5); scatter = (1 - v.scale) * 1.4; }   // docked elsewhere: she's not here
   else if (v.vanishT >= 0) { v.vanishT += dt; v.scale = Math.max(0, 1 - v.vanishT / 0.45); scatter = Math.min(1, v.vanishT / 0.45) * 1.4; }
   else if (v.appearT > 0) { v.appearT = Math.max(0, v.appearT - dt); const k = 1 - v.appearT / 0.8; v.scale = Math.min(1, 0.35 + k); scatter = (1 - k) * (1 - k) * 1.6; v.glow = Math.max(v.glow, 1 - k); }   // the swarm gathers into her
   else v.scale = 1;
@@ -3708,7 +3506,7 @@ function updateVee(v, dt, t) {
   const dx = cam.x - b.x, dz = cam.z - b.z, dist = Math.hypot(dx, dz);
   const isNear = dist < 5.5;
   if (!isNear) v.awayT += dt;
-  if (isNear && !v.wasNear) { v.waveT = 2.4; if (v.awayT > 8 && !reduceMotion && !v.rig) v.spinT = 0.9; v.awayT = 0; }   // the welcome-back spin is for her built body; on the rig it twisted her mid-wave   // wave hello, with a twirl if you've been gone a while
+  if (isNear && !v.wasNear) { v.waveT = 2.4; if (v.awayT > 8 && !reduceMotion) v.spinT = 0.9; v.awayT = 0; }   // the welcome-back spin is for her built body; on the rig it twisted her mid-wave   // wave hello, with a twirl if you've been gone a while
   v.wasNear = isNear;
   // facing: what she's pointing at, else you, else her resting direction
   v.pointT -= dt;
@@ -3778,7 +3576,6 @@ function updateVee(v, dt, t) {
     if (v.glitchD > 0) { v.glitchD -= dt; v.fig.position.x = (Math.random() - 0.5) * 0.025; v.holoU.uDim.value = 0.8 + Math.random() * 0.2; }
     else v.fig.position.x = 0;
   }
-  if (v.rig) updateVeeRig(v, dt);
   v.rings.forEach((r, i) => { r.rotation.z += dt * [0.8, -0.6, 1.1][i] * m; if (i === 2) r.scale.setScalar(1 + 0.08 * Math.sin(t * 2.2) * m); });   // the foot halo also breathes
   // motes: swirl faster and pull in tighter while she talks, twinkle as they go
   v.moteSpeed += ((talking ? 2.6 : 1) * v.mp.swirl - v.moteSpeed) * Math.min(1, dt * 3);
@@ -4015,7 +3812,7 @@ function buildReception() {
     // 3 specifications
     section('03', 'Specifications', RX2, 350, RW2);
     [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
-     ['Library', '~1,000 Quantum V^ research passages'], ['Memory', 'One conversation; none between visits'], ['Body', '~2,100 nanobots on a rigged skeleton']].forEach(([k, v], i) => {
+     ['Library', '~1,000 Quantum V^ research passages'], ['Memory', 'One conversation; none between visits'], ['Face', '350 drones in 3D: the face from her chat widget']].forEach(([k, v], i) => {
       const y = 420 + i * 58;
       g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
       g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
@@ -4046,7 +3843,7 @@ function buildReception() {
     g.fillStyle = SOFT; g.font = sans(27);
     wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
     line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
-    [['EMBODIMENT', '~2,100 nanobots on a motion-captured skeleton: moods, gestures, lip sync and full-body moves.'],
+    [['EMBODIMENT', 'Her chat-widget face in 3D: 350 drones, eyes and a mouth that talk, moods, a beam to point, spins and bursts.'],
      ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
      ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
      ['RETRIEVAL', 'RAG over ~1,000 passages in Vectorize; AI tools like Claude can search them (and private notes) via MCP.'],
@@ -4279,7 +4076,6 @@ const hallBounds = p => { if (walkable(p.x, p.z)) return; const c = camera.posit
 function buildMascot() {
   const normal = new THREE.Vector3(START.pos.x - VEE_POS.x, 0, START.pos.z - VEE_POS.z).normalize();
   vee = makeVee(veeRoot, VEE_POS, normal); vee.bounds = p => { if (mode !== 'lift') hallBounds(p); };
-  loadVeeRig();   // her rigged body, straight away (she waits for it, dissolved)
   const plat = paintings.find(p => p.p.id === 'platform'), liftAt = new THREE.Vector3(LIFT.x, 2.2, LIFT.z);
   const firstUnseen = unseenWorlds()[0], firstTarget = firstUnseen && firstUnseen !== 'about' ? paintings.find(p => p.p.id === firstUnseen) : null;
   // the lines play on their own while you stand near her; pressing E (or tapping her) always leads to About
