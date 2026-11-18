@@ -1935,10 +1935,10 @@ const DATA_WALL_Z = [1.2, -2.05, -5.3, -8.55], DATA_WALL_CZ = (DATA_WALL_Z[0] + 
     if (link) hallLinks.push({ mesh: m, url: link, floor: FI.b1, stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + y, z), normal: new THREE.Vector3(1, 0, 0), standOff: 3.6, pitch: row ? 0.02 : 0.2 } });
     return s;
   }
-  // 1 · live draws, and what this visit has taken from the pool
-  const live = screen(0, 0, p => {
+  // 1 · live draws, and what this visit has taken from the pool (top right, beside the library that serves them)
+  const live = screen(2, 0, p => {
     const on = qrngLive();
-    head(p, 'LIVE FROM IBM QUANTUM HARDWARE', on ? '● LIVE' : '○ OFFLINE', on);
+    head(p, 'LIVE QES-256 DRAWS', on ? '● LIVE' : '○ OFFLINE', on);   // a quantum-seeded generator, not hardware per request
     small(p, 'LATEST 32-BYTE DRAWS · HEX', 44, 106);
     p.font = '600 20px "IBM Plex Mono", monospace';   // 71 characters a line, inside the frame
     if (QRNG.draws.length) QRNG.draws.slice(0, 4).forEach((h, i) => { p.fillStyle = i ? `rgba(200,255,224,${0.85 - i * 0.14})` : '#d8ffe6'; p.fillText(h.match(/.{8}/g).join(' '), 44, 148 + i * 38); });
@@ -1960,9 +1960,11 @@ const DATA_WALL_Z = [1.2, -2.05, -5.3, -8.55], DATA_WALL_CZ = (DATA_WALL_Z[0] + 
     const a = QRNG.att;
     head(p, 'ATTESTATION · MASTER POOL', a ? 'LIVE' : '', a ? null : false);
     if (!a) { p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText(QRNG.attTried ? 'The attestation endpoint can\'t be reached right now.' : 'Fetching /qrng/attestation…', 44, 150); return; }
-    const rowsA = [['SERVICE', a.service], ['HIVES LOADED', String(a.hives_loaded)], ['SATELLITES', String(a.total_satellites)],
-      ['TOTAL ENTROPY', `${Number(a.total_entropy_bits).toLocaleString('en-US')} bits`],
-      ['YIELD', `${(a.avg_yield_efficiency * 100).toFixed(1)}% avg · ${(a.min_yield_efficiency * 100).toFixed(1)}–${(a.max_yield_efficiency * 100).toFixed(1)}%`],
+    // the pool is 256 bits, hashed from every seed; the old 'total entropy' summed per-shot Shannon figures, which isn't the entropy of anything
+    const hvA = Object.values(a.hives), fullA = hvA.reduce((n, h) => n + (h.full_entropy_seeds || 0), 0);
+    const rowsA = [['SERVICE', a.service], ['HIVES LOADED', String(a.hives_loaded)], ['SEEDS', String(a.total_satellites)],
+      ['FULL ENTROPY', hvA.every(h => h.seed_method === 'shots-v2') ? `${fullA} of ${a.total_satellites} seeds` : '—'],
+      ['POOL', `${a.pool_bits || 256} bits, hashed from every seed`],
       ['GENERATED', String(a.generated_at).slice(0, 16).replace('T', ' ') + ' UTC']];
     rowsA.forEach(([k, v], i) => { small(p, k, 44, 122 + i * 46, '#8e99b0', 20); p.fillStyle = '#f1e6cf'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText(v, 330, 124 + i * 46); });
     small(p, 'MASTER FINGERPRINT · SHA-256 OF THE ENTROPY POOL', 44, 432, '#5ff0ff');
@@ -1970,22 +1972,24 @@ const DATA_WALL_Z = [1.2, -2.05, -5.3, -8.55], DATA_WALL_CZ = (DATA_WALL_Z[0] + 
     p.fillText(fp.slice(0, 32).match(/.{1,8}/g).join(' '), 44, 472); p.fillText(fp.slice(32).match(/.{1,8}/g).join(' '), 44, 506);
     p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Not reversible to key material.', 44, 570);
   });
-  // 3 · the three hives seeding the pool
-  const hives = screen(2, 0, p => {
+  // 3 · the three hives seeding the pool: where the seeds came from (top, second column, above their job IDs)
+  const hives = screen(0, 0, p => {
     const a = QRNG.att;
     head(p, 'THE THREE HIVES', a ? 'LIVE' : '', a ? null : false);
     if (!a) { p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText('Waiting for the attestation…', 44, 150); return; }
-    const hd = ['HIVE', 'p', 'SATELLITES', 'AVG ENTROPY', 'YIELD'], xs = [44, 250, 340, 560, 800];
+    const hd = ['HIVE', 'p', 'SATELLITES', 'IBM JOBS', 'SEED RUN'], xs = [44, 250, 340, 560, 740];
+    const runDate = h => { const m = /_(\d{9,})\.json$/.exec(h.seed_file || ''); return m ? new Date(+m[1] * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'; };
     hd.forEach((h, i) => small(p, h, xs[i], 120, '#8e99b0', 20));
     ['VAULT', 'VIPER', 'LOTUS'].forEach((k, i) => {
       const h = a.hives[k]; if (!h) return; const y = 190 + i * 112;
       p.fillStyle = hiveC[k]; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText(k + '™', 44, y);
       p.fillStyle = '#f1e6cf'; p.font = '600 30px "IBM Plex Mono", monospace';
-      p.fillText(String(h.prime), 250, y); p.fillText(String(h.satellites), 340, y); p.fillText(`${h.avg_entropy_bits.toFixed(2)} bits`, 560, y); p.fillText(`${(h.yield_efficiency * 100).toFixed(1)}%`, 800, y);
-      p.fillStyle = 'rgba(63,224,224,0.14)'; p.fillRect(44, y + 22, 936, 8); p.fillStyle = hiveC[k]; p.fillRect(44, y + 22, 936 * h.yield_efficiency, 8);
-      small(p, `${h.seeds_per_job != null ? h.total_jobs + ' JOBS' : h.results_loaded + ' SEEDS'} · ${h.backend} · ${h.inferred_qubits} QUBITS${h.min_entropy_bits_per_seed_min != null ? ` · MIN-ENTROPY ≥ ${Math.round(h.min_entropy_bits_per_seed_min).toLocaleString('en-US')} BITS/SEED` : ''}`, 44, y + 60, '#8e99b0', 18);
+      p.fillText(String(h.prime), 250, y); p.fillText(String(h.satellites), 340, y); p.fillText(h.seeds_per_job != null ? String(h.total_jobs) : '—', 560, y);
+      p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(runDate(h), 740, y);
+      p.fillStyle = 'rgba(63,224,224,0.14)'; p.fillRect(44, y + 22, 936, 8); p.fillStyle = hiveC[k]; p.fillRect(44, y + 22, 936 * h.satellites / 432, 8);   // satellites against LOTUS's 432
+      small(p, `${h.backend} · ${h.inferred_qubits} QUBITS · ${h.seeds_per_job != null ? h.seeds_per_job + ' SEEDS PER JOB' : h.results_loaded + ' SEEDS'}`, 44, y + 60, '#8e99b0', 18);
     });
-    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText(`Yield: average entropy against the ${a.hives.VAULT ? a.hives.VAULT.theoretical_max_bits : 10}-bit maximum per measurement.`, 44, 590);
+    p.fillStyle = '#c9d2e3'; p.font = '22px "IBM Plex Sans", sans-serif'; p.fillText('Each hive is its own seed run; the pool hashes all three. Job IDs below.', 44, 590);
   });
   // 4 · real IBM Quantum job IDs, one highlighted at a time; tap to open it on IBM Quantum
   let jobK = 0;
