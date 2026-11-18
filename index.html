@@ -1364,7 +1364,7 @@ function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
 }
 
 /* ---------- Crystal lattice walls (?walls=lattice | ?walls=open, a prototype, 2026-11-18) ----------
-   lattice: the hall becomes the crystal. Up to each floor's CRYSTAL_TOP (above its tallest wall exhibit) the wall is
+   lattice: the hall becomes the crystal. Up to CRYSTAL_TOP (3.8 m; B2 all crystal) the wall is
    solid crystal: dark and glassy, a Fresnel rim, faint facets, and the same lattice glowing inside it with parallax
    (sampled at several depths along your line of sight); a bright growth edge where it opens into lattice, which
    runs on to the ceiling on one world-aligned grid, so the inner and open lattice line up. open: the whole wall is
@@ -1373,7 +1373,8 @@ function floorSign(g, eyebrow, title, x, y, z, ry, w = 4.2, mark) {
    move: nodes as points twinkling in the shader, nearest-neighbour struts as lines, a starfield beyond. B2, the
    sealed server room, stays solid. Default: solid walls. */
 const LATTICE_A = 1.25, LATTICE_D = 1.6;   // cell size, depth beyond the wall
-const CRYSTAL_TOP = { b2: Infinity, b1: 5.6, l1: 4.6, l2: 5.4, l3: 5.9, l4: 5.0 };   // floor-local, above each floor's tallest wall exhibit
+// where the crystal opens into lattice: 3.8 m everywhere (taller bands made the rooms feel smaller), B2 all crystal
+const CRYSTAL_TOP = { b2: Infinity }, CRYSTAL_TOP_DEFAULT = 3.8;
 const latticeU = { uTime: { value: 0 } };
 const latticeNodeMat = new THREE.ShaderMaterial({ uniforms: latticeU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   vertexShader: `attribute float aSeed; uniform float uTime; varying float vA;
@@ -1412,24 +1413,21 @@ const crystalFrag = `uniform float uTime, uFloorY, uA, uTop; varying vec3 vW; va
   float node(vec3 p) { vec3 x = p / (uA * 0.5); float d = length(x - nearestFCC(x)) * uA * 0.5; return exp(-d * d / 0.006); }
   void main() {
     vec3 V = normalize(vW - cameraPosition), N = normalize(vN), p = vW - vec3(0.0, uFloorY, 0.0);
-    // the lattice inside, seen into the crystal along your line of sight: brighter near the surface, bluer deeper in
+    // the lattice deep inside, set back from the surface (0.8 to 3 m along your line of sight) so you look into the
+    // wall rather than at it; fainter and bluer the deeper it is
     vec3 inner = vec3(0.0);
-    for (int k = 0; k < 8; k++) { float t = float(k) * 0.22, f = exp(-float(k) * 0.38); inner += node(p + V * t) * f * mix(vec3(0.45, 0.96, 1.0), vec3(0.18, 0.45, 1.0), float(k) / 7.0); }
+    for (int k = 0; k < 8; k++) { float t = 0.8 + float(k) * 0.32, f = exp(-float(k) * 0.3); inner += node(p + V * t) * f * mix(vec3(0.4, 0.9, 1.0), vec3(0.15, 0.35, 0.9), float(k) / 7.0); }
     float tw = 0.75 + 0.25 * sin(uTime * 0.9 + dot(floor(p / uA), vec3(1.7, 2.3, 3.1)));
-    float fres = pow(1.0 - abs(dot(N, -V)), 3.0);
-    // cleavage planes of the crystal, not a tile grid: faint diagonals along its {111} planes
-    float c1 = smoothstep(0.47, 0.5, abs(fract((p.x + p.y + p.z) / (uA * 1.5)) - 0.5)), c2 = smoothstep(0.475, 0.5, abs(fract((p.x - p.y + p.z) / (uA * 2.1)) - 0.5));
-    // light catching the upper crystal, and a slow sheen drifting across the surface
-    float rise = smoothstep(0.0, uTop, p.y), sheen = pow(max(0.0, 1.0 - abs(fract((p.x + p.z + p.y * 0.6) * 0.045 - uTime * 0.015) - 0.5) * 2.0), 18.0);
-    float edge = smoothstep(0.07, 0.0, abs(p.y - uTop));   // the growth edge, where the crystal opens into lattice
-    vec3 col = vec3(0.016, 0.03, 0.058) + vec3(0.12, 0.42, 0.55) * rise * 0.16
-      + inner * 0.55 * tw + vec3(0.37, 0.94, 1.0) * (fres * 0.2 + (c1 + c2) * 0.035 + sheen * 0.06) + vec3(0.65, 1.0, 1.0) * edge * 0.85;
+    float fres = pow(1.0 - abs(dot(N, -V)), 4.0);
+    float c1 = smoothstep(0.48, 0.5, abs(fract((p.x + p.y + p.z) / (uA * 1.5)) - 0.5));   // a single, faint set of cleavage planes
+    float edge = smoothstep(0.05, 0.0, abs(p.y - uTop));   // the growth edge, where the crystal opens into lattice
+    vec3 col = vec3(0.01, 0.018, 0.035) + inner * 0.32 * tw + vec3(0.37, 0.94, 1.0) * (fres * 0.12 + c1 * 0.018) + vec3(0.6, 1.0, 1.0) * edge * 0.6;
     gl_FragColor = vec4(col, 1.0);
   }`;
 const crystalMats = {};
 function crystalMat(F) {
   return crystalMats[F.id] || (crystalMats[F.id] = new THREE.ShaderMaterial({ side: THREE.DoubleSide, vertexShader: crystalVert, fragmentShader: crystalFrag,
-    uniforms: { uTime: latticeU.uTime, uFloorY: { value: F.y }, uA: { value: LATTICE_A }, uTop: { value: Math.min(CRYSTAL_TOP[F.id] ?? 4.6, F.h) } } }));
+    uniforms: { uTime: latticeU.uTime, uFloorY: { value: F.y }, uA: { value: LATTICE_A }, uTop: { value: Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h) } } }));
 }
 function crystalWall(F, g, w, h, x, y, z, ry) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), crystalMat(F)); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m; }
 // a room's wall (the lobby annex): crystal in the lattice mode, panels otherwise
@@ -1437,7 +1435,7 @@ function roomWall(F, g, w, h, x, y, z, ry) { return WALLS_MODE === 'lattice' ? c
 // a wall rectangle (centre x, y, z), solid or lattice by WALLS_MODE
 function wallBand(F, g, w, h, x, y, z, ry) {
   const lo = y - h / 2, hi = y + h / 2, sealed = F.atrium === false;
-  const top = Math.min(CRYSTAL_TOP[F.id] ?? 4.6, F.h);
+  const top = Math.min(CRYSTAL_TOP[F.id] ?? CRYSTAL_TOP_DEFAULT, F.h);
   const cut = !WALLS_MODE || (sealed && WALLS_MODE === 'open') ? hi : WALLS_MODE === 'open' ? lo : Math.max(lo, Math.min(hi, top));
   if (cut > lo + 1e-3) (WALLS_MODE === 'lattice' ? crystalWall(F, g, w, cut - lo, x, (lo + cut) / 2, z, ry) : wallAt(g, w, cut - lo, x, (lo + cut) / 2, z, ry));
   if (hi > cut + 1e-3) latticePanel(g, w, hi - cut, x, (cut + hi) / 2, z, ry);
