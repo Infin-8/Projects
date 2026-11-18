@@ -2073,7 +2073,6 @@ let MEAS_STOP = null;
   const small = (p, text, x, y, color = '#8e99b0', px = 18) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
   const sans = (p, text, x, y, color = '#c9d2e3', px = 22) => { p.fillStyle = color; p.font = `${px}px "IBM Plex Sans", sans-serif`; p.fillText(text, x, y); };
   const bits = v => v.toString(2).padStart(8, '0');
-  const hue = v => `hsl(${Math.round(v / 255 * 300)}, 72%, 56%)`;
   const screens = [];
   function screen(i, draw, link) {
     const c = mk(1024, 640), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
@@ -2085,18 +2084,26 @@ let MEAS_STOP = null;
     if (link) hallLinks.push({ mesh: m, url: link, floor: FI.b1, stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + YS[i], Z), normal: new THREE.Vector3(1, 0, 0), standOff: 3.6, pitch: i ? 0.02 : 0.2 } });
     return s;
   }
-  // A · the shots: a 32 × 32 grid, one cell per shot, coloured by its 8-bit outcome, filled in measurement order
-  const N = MEAS.shots.length, CELL = 14, GX = 44, GY = 92;
+  // A · the shots, bit by bit: 8,192 readings (1,024 shots × 8 qubits), lit for 1 and dark for 0, eight shots to a row,
+  // filled in measurement order. Each shot is a block of eight columns, q7 to q0 like the bitstring, so every qubit
+  // lines up in its own column and a biased qubit shows as a dimmer stripe (qubit 1, at 34% ones).
+  const N = MEAS.shots.length, PER = 8, CW = 6, SBW = 8 * CW + 3, RH = 3.3, GX = 44, GY = 96;   // 128 rows, down to y 518
   const shotsScreen = screen(0, (p, t) => {
-    head(p, 'MEASUREMENT RECORD · 1,024 SHOTS', 'REAL JOB · DISPLAY ONLY');
+    head(p, 'MEASUREMENT RECORD · 8,192 BITS', 'REAL JOB · DISPLAY ONLY');
     const k = reduceMotion ? N : Math.floor((t * 24) % (N + 96));   // a pause with the grid full, then again
+    small(p, 'q7 · · · q0', GX, GY - 8, '#5b6680', 12);
     for (let i = 0; i < N; i++) {
-      const x = GX + (i % 32) * CELL, y = GY + Math.floor(i / 32) * CELL;
-      p.fillStyle = i < k ? hue(MEAS.shots[i]) : 'rgba(63,224,224,0.07)'; p.fillRect(x, y, CELL - 2, CELL - 2);
+      const x0 = GX + (i % PER) * SBW, y = GY + Math.floor(i / PER) * RH, v = MEAS.shots[i];
+      for (let c = 0; c < 8; c++) {
+        const one = (v >> (7 - c)) & 1, x = x0 + c * CW;
+        p.fillStyle = i >= k ? 'rgba(63,224,224,0.05)' : one ? (c === 6 ? '#ffc24a' : '#3fe0e0') : 'rgba(63,224,224,0.13)';
+        p.fillRect(x, y, CW - 1, RH - 0.6);
+      }
     }
     const cur = Math.min(k, N) - 1;
-    if (cur >= 0 && k <= N) { const x = GX + (cur % 32) * CELL, y = GY + Math.floor(cur / 32) * CELL; p.strokeStyle = '#ffffff'; p.lineWidth = 2; p.strokeRect(x - 2, y - 2, CELL + 2, CELL + 2); }
-    small(p, 'EACH CELL IS ONE SHOT · COLOUR = ITS 8-BIT OUTCOME', GX, 572, '#8e99b0', 15);
+    if (cur >= 0 && k <= N) { const x = GX + (cur % PER) * SBW, y = GY + Math.floor(cur / PER) * RH; p.strokeStyle = '#ffffff'; p.lineWidth = 1.5; p.strokeRect(x - 1.5, y - 1.5, 8 * CW + 2, RH + 2); }
+    small(p, 'EACH ROW: 8 SHOTS · EACH SQUARE: ONE QUBIT · LIT = 1', GX, 546, '#8e99b0', 15);
+    p.fillStyle = '#ffc24a'; p.fillRect(GX, 562, 10, 10); small(p, 'QUBIT 1: THE DIMMER STRIPE', GX + 16, 572, '#ffc24a', 14);
     // right column
     const RX = 540;
     small(p, cur >= 0 ? `SHOT ${String(Math.min(k, N)).padStart(4, ' ')} OF ${N}` : 'MEASURING…', RX, 112, '#5ff0ff', 20);
