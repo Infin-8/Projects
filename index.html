@@ -5932,31 +5932,40 @@ function buildOfficeWorld(p) {
       addStation(m, { id: 'shipped-' + i, info: { title: `Shipped · ${r.name}` }, exhibit: true, standOff: 2.2, pitch: y > 2 ? 0.2 : 0.02 });
     });
   }
-  // Now building: a whiteboard in marker, on the right as you face the wall (-x)
+  // Now building: a glass board with glowing handwriting, on the right as you face the wall (-x)
   {
     const c = mk(2048, 960), g = c.getContext('2d');
-    g.fillStyle = '#cfd5dd'; g.fillRect(0, 0, 2048, 960);   // a soft grey so it doesn't glare in the dim room
-    for (let i = 0; i < 9; i++) {   // faint smudges of old notes, wiped off
-      const x = 200 + ((i * 433) % 1700), y = 120 + ((i * 271) % 760), gr = g.createRadialGradient(x, y, 10, x, y, 180 + (i % 3) * 60);
-      gr.addColorStop(0, 'rgba(120,130,150,0.07)'); gr.addColorStop(1, 'rgba(120,130,150,0)'); g.fillStyle = gr; g.fillRect(x - 260, y - 260, 520, 520);
-    }
-    const marker = (text, x, y, px, color, rot = 0) => { g.save(); g.translate(x, y); g.rotate(rot); g.fillStyle = color; g.font = `600 ${px}px "Caveat", "Comic Sans MS", cursive`; g.fillText(text, 0, 0); g.restore(); };
+    g.clearRect(0, 0, 2048, 960);
+    g.fillStyle = 'rgba(18, 55, 72, 0.22)'; g.fillRect(0, 0, 2048, 960);   // the glass: a faint teal tint you can see the wall through
+    const sheen = g.createLinearGradient(0, 0, 2048, 960);   // a soft reflection across it
+    sheen.addColorStop(0, 'rgba(255,255,255,0.07)'); sheen.addColorStop(0.35, 'rgba(255,255,255,0.0)'); sheen.addColorStop(0.62, 'rgba(255,255,255,0.035)'); sheen.addColorStop(1, 'rgba(255,255,255,0.0)');
+    g.fillStyle = sheen; g.fillRect(0, 0, 2048, 960);
+    const GLOW = { '#1d3f9e': '#8ab8ff', '#11602e': '#6dffa8', '#b3261e': '#ff7a7a' };   // the marker colours, as light
+    const write = (text, x, y, px, color, rot = 0) => {
+      g.save(); g.translate(x, y); g.rotate(rot); g.font = `600 ${px}px "Caveat", "Comic Sans MS", cursive`;
+      g.shadowColor = color; g.shadowBlur = px * 0.35; g.fillStyle = color; g.fillText(text, 0, 0);
+      g.shadowBlur = 0; g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillText(text, 0, 0);   // a bright core, so it reads as lit
+      g.restore();
+    };
     g.textAlign = 'left';
-    marker('Now building', 90, 140, 118, '#1a1f2b', -0.012);
-    g.strokeStyle = '#1a1f2b'; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(92, 168); g.quadraticCurveTo(400, 158, 700, 170); g.stroke();
+    write('Now building', 90, 140, 118, '#bff8ff', -0.012);
+    g.save(); g.shadowColor = '#5ff0ff'; g.shadowBlur = 16; g.strokeStyle = '#bff8ff'; g.lineWidth = 5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(92, 168); g.quadraticCurveTo(400, 158, 700, 170); g.stroke(); g.restore();
     BUILDING.forEach((b, i) => {
-      const y = 290 + i * 132, wob = (i % 2 ? 1 : -1) * 0.006;
-      g.strokeStyle = b.c; g.lineWidth = 5; g.strokeRect(98, y - 50, 46, 46);   // an open box: not done yet
-      marker(b.t, 180, y, 78, b.c, wob);
-      marker(b.n, 196, y + 50, 50, '#4a5160', wob);
+      const y = 290 + i * 132, wob = (i % 2 ? 1 : -1) * 0.006, col = GLOW[b.c] || '#bff8ff';
+      g.save(); g.shadowColor = col; g.shadowBlur = 14; g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(98, y - 50, 46, 46); g.restore();   // an open box: not done yet
+      write(b.t, 180, y, 78, col, wob);
+      write(b.n, 196, y + 50, 50, '#9fc3d6', wob);
     });
-    marker('→ updated as things ship', 1500, 905, 54, '#4a5160', -0.01);
-    const m = wallPanel(c, -3.0, 1.95, 5.0, 5.0 * 960 / 2048, frameMat, 0.06);
-    const tray = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.05, 0.14), frameMat); tray.position.set(-3.0, 1.95 - 5.0 * 960 / 2048 / 2 - 0.09, wallZ - 0.08); ws.add(tray);
-    [['#1d3f9e', -4.2], ['#b3261e', -3.95], ['#11602e', -3.7]].forEach(([col, x]) => {
-      const mk3 = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 10), new THREE.MeshStandardMaterial({ color: col, roughness: 0.5 }));
-      mk3.rotation.z = Math.PI / 2; mk3.position.set(x, tray.position.y + 0.045, wallZ - 0.1); ws.add(mk3);
-    });
+    write('→ updated as things ship', 1500, 905, 54, '#9fc3d6', -0.01);
+    // the pane: no frame or tray, standing a few centimetres off the wall on four small standoffs, its edges catching the light
+    const W = 5.0, H = 5.0 * 960 / 2048, X = -3.0, Y = 1.95, gp = new THREE.Group(); gp.position.set(X, Y, wallZ - 0.06); gp.rotation.y = Math.PI; ws.add(gp);
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })); gp.add(scr);
+    gp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.55 })));
+    const steel2 = new THREE.MeshStandardMaterial({ color: 0xb8bec8, metalness: 0.85, roughness: 0.25 });
+    for (const [sx, sy] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.07, 16), steel2); st.rotation.x = Math.PI / 2; st.position.set(sx * (W / 2 - 0.12), sy * (H / 2 - 0.12), -0.035); gp.add(st); }
+    const m = { g: gp, scr, tex, center: new THREE.Vector3(X, Y, wallZ - 0.1), normal: new THREE.Vector3(0, 0, -1), h: H };
     addStation(m, { id: 'building', info: { title: 'Now building' }, exhibit: true, standOff: 3.4, pitch: 0.04 });
   }
 
