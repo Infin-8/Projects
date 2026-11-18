@@ -1551,6 +1551,66 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.014, 6, 48), amberMat); ring.rotation.x = Math.PI / 2; ring.position.set(x, y < 1 ? 0.31 : L1.h - 0.31, z); L1.g.add(ring);
   }
 }
+/* The pillars carry entropy (2026-11-18): bits rise through each glass pillar from B1, where the entropy is
+   measured, toward the pools on L3. Three carry the pools' colours (VAULT™, VIPER™, LOTUS™); their bits are random
+   and never claimed as live. The fourth carries QES-256, the mixed output, and shows real bytes from the QRNG API
+   while the page has fresh live data (its label says LIVE only then). A bright point is a 1, a faint one a 0. */
+{
+  const N = 480, R = 0.3, H = L1.h;
+  const lanes = [
+    { x: L1.x0 + 0.5, z: 8, name: 'VAULT™', sub: 'p = 5 · pool', col: POOLS[0].color2 },   // the light tint, so it shows against the cyan glass
+    { x: L1.x1 - 0.5, z: 8, name: 'VIPER™', sub: 'p = 13 · pool', col: POOLS[1].color },
+    { x: L1.x0 + 0.5, z: 2.5, name: 'LOTUS™', sub: 'p = 17 · pool', col: POOLS[2].color },
+    { x: L1.x1 - 0.5, z: 2.5, name: 'QES-256', sub: 'the mix of all three', col: '#e8fdff', live: true }];
+  const bitVert = `uniform float uTime, uH; uniform sampler2D uBits; attribute vec4 seed; varying float vOn; varying float vA;
+    void main() {
+      float y = mod(seed.y * uH + uTime * (0.45 + 0.35 * seed.w), uH), a = seed.x * 6.2832 + y * 0.9;
+      float r = ${R.toFixed(2)} * sqrt(seed.z);
+      vec3 p = vec3(cos(a) * r, y, sin(a) * r);
+      vOn = texture2D(uBits, vec2((floor(seed.y * 255.0) + floor(y * 2.0)) / 256.0 + 0.5 / 256.0, 0.5)).r;
+      vA = smoothstep(0.0, 0.8, y) * (1.0 - smoothstep(uH - 1.0, uH - 0.3, y));   // fade in at the floor, out at the ceiling
+      vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
+      gl_PointSize = (vOn > 0.5 ? 52.0 : 28.0) / -mv.z;
+    }`;
+  const bitFrag = `uniform vec3 uColor; varying float vOn; varying float vA;
+    void main() { vec2 d = gl_PointCoord - 0.5; float k = smoothstep(0.5, 0.1, length(d));
+      gl_FragColor = vec4(uColor * (vOn > 0.5 ? 1.0 : 0.3), k * vA * (vOn > 0.5 ? 0.95 : 0.4)); }`;
+  const fillRandom = arr => { const b = new Uint8Array(32); crypto.getRandomValues(b); for (let i = 0; i < 256; i++) arr[i * 4] = ((b[i >> 3] >> (7 - (i & 7))) & 1) * 255; };
+  let shownDraw = '';
+  lanes.forEach((ln, li) => {
+    const data = new Uint8Array(256 * 4); fillRandom(data);
+    const tex = new THREE.DataTexture(data, 256, 1, THREE.RGBAFormat); tex.needsUpdate = true;
+    const seeds = new Float32Array(N * 4); for (let i = 0; i < N * 4; i++) seeds[i] = Math.random();
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(N * 3), 3)); geo.setAttribute('seed', new THREE.Float32BufferAttribute(seeds, 4));
+    const mat = new THREE.ShaderMaterial({ uniforms: { uTime: latticeU.uTime, uH: { value: H }, uBits: { value: tex }, uColor: { value: new THREE.Color(ln.col) } },
+      vertexShader: bitVert, fragmentShader: bitFrag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const pts = new THREE.Points(geo, mat); pts.position.set(ln.x, 0, ln.z); pts.frustumCulled = false; L1.g.add(pts);
+    // its label: etched glass at eye height on the pillar's lobby side
+    const c = mk(512, 128), g = c.getContext('2d'), lt = new THREE.CanvasTexture(c);
+    const draw = live => { etchedPlate(g, 512, 128, 10); g.textAlign = 'center'; etchText(g, ln.name, 256, 58, '34px "Young Serif", Georgia, serif');
+      etchText(g, ln.live && live ? 'LIVE · the mix of all three' : ln.sub, 256, 98, '600 20px "IBM Plex Mono", monospace', 0.6); lt.needsUpdate = true; };
+    draw(false);
+    const plate = etchedMesh(lt, 0.9, 0.225), side = ln.x < 0 ? 1 : -1;
+    plate.position.set(ln.x + side * 0.52, 1.55, ln.z); plate.rotation.y = side * Math.PI / 2; L1.g.add(plate);
+    ln.data = data; ln.tex = tex; ln.draw = draw; ln.wasLive = false; ln.next = 4 + li;
+  });
+  buildingUpdates.push((dt, t) => {
+    if (!L1.g.visible) return;
+    for (const ln of lanes) {
+      if (ln.live) {
+        const live = qrngLive();
+        if (live && QRNG.draws[0] && QRNG.draws[0] !== shownDraw) {   // the newest 32-byte draw, as 256 bits
+          shownDraw = QRNG.draws[0];
+          for (let i = 0; i < 256; i++) ln.data[i * 4] = ((parseInt(shownDraw[i >> 2], 16) >> (3 - (i & 3))) & 1) * 255;
+          ln.tex.needsUpdate = true;
+        }
+        if (live !== ln.wasLive) { ln.wasLive = live; ln.draw(live); }
+        if (!live && t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
+        if (Date.now() - QRNG.last > 60000) qrngRefill();   // fresh bytes about once a minute while you're in the lobby (rate-limited inside)
+      } else if (t > ln.next) { ln.next = t + 6; fillRandom(ln.data); ln.tex.needsUpdate = true; }
+    }
+  });
+}
 // The entrance is Young's double slit: you arrive through a dark barrier cut by two tall lit slits.
 // On the floor in front of it, the two waves from the slits add up (the real two-source pattern),
 // and their fringes run into the light path. Beside it, a caption and a detector that collects single
