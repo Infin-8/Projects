@@ -812,7 +812,7 @@ const WING_PROJECTS = [
     site: { url: 'https://recluda.com', label: 'recluda.com', addr: 'https://recluda.com', shot: 'assets/site-recluda.jpg',
       heading: 'recluda.com', cardText: 'The screen on your right opens recluda.com.' },
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: null,
-    floor: 'b2', pos: [2.5, 2.9, -8.92], rotY: 0, size: [3.3, 3.3] }];
+    floor: 'b2', pos: [-7.92, 3.6, -7.4], rotY: Math.PI / 2, size: [4.2, 4.2] }];   // the west wall, seen through the glass server room (beside the rack) as you arrive
 for (const P of POOLS) DRAW[P.id] = c => { const a = poolArtCanvas(P.prime, P.name, P.color, P.color2); c.getContext('2d').drawImage(a, 0, 0, c.width, c.height); };
 DRAW.oidc = c => c.getContext('2d').drawImage(oidcArtCanvas(), 0, 0, c.width, c.height);
 
@@ -900,7 +900,7 @@ const camera = new THREE.PerspectiveCamera(65, 1, 0.05, 100);
 const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
-  { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -15, h: 6, x0: -3, x1: 8, z0: -9, z1: 5.5, atrium: false, lightX: 2.5, lightsZ: [2.5, -4.5], look: [2.5, 5.5, 0.08], hello: ['B2 · Recluda.', 'The server room. Follow a VPN sign-in along the wall on your right.'] },
+  { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -18, h: 9, x0: -8, x1: 8, z0: -11, z1: 5.5, atrium: false, lightX: 0, lightsZ: [2.5, -6.5], look: [-0.5, -2.75, 0.04], hello: ['B2 · Recluda. The Gate.', 'A VPN sign-in runs through the glass server room in front of you.'] },
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } } },   // the AI Workers room, through a doorway in the west wall,
@@ -1830,15 +1830,20 @@ function makeVBanner(w, hangUp, near = 16) {
   buildingUpdates.push((dt, t) => b.update(dt, t));
 }
 
-/* ---------- B2 · Recluda ----------
-   The server room, sealed off below the cryostat, and smaller than the floors above. Facing you as the lift opens:
-   the floor plaque over the Recluda wall (what Recluda Server is, the install terminal, what you get). On your right, the west wall reads left to right as a sign-in goes:
-   the VPN's login screen, the Recluda Server rack against the wall, the phone. Recluda VPN is on the north wall. */
+/* ---------- B2 · Recluda · The Gate (rebuilt 2026-11-18) ----------
+   The server room below the cryostat, as large as B1. As the lift opens you face its centrepiece: a glass server
+   room with the Recluda Server rack inside, which you can walk all the way round. A VPN sign-in runs through the
+   room as light: the VPN login terminal (left of the glass room, angled to you) asks the rack's RADIUS bridge; the
+   rack sends the code up to the push relay hanging overhead (push.recluda.com); it drops to the phone (right),
+   where the number is picked and Face ID confirms; the signed approval returns to the rack and the VPN lets them
+   in. Recluda VPN is on the west wall behind the glass room; the Recluda wall (what it is, the install terminal,
+   what you get) is on the south wall. */
 const B2 = FLOORS[FI.b2];
-floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 2.5, 4.75, B2.z1 - 0.06, Math.PI, 4.2, drawFaceScan);   // straight ahead as the lift opens, over the Recluda wall
-// The server rack, against the west wall facing the lift, between the VPN screen and the phone: what Recluda Server
+const GATE = { x: -0.5, z: -2.75, w: 4.4, d: 4.0, h: 4.3 }, GATE_VIEW = { x: 5.9, z: -1.2 };   // the glass server room, and where you stand as the lift opens
+floorSign(B2.g, 'LEVEL B2 · THE GATE', 'Recluda', 0, 5.0, B2.z1 - 0.06, Math.PI, 4.2, drawFaceScan);   // over the Recluda wall
+// The server rack, in the glass server room in the middle of the floor, facing the lift: what Recluda Server
 // runs (its Docker Compose services, and a Raspberry Pi, which it also runs on). RACK.blink(id) flashes a unit's lights.
-const RACK = { x: B2.x0 + 0.7, z: -2.6, units: [
+const RACK = { x: GATE.x, z: GATE.z, units: [
   { id: 'patch', u: 1, name: 'PATCH PANEL', sub: 'VPN · INTERNET · LAN' },
   { id: 'https', u: 2, name: 'HTTPS', sub: 'CADDY · TLS ON 443' },
   { id: 'server', u: 4, name: 'RECLUDA SERVER', sub: 'OPENID CONNECT · RFC 8628 DEVICE FLOW' },
@@ -1849,7 +1854,7 @@ const RACK = { x: B2.x0 + 0.7, z: -2.6, units: [
 RACK.blink = id => { RACK.flash[id] = 1; };
 {
   const RW = 1.1, RH = 2.5, RD = 1.0, R = new THREE.Group(); R.position.set(RACK.x, 0, RACK.z); R.rotation.y = Math.PI / 2; R.scale.setScalar(1.25); B2.g.add(R);   // front (+z) faces east, to the lift
-  B2.blocks.push({ x0: B2.x0, x1: RACK.x + 1.2, z0: RACK.z - 1.15, z1: RACK.z + 1.15 });
+  B2.blocks.push({ x0: GATE.x - GATE.w / 2 - 0.3, x1: GATE.x + GATE.w / 2 + 0.3, z0: GATE.z - GATE.d / 2 - 0.3, z1: GATE.z + GATE.d / 2 + 0.3 });   // the glass room around it
   const cab = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.7, roughness: 0.35 });
   // a raised plinth with a lit edge, then the cabinet: top, base, sides and a dark back
   const plinth = new THREE.Mesh(new THREE.BoxGeometry(RW + 0.5, 0.1, RD + 0.5), colMat); plinth.position.y = 0.05; R.add(plinth);
@@ -1913,35 +1918,65 @@ RACK.blink = id => { RACK.flash[id] = 1; };
     drawRack(t);
   });
 }
+// the glass server room: clear panes on four sides and a roof, crystal bars with their amber line along every edge
+{
+  const G = GATE, x0 = G.x - G.w / 2, x1 = G.x + G.w / 2, z0 = G.z - G.d / 2, z1 = G.z + G.d / 2, t = 0.09;
+  const paneMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    vertexShader: pillarGlassMat.vertexShader,
+    fragmentShader: `varying vec3 vW; varying vec3 vN;
+      void main() { vec3 V = normalize(cameraPosition - vW), N = normalize(vN); float fres = pow(1.0 - abs(dot(N, V)), 3.0);
+        gl_FragColor = vec4(mix(vec3(0.10, 0.45, 0.50), vec3(0.6, 1.0, 0.95), fres), 0.06 + 0.42 * fres); }` });
+  const pane = (w, h, x, y, z, ry, rx = 0) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), paneMat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); B2.g.add(m); };
+  pane(G.w, G.h, G.x, G.h / 2, z0, 0); pane(G.w, G.h, G.x, G.h / 2, z1, 0);
+  pane(G.d, G.h, x0, G.h / 2, G.z, Math.PI / 2); pane(G.d, G.h, x1, G.h / 2, G.z, Math.PI / 2);
+  pane(G.w, G.d, G.x, G.h, G.z, 0, -Math.PI / 2);
+  for (const x of [x0, x1]) for (const z of [z0, z1]) crystalBar(B2.g, t, G.h + t, t, x, G.h / 2, z);   // the uprights
+  for (const y of [t / 2, G.h]) {
+    for (const z of [z0, z1]) crystalBar(B2.g, G.w, t, t, G.x, y, z);
+    for (const x of [x0, x1]) crystalBar(B2.g, t, t, G.d, x, y, G.z);
+  }
+  const base = new THREE.Mesh(new THREE.BoxGeometry(G.w + 0.3, 0.06, G.d + 0.3), crystalFrameMat); base.position.set(G.x, 0.03, G.z); B2.g.add(base);
+  const inLight = new THREE.PointLight(0x2dd4bf, 0.6, 7, 2); inLight.position.set(G.x + 1.2, G.h - 0.6, G.z); B2.g.add(inLight);
+}
 /* A VPN sign-in, played through the room on a loop as light along cables, the way it really goes:
    the VPN asks the rack's RADIUS bridge (UDP 1812); the server sends only the code (never the number) up through
    the ceiling to push.recluda.com, which drops it to the phone through Apple's push service; the person taps the
    number the VPN shows and confirms with Face ID; the signed approval comes back over HTTPS, and the RADIUS bridge
    tells the VPN to let them in. */
-const SIGNIN = { code: '7QK-4MX', num: 47, choices: [31, 47, 82], vpn: { x: B2.x0 + 0.08, y: 2.3, z: 1.0 }, phone: { x: B2.x0 + 1.1, z: -5.4 } };   // along the west wall, left to right from the lift: the VPN, the rack, the phone
+const SIGNIN = { code: '7QK-4MX', num: 47, choices: [31, 47, 82], vpn: { x: 1.9, y: 1.85, z: 1.7 }, phone: { x: 1.9, z: -7.2 } };   // either side of the glass room's front, angled to you as you arrive: the VPN (left), the phone (right)
 {
   const V = SIGNIN.vpn, PH = SIGNIN.phone, Y = 0.04, TOP = B2.h - 0.02;
   const cableMat = new THREE.MeshStandardMaterial({ color: 0x123a38, metalness: 0.5, roughness: 0.5, emissive: 0x06201e });
   const path = pts => new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'catmullrom', 0.1);
+  const C = GATE, RF = C.x + 0.85, RY = B2.h - 2.4;   // the rack's front (it faces +x), and the height the push relay hangs at
   const cables = {
-    radius: path([[RACK.x, 0.5, RACK.z + 0.78], [RACK.x, Y, RACK.z + 1.15], [V.x + 0.3, Y, V.z - 1.7], [V.x + 0.14, Y, V.z - 0.4], [V.x + 0.08, V.y - 1.0, V.z - 0.4]]),
-    uplink: path([[RACK.x - 0.25, 3.15, RACK.z], [RACK.x - 0.25, 4.6, RACK.z], [RACK.x - 0.25, TOP, RACK.z]]),
-    drop: path([[PH.x, TOP, PH.z], [PH.x, 3.6, PH.z], [PH.x, 2.15, PH.z]]),
-    https: path([[PH.x - 0.1, 0.3, PH.z + 0.22], [PH.x - 0.3, Y, PH.z + 0.75], [RACK.x, Y, RACK.z - 1.15], [RACK.x, 0.5, RACK.z - 0.78]])
+    radius: path([[RF, 0.45, C.z + 0.35], [RF + 0.35, Y, C.z + 0.35], [V.x - 0.5, Y, V.z - 0.7], [V.x, Y, V.z - 0.1], [V.x, 0.9, V.z - 0.1]]),
+    uplink: path([[C.x, 3.25, C.z], [C.x, 5.0, C.z], [C.x, RY - 0.35, C.z]]),
+    drop: path([[C.x + 0.35, RY, C.z - 0.2], [(C.x + PH.x) / 2, RY + 0.5, (C.z + PH.z) / 2], [PH.x, RY - 0.3, PH.z], [PH.x, 3.4, PH.z], [PH.x, 2.2, PH.z]]),
+    https: path([[PH.x, 0.3, PH.z], [PH.x - 0.35, Y, PH.z + 0.6], [RF + 0.35, Y, C.z - 0.35], [RF, 0.45, C.z - 0.35]])
   };
   for (const c of Object.values(cables)) B2.g.add(new THREE.Mesh(new THREE.TubeGeometry(c, 64, 0.028, 8, false), cableMat));
-  // where the uplink and the drop go through the ceiling: a lit collar each, and what's on the other side
-  for (const [x, z] of [[RACK.x - 0.25, RACK.z], [PH.x, PH.z]]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 6, 32), new THREE.MeshBasicMaterial({ color: 0x2dd4bf })); r.rotation.x = Math.PI / 2; r.position.set(x, TOP - 0.01, z); B2.g.add(r); }
+  // the push relay, hanging over the glass room: a slowly turning lattice of light (push.recluda.com, in the cloud)
+  const relay = new THREE.Group(); relay.position.set(C.x, RY, C.z); B2.g.add(relay);
+  relay.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), new THREE.MeshBasicMaterial({ color: 0x2dd4bf, wireframe: true, transparent: true, opacity: 0.8 })));
+  const rring = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.014, 6, 96), new THREE.MeshBasicMaterial({ color: 0x9ff8ef })); rring.rotation.x = Math.PI / 2; relay.add(rring);
+  relay.add(new THREE.PointLight(0x2dd4bf, 0.8, 6, 2));
+  buildingUpdates.push((dt, t) => { if (B2.g.visible && !reduceMotion) { relay.rotation.y = t * 0.35; rring.rotation.y = t * 0.6; } });
   const tag = (t1, t2, x, y, z) => { const sp = textSprite([[t1, '600 44px "IBM Plex Mono", monospace', '#2dd4bf'], [t2, '36px "IBM Plex Sans", sans-serif', '#c9d2e3']], 1024, 180, 2.6); sp.position.set(x, y, z); B2.g.add(sp); return sp; };
-  tag('PUSH.RECLUDA.COM', 'Cloudflare Worker · never sees the number', B2.x0 + 1.6, TOP - 0.55, RACK.z);
-  tag('APPLE PUSH', 'the code reaches the phone', B2.x0 + 1.6, TOP - 0.55, PH.z - 0.4);
-  tag('RADIUS · UDP 1812', 'the VPN asks the bridge', B2.x0 + 1.5, 0.5, V.z - 1.6);
-  tag('HTTPS · SIGNED', 'the approval, from the Secure Enclave', B2.x0 + 1.5, 0.5, PH.z + 1.3);
+  tag('PUSH.RECLUDA.COM', 'Cloudflare Worker · never sees the number', C.x, RY + 1.0, C.z);
+  tag('APPLE PUSH', 'the code reaches the phone', PH.x + 0.4, RY + 0.35, PH.z);
+  tag('RADIUS · UDP 1812', 'the VPN asks the bridge', (RF + V.x) / 2 + 0.5, 0.45, (C.z + V.z) / 2 + 0.6);
+  tag('HTTPS · SIGNED', 'the approval, from the Secure Enclave', (RF + PH.x) / 2 + 0.5, 0.45, (C.z + PH.z) / 2 - 0.4);
+  const yawTo = (x, z) => Math.atan2(GATE_VIEW.x - x, GATE_VIEW.z - z);   // turned toward you as you step out of the lift
 
-  // the VPN's login screen, on the west wall left of the rack
+  // the VPN's login screen, on a stand left of the glass room
   const vc = mk(1024, 640), vg = vc.getContext('2d'), vtex = new THREE.CanvasTexture(vc);
-  const vs = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.875), new THREE.MeshBasicMaterial({ map: vtex })); vs.position.set(V.x + 0.04, V.y, V.z); vs.rotation.y = Math.PI / 2; B2.g.add(vs);
-  const vf = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.99, 3.12), colMat); vf.position.set(V.x, V.y, V.z); B2.g.add(vf);
+  const vk = new THREE.Group(); vk.position.set(V.x, 0, V.z); vk.rotation.y = yawTo(V.x, V.z); B2.g.add(vk);   // a freestanding terminal
+  B2.blocks.push({ x0: V.x - 0.9, x1: V.x + 0.9, z0: V.z - 0.9, z1: V.z + 0.9 });
+  const vpost = new THREE.Mesh(new THREE.BoxGeometry(0.12, V.y, 0.12), colMat); vpost.position.set(0, V.y / 2, -0.12); vk.add(vpost);
+  const vfoot = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.6), colMat); vfoot.position.set(0, 0.03, -0.12); vk.add(vfoot);
+  const vs = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.5), new THREE.MeshBasicMaterial({ map: vtex })); vs.position.set(0, V.y, 0); vk.add(vs);
+  glassFrame(vk, 2.4, 1.5, 0, V.y, 0, 0, 0.06, 0.06);
   const drawVPN = (st, k) => {
     vg.fillStyle = '#0a0f17'; vg.fillRect(0, 0, 1024, 640); vg.strokeStyle = 'rgba(45,212,191,0.5)'; vg.lineWidth = 4; vg.strokeRect(10, 10, 1004, 620);
     vg.textAlign = 'left'; vg.fillStyle = '#7fa9a3'; vg.font = '600 30px "IBM Plex Mono", monospace'; vg.fillText('A VPN LOGIN · ANY VPN THAT SPEAKS RADIUS', 56, 80);
@@ -1957,7 +1992,7 @@ const SIGNIN = { code: '7QK-4MX', num: 47, choices: [31, 47, 82], vpn: { x: B2.x
   };
 
   // the phone with Recluda, on a stand under the drop
-  const pg0 = new THREE.Group(); pg0.position.set(PH.x, 0, PH.z); pg0.rotation.y = Math.PI / 2; B2.g.add(pg0);   // right of the rack, facing the lift
+  const pg0 = new THREE.Group(); pg0.position.set(PH.x, 0, PH.z); pg0.rotation.y = yawTo(PH.x, PH.z); B2.g.add(pg0);   // right of the glass room, turned to you
   B2.blocks.push({ x0: PH.x - 0.6, x1: PH.x + 0.6, z0: PH.z - 0.6, z1: PH.z + 0.6 });
   const ped = new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.05, 0.42), colMat); ped.position.y = 0.525; pg0.add(ped);
   const pedE = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.025, 0.44), new THREE.MeshBasicMaterial({ color: 0x2dd4bf })); pedE.position.y = 1.06; pg0.add(pedE);
@@ -2016,7 +2051,7 @@ const SIGNIN = { code: '7QK-4MX', num: 47, choices: [31, 47, 82], vpn: { x: B2.x
     if (key !== lastKey || (moving && (acc += dt) > 0.1)) { acc = 0; lastKey = key; drawVPN(vst, k); drawPhone(pst, k); }
   });
 }
-const SIGNIN_STOP = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(B2.x0, B2.y + 2.2, -2.9), normal: new THREE.Vector3(1, 0, 0), standOff: 8.6, pitch: 0.02 };   // the VPN, the rack and the phone in one view
+const SIGNIN_STOP = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(GATE.x, B2.y + 2.4, GATE.z), normal: new THREE.Vector3(GATE_VIEW.x - GATE.x, 0, GATE_VIEW.z - GATE.z).normalize(), standOff: Math.hypot(GATE_VIEW.x - GATE.x, GATE_VIEW.z - GATE.z), pitch: 0.06 };   // the VPN, the glass room and the phone in one view
 // B2's raised floor: 60 cm access-floor tiles over the whole room, and perforated grille tiles in front of the rack,
 // where a server room vents cold air up to the equipment
 {
@@ -2493,7 +2528,7 @@ const POOL_WALL = { x: 0.1, y: 2.75, w: 11.2, h: 3.5 }, POOL_RACK = { x: -6.3, z
 /* B2's install terminal, in the centre of the Recluda wall facing the lift: the install from recluda.com/server, typed out
    with the installer's own output (the recluda script in recluda-server). Tap it to open that page.
    The version is the one recluda.com/downloads serves; change it with each release. */
-const INSTALL = { x: 2.5, y: 2.35, z: FLOORS[FI.b2].z1 - 0.14, url: 'https://recluda.com/server', version: '0.4.0' };
+const INSTALL = { x: 0, y: 2.35, z: FLOORS[FI.b2].z1 - 0.14, url: 'https://recluda.com/server', version: '0.4.0' };
 {
   const F = FLOORS[FI.b2], v = INSTALL.version, W = 3.2, H = 2.0;
   const lines = [['$', `curl -fLO https://recluda.com/downloads/recluda-server-${v}.tar.gz`], ['$', `tar xzf recluda-server-${v}.tar.gz`], ['$', `cd recluda-server-${v}`],
@@ -2802,7 +2837,7 @@ floorSign(L3.g, 'Quantum V^ Platform', 'Platform Wing', 0, 6.3, L3.z1 - 0.06, Ma
 /* B2's Recluda wall, facing the lift under the floor plaque: what Recluda Server is on the left, the install
    terminal in the centre (built above, in front of this panel), what you get on the right. Like L3's platform
    wall, in Recluda's teal. Only what the install guide and the server package say. */
-const RECLUDA_WALL = { w: 10.4, h: 3.0, url: 'https://recluda.com' };
+const RECLUDA_WALL = { x: 0, w: 10.4, h: 3.0, url: 'https://recluda.com' };
 function buildRecludaWall() {
   const F = FLOORS[FI.b2], { w, h } = RECLUDA_WALL, y = INSTALL.y, z = F.z1 - 0.06, CW = 4096, CH = Math.round(CW * h / w);
   const c = mk(CW, CH), g = c.getContext('2d'), TEAL = '#2dd4bf';
@@ -2829,10 +2864,10 @@ function buildRecludaWall() {
     g.fillStyle = '#b4d6d0'; g.font = '41px "IBM Plex Sans", sans-serif'; wrapText(g, d, RX + 96, yy + 54, COLW - 96, 50);
   });
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(2.5, y, z - 0.01); m.rotation.y = Math.PI; F.g.add(m);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(RECLUDA_WALL.x, y, z - 0.01); m.rotation.y = Math.PI; F.g.add(m);
   const ft = 0.14;
-  crystalFrame(F.g, w, h, ft, 0.1, 2.5, y, z - 0.04);
-  RECLUDA_WALL.stop = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(2.5, F.y + y, F.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: 0.1 };
+  crystalFrame(F.g, w, h, ft, 0.1, RECLUDA_WALL.x, y, z - 0.04);
+  RECLUDA_WALL.stop = { exhibit: true, floor: FI.b2, center: new THREE.Vector3(RECLUDA_WALL.x, F.y + y, F.z1), normal: new THREE.Vector3(0, 0, -1), standOff: 6.4, pitch: 0.1 };
   hallLinks.push({ mesh: m, url: RECLUDA_WALL.url, floor: FI.b2, stop: RECLUDA_WALL.stop });
 }
 
@@ -3136,7 +3171,9 @@ const LIGHT_PATHS = (() => {
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
   // B2: out of the lift (door at z -2.85), straight to the rack, and branches to the Recluda wall and Recluda VPN
-  add(FI.b2, X, door, X, -1.2); add(FI.b2, X, -1.2, 0.3, -1.2); add(FI.b2, 2.5, -1.2, 2.5, 3.4); add(FI.b2, 2.5, -1.2, 2.5, -6.8);
+  add(FI.b2, X, door, X, -1.2); add(FI.b2, X, -1.2, GATE.x + GATE.w / 2 + 0.4, -1.2);   // to the glass server room's front
+  add(FI.b2, 3.6, -1.2, 3.6, -5.0); add(FI.b2, 3.6, -1.2, 3.6, 3.4);                      // to the phone, and toward the Recluda wall
+  add(FI.b2, 3.6, 3.4, -5.8, 3.4); add(FI.b2, -5.8, 3.4, -5.8, -7.4);                      // along the Recluda wall, round to Recluda VPN on the west wall
   add(FI.l4, X, door, X, 0.4); add(FI.l4, X, 0.4, OFFICE_DOOR_X, 0.4); add(FI.l4, OFFICE_DOOR_X, 0.4, OFFICE_DOOR_X, FLOORS[FI.l4].z1 - 0.45);   // past her reception, right up to the office door
   return segs;
 })();
