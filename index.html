@@ -600,9 +600,10 @@ const ABOUT = {
   work: [
     { name: 'STEADYWATCH™ HANDHELD', version: 'App Store v2.1', logo: 'assets/steadywatch-icon.png' },
     { name: 'KaizenDoku', version: 'App Store v2.6.2', logo: 'assets/kaizendoku-icon.png' },
+    { name: 'Recluda', version: 'App Store v1.0', logo: 'assets/recluda-icon.png' },
     { name: 'Quantum V^ Platform', version: 'quantumv.dev', logo: 'assets/quantumv-logo.png' }],
   contactRows: [['EMAIL', 'nathaniel@quantumv.dev'], ['LINKEDIN', 'in/nathaniel-vazquez-b41631153'], ['GITHUB', 'github.com/Infin-8'], ['WEB', 'quantumv.dev · steady-watch.com · recluda.com · kaizendoku.com']],
-  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD and KaizenDoku on the App Store, and the Quantum V^ Platform.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
+  extra: [['skills', 'Skills', 'Six categories, from languages to cryptography.'], ['work', 'Notable work', 'STEADYWATCH™ HANDHELD, KaizenDoku and Recluda on the App Store, and the Quantum V^ Platform.'], ['contact', 'Contact', 'Email, LinkedIn, GitHub and the product sites.']],
   links: [['Resume (PDF)', 'assets/nathaniel-vazquez-resume.pdf'], ['LinkedIn', 'https://www.linkedin.com/in/nathaniel-vazquez-b41631153'], ['GitHub', 'https://github.com/Infin-8'], ['Email', 'mailto:nathaniel@quantumv.dev']],
   site: { url: 'assets/nathaniel-vazquez-resume.pdf', label: 'Resume · KaizenDoku v1', addr: 'Resume · Nathaniel Vazquez · PDF', shot: 'assets/resume-page1.jpg', fit: 'top',
     heading: 'Operator terminal', cardText: 'The main screen of the operator desk. Open it for the Resume, to play KaizenDoku v1 (the first version of the game), or for contact details.' },
@@ -5922,13 +5923,15 @@ function officeSkillsCanvas(skills) {
 }
 function officeWorkCanvas(work) {
   const c = mk(640, 400), g = officeScreenBase(c, 'NOTABLE WORK');
-  const three = work.length > 2, top = three ? 70 : 84, step = three ? 106 : 150, size = three ? 90 : 110;   // two rows, or three tighter ones
+  const n = work.length, three = n > 2;
+  /* two rows, three tighter ones, or four tighter still */
+  const top = n > 3 ? 62 : three ? 70 : 84, step = n > 3 ? 80 : three ? 106 : 150, size = n > 3 ? 68 : three ? 90 : 110;
   work.forEach((w, i) => {
     const y = top + i * step, logo = LOGOS[w.logo];
     if (logo) { g.save(); rr(g, 28, y, size, size, size * 0.22); g.clip(); g.drawImage(logo, 28, y, size, size); g.restore(); }
     const x = 28 + size + 22;
-    g.fillStyle = '#f1e6cf'; let px = three ? 30 : 32; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(w.name).width > 612 - x && --px > 18); g.fillText(w.name, x, y + size * 0.4);
-    g.fillStyle = '#3fe0e0'; g.font = `600 ${three ? 20 : 22}px "IBM Plex Mono", monospace`; g.fillText(w.version, x, y + size * 0.74);
+    g.fillStyle = '#f1e6cf'; let px = n > 3 ? 26 : three ? 30 : 32; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(w.name).width > 612 - x && --px > 18); g.fillText(w.name, x, y + size * 0.4);
+    g.fillStyle = '#3fe0e0'; g.font = `600 ${n > 3 ? 18 : three ? 20 : 22}px "IBM Plex Mono", monospace`; g.fillText(w.version, x, y + size * 0.74);
   });
   return c;
 }
