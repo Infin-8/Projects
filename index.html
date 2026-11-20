@@ -7,7 +7,7 @@
 <title>Quantum Hall</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=qv">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=qv">
-<meta name="description" content="Quantum Hall: a six-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda (coming soon) and its server room, and Vee, the holographic guide.">
+<meta name="description" content="Quantum Hall: a six-floor 3D gallery of Infin-8's projects. KaizenDoku, the STEADYWATCH™ HANDHELD practice panel, the Quantum V^ Platform and its VAULT™, VIPER™ and LOTUS™ entropy pools, Recluda and its server room, and Vee, the holographic guide.">
 <meta property="og:title" content="Quantum Hall">
 <meta property="og:description" content="Six floors around an atrium, from a server room and a cryostat lab to the builder's office. Walk up to a display and step inside to see the project.">
 <meta property="og:image" content="https://hall.quantumv.dev/assets/gallery-preview.png">
@@ -547,12 +547,12 @@ const PROJECTS = [
     floor: 'l2', pos: [-3.6, 3.2, 6.92], rotY: Math.PI, size: [3.7, 3.7]
   },
   {
-    // a teaser: Recluda isn't on the App Store yet, so no phone kiosk; its world has recluda.com and its screens
-    id: 'recluda', name: 'Recluda', tagline: 'Coming soon · iPhone, iPad and Mac', wing: 'Apps', teaser: true,
-    desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data. Coming soon to the App Store.',
+    // on the App Store since 19 Nov 2026; instead of a phone kiosk it has three device podiums (iPhone, iPad, Mac) by its display
+    id: 'recluda', name: 'Recluda', tagline: 'Signing In. Made Easy.', wing: 'Apps', version: '1.0',   // shown as a badge on its portrait
+    desc: 'A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can\'t trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data. Free on the App Store for iPhone, iPad and Mac.',
     modules: [['FACE SCAN APPROVAL','Tap the number the sign-in screen shows, then Face ID or Touch ID'],['PUSH APPROVALS','Each sign-in comes to your phone, from any Recluda server, through Recluda\'s push relay'],['VPN SIGN-IN','Any VPN that speaks RADIUS: your username, then the push (or the code the VPN shows)'],['HISTORY','Every sign-in you approved or denied, kept on the device'],['SELF-HOSTED','Your own server, even a Raspberry Pi: you keep your data']],
     stack: 'Secure Enclave · Face ID · OpenID Connect · RADIUS · APNs',
-    links: [['recluda.com','https://recluda.com'], ['VPN Guide','https://recluda.com/vpn-guide']],
+    links: [['App Store','https://apps.apple.com/us/app/recluda/id6826393974'], ['recluda.com','https://recluda.com'], ['VPN Guide','https://recluda.com/vpn-guide']],
     theme: { bg: '#04161a', fg: '#e6fbf7', accent: '#2dd4bf' }, logo: 'assets/recluda-icon.png',
     site: { url: 'https://recluda.com', label: 'recluda.com', shot: 'assets/site-recluda.jpg' },
     shots: [1, 2, 3, 4, 5, 6].map(n => `assets/shots/rc-${n}.jpg`),
@@ -628,7 +628,11 @@ function drawLogo(c, img, p) {
   const g = c.getContext('2d');
   if (img) g.drawImage(img, 0, 0, c.width, c.height);
   g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(5, 5, c.width - 10, c.height - 10);
-  // the app's version, as a badge in the bottom-right corner (outside the icon's disc)
+  drawVersionBadge(c, p);
+}
+// the app's version, as a badge in the bottom-right corner (outside the icon's disc)
+function drawVersionBadge(c, p) {
+  const g = c.getContext('2d');
   if (p && p.version) {
     const s = c.width / 1024, label = 'v' + p.version;
     g.font = `600 ${Math.round(52 * s)}px "IBM Plex Mono", monospace`;
@@ -677,7 +681,7 @@ function wrapText(g, text, x, y, maxW, lh) {
   }
   g.fillText(line, x, y); return y + lh;
 }
-function drawRecludaTeaser(c, img) {
+function drawRecludaDisplay(c, img, p) {
   const g = c.getContext('2d'), w = c.width, h = c.height;
   const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#062026'); bg.addColorStop(1, '#03080b');
   g.fillStyle = bg; g.fillRect(0, 0, w, h);
@@ -692,11 +696,12 @@ function drawRecludaTeaser(c, img) {
   // the ribbon across the top-right corner
   g.save(); g.translate(w * 0.78, h * 0.18); g.rotate(Math.PI / 4);
   g.fillStyle = '#2dd4bf'; g.fillRect(-w * 0.4, -h * 0.045, w * 0.8, h * 0.09);
-  g.fillStyle = '#03080b'; g.font = `700 ${w * 0.04}px "IBM Plex Mono", monospace`; g.fillText('COMING SOON', 0, h * 0.014);
+  g.fillStyle = '#03080b'; g.font = `700 ${w * 0.04}px "IBM Plex Mono", monospace`; g.fillText('ON THE APP STORE', 0, h * 0.014);
   g.restore();
   g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+  drawVersionBadge(c, p);
 }
-const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, recluda: drawRecludaTeaser, platform: drawPlatform };
+const DRAW = { kaizendoku: drawLogo, handheld: drawLogo, recluda: drawRecludaDisplay, platform: drawPlatform };
 /* ---------- The Platform Wing: VAULT™, VIPER™, LOTUS™ (entropy pools) and OIDC ----------
    Each pool's nodes are exactly the Hurwitz quaternions of norm p (prime p = 5, 13, 17):
    integer quaternions (a, b, c, d) and half-integer ones (all four coordinates odd/2) with
@@ -904,7 +909,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } } },   // the AI Workers room, through a doorway in the west wall,
-  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku and STEADYWATCH™ HANDHELD on the App Store, and Recluda, coming soon.'] },
+  { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
 const FI = Object.fromEntries(FLOORS.map((F, i) => [F.id, i]));
@@ -2571,7 +2576,7 @@ const POOL_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(POOL_
 const CRYO_STOP = { exhibit: true, floor: FI.b1, center: new THREE.Vector3(ATRIUM.x, B1.y + 2.7, ATRIUM.z), normal: new THREE.Vector3(0, 0, 1), standOff: 4.4, pitch: 0.12 };
 
 /* ---------- L2 · Apps ----------
-   The two apps face you as you step out of the lift; Recluda, coming soon, is on the left wall, and an
+   The two apps face you as you step out of the lift; Recluda is on the left wall, and an
    empty frame waits for the next one. (Its server has its own floor, B2.) */
 const L2 = FLOORS[FI.l2];
 floorSign(L2.g, 'LEVEL 2', 'Apps', 0, 6.2, L2.z1 - 0.06, Math.PI);
@@ -2629,8 +2634,8 @@ function buildAppKiosks() {
   }
 }
 // Recluda runs on iPhone, iPad and Mac (on a Mac, the iPad app: Designed for iPad): three podiums along L2's west
-// wall beside its display, each device cycling through the app's real screens. Coming soon, so a tap opens
-// recluda.com rather than the App Store. Recluda's icon turns over the middle one.
+// wall beside its display, each device cycling through the app's real screens; a tap opens the App Store
+// (p.links[0]). Recluda's icon turns over the middle one.
 const RECLUDA_DEVICES = { x: -6.25, zs: [-0.8, -2.25, -3.95], ry: Math.PI / 2 - 0.32 };
 function buildRecludaDevices() {
   const loader = new THREE.TextureLoader(), p = PROJECTS.find(q => q.id === 'recluda'), F = FLOORS[FI[p.floor]], A = new THREE.Color(p.theme.accent);
@@ -2664,7 +2669,7 @@ function buildRecludaDevices() {
     const scrM = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const [dev, scr] = dv.build(g, scrM);
     const glow = new THREE.PointLight(A, 0.3, 3, 2); glow.position.set(0, 1.6, 0.7); g.add(glow);
-    const tag = textSprite([[dv.name.toUpperCase(), '600 32px "IBM Plex Mono", monospace', p.theme.accent], ['Coming soon · tap for recluda.com', '26px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.4);
+    const tag = textSprite([[dv.name.toUpperCase(), '600 32px "IBM Plex Mono", monospace', p.theme.accent], ['App Store · tap to open', '26px "IBM Plex Sans", sans-serif', '#c9d2e3']], 768, 140, 1.4);
     tag.position.set(0, 0.62, pd / 2 + 0.1); g.add(tag);
     const stop = { exhibit: true, floor: FI[p.floor], center: new THREE.Vector3(x, F.y + 1.55, z), normal: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)), standOff: dv.wide ? 2.3 : 2.0, pitch: -0.08 };
     RECLUDA_DEVICES.stops.push(stop);
@@ -6097,9 +6102,9 @@ function buildOfficeWorld(p) {
     { d: '18 Nov 2026', t: 'QES-256 seed v2', n: 'new IBM hardware seeds · shots on B1', icon: 'assets/quantumv-logo.png' },
     { d: '18 Nov 2026', t: 'AI Workers room', n: 'Vee and Dr. Z, off the lobby', icon: 'assets/quantumv-logo.png' },
     { d: '18 Nov 2026', t: 'The crystal Hall', n: 'crystal walls, glass, entropy pillars', icon: 'assets/quantumv-logo.png' },
+    { d: '19 Nov 2026', t: 'Recluda 1.0', n: 'App Store · iPhone, iPad and Mac', icon: 'assets/recluda-icon.png' },
     { d: '19 Nov 2026', t: 'Clu', n: "Recluda's AI guide · recluda.com", icon: 'assets/recluda-icon.png' }];
   const BUILDING = [
-    { t: 'Recluda 1.0', n: 'coming soon · iPhone, iPad and Mac', c: '#1d3f9e' },
     { t: 'Recluda 1.1: site keys made on your device', n: 'the server only relays what it can’t read', c: '#1d3f9e' },
     { t: 'STEADYWATCH 2.2: guitar mode', n: 'chord practice with finger numbers · on TestFlight', c: '#11602e' },
     { t: 'Live reseeding of QES-256 from ANU', n: 'built · waiting on an API key from ANU', c: '#11602e' },

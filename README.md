@@ -67,7 +67,7 @@
     <td valign="top">
       <strong>Recluda</strong><br>
       Signing In. Made Easy.
-      Coming soon · iPhone, iPad and Mac
+      iPhone, iPad and Mac
       <br><br>
       A security key in your device. Sign-ins are approved with Face ID or Touch ID, using a key in the Secure Enclave that never leaves the device, with number matching so a stranger can't trick you into approving theirs. Pushes bring each sign-in to you, VPN logins included. A self-hosted alternative to Cisco Duo: your server, your data.
       <br><br>
@@ -86,9 +86,9 @@
       <strong>SELF-HOSTED</strong><br>
       Your own server, even a Raspberry Pi: you keep your data.
       <br><br>
-      Coming soon to the App Store.
+      Free on the App Store.
       <br>
-      <a href="https://recluda.com">Website</a>
+      <a href="https://apps.apple.com/us/app/recluda/id6826393974">Download on the App Store</a> · <a href="https://recluda.com">Website</a>
     </td>
   </tr>
 </table>
