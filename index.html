@@ -468,7 +468,7 @@ body:not(.in-world) #controls .world-only, body.in-world #controls .hall-only, b
 <div class="hud" id="tourHint" role="status" aria-live="polite"></div>
 <section class="hud" id="askVee" hidden role="dialog" aria-label="Ask Vee">
   <div class="ask-chips" role="group" aria-label="Suggested questions"></div>
-  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. She can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" hidden aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
+  <form class="ask-form" autocomplete="off"><input id="askInput" maxlength="400" placeholder="Ask Vee about the products, the builder or the hall…" aria-label="Your question for Vee" title="Vee answers from this site's own facts using Cloudflare Workers AI. Vee can still get things wrong."><button type="button" id="askMic" class="ask-icon" hidden aria-label="Hold to talk to Vee" title="Hold to talk">🎤</button><button type="button" id="askVoice" class="ask-icon" hidden aria-pressed="false" aria-label="Vee's voice: off" title="Vee's voice: off">🔇</button><button type="submit">Ask</button><button type="button" id="askClose" aria-label="Close">✕</button></form>
   <form class="ask-lead" hidden autocomplete="on"><span>Want Nathaniel to get back to you?</span><input type="email" name="email" required placeholder="you@company.com" aria-label="Your email for Nathaniel"><input class="ask-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true"><button type="submit">Send to Nathaniel</button><small>Only Nathaniel sees it, to reply to you.</small></form>
   <p class="ask-live" aria-live="polite"></p>
 </section>
@@ -3952,7 +3952,7 @@ function buildKiosk() {
    Its stations follow a question through how she thinks; the wording matches her 'How Vee works' panel. */
 const VEE_WORLD = {
   id: 'vee', kind: 'vee', name: "Vee's world", tagline: 'How I think, compiled around you', wing: 'Reception', noBadge: true, sectionTitle: 'How I think',
-  desc: "A loading program for Vee. Her nanobots compile this space around you, then a path follows a question from left to right: what you ask, what she knows, what she looks up, the model that writes the answer, the rules it keeps, and how the answer comes back to you. Beside the library, under its sphere, a gold branch station shows how Claude and other AI tools search the research directly.",
+  desc: "A loading program for Vee. Vee's nanobots compile this space around you, then a path follows a question from left to right: what you ask, what Vee knows, what Vee looks up, the model that writes the answer, the rules it keeps, and how the answer comes back to you. Beside the library, under its sphere, a gold branch station shows how Claude and other AI tools search the research directly.",
   modules: [
     ['Your question', 'You type it, or hold to talk and Whisper turns your voice into text. I also know your floor, what you are looking at, what you have explored and our last few turns.'],
     ['My facts', 'A persona and facts synced from this gallery. Only the sections your question touches come along, with live QRNG data when your page sends it.'],
@@ -4051,15 +4051,15 @@ function buildReception() {
     g.textAlign = 'right'; g.fillText('MODEL V^-1 · REV 2026.10', 1740, 108); g.textAlign = 'left';
     g.fillStyle = INK; g.font = serif(84); g.fillText('Vee', 60, 210);
     g.font = serif(84); const vw = g.measureText('Vee ').width; g.fillStyle = ACC; g.font = serif(48); g.fillText('User Manual', 60 + vw, 206);
-    g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what she says.', 60, 254);
+    g.fillStyle = SOFT; g.font = sans(26); g.fillText('Your holographic guide to the hall: an AI with a body that acts on what Vee says.', 60, 254);
     line(60, 284, 1740, 2, 'rgba(95,240,255,0.55)');
     const LX = 60, LW = 800, RX2 = 940, RW2 = 800;
     // 1 quick start
     section('01', 'Quick start', LX, 350, LW);
-    [['Ask', 'Walk up and press E, or tap Ask. Ask her anything.'],
-     ['Go', 'Say "take me to…" and she walks you there.'],
-     ['Tour', 'Press T and she leads a guided tour.'],
-     ['Rest', 'Dock her here to rest; wake her the same way.']].forEach(([k, v], i) => {
+    [['Ask', 'Walk up and press E, or tap Ask. Ask Vee anything.'],
+     ['Go', 'Say "take me to…" and Vee walks you there.'],
+     ['Tour', 'Press T and Vee leads a guided tour.'],
+     ['Rest', 'Dock Vee here to rest; wake Vee the same way.']].forEach(([k, v], i) => {
       const y = 420 + i * 62;
       g.fillStyle = ACC; g.beginPath(); g.arc(LX + 18, y - 9, 18, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#05080d'; g.font = mono(20); g.textAlign = 'center'; g.fillText(String(i + 1), LX + 18, y - 2); g.textAlign = 'left';
@@ -4067,7 +4067,7 @@ function buildReception() {
       g.fillStyle = SOFT; fit(v, LX + 140, y, LW - 140, f => sans(f), 25);
     });
     // 2 how she thinks: a little flow diagram
-    section('02', 'How she thinks', LX, 700, LW);
+    section('02', 'How Vee thinks', LX, 700, LW);
     const boxes = [['YOUR QUESTION', 'with your floor and view'], ['LIBRARY', 'closest research passages'], ['MODEL', 'Mistral Small 3.1 · 24B'], ['REPLY + ACTION', 'walk · mood · point']];
     const bw = 176, gap = (LW - bw * 4) / 3;
     boxes.forEach(([t, d], i) => {
@@ -4078,11 +4078,11 @@ function buildReception() {
       g.fillStyle = i === 2 ? INK : SOFT; fit(d, x + bw / 2, y + 82, bw - 16, f => sans(f), 18, 12); g.textAlign = 'left';
       if (i < 3) { const ax = x + bw + 6, ay = y + 59; g.fillStyle = ACC; g.beginPath(); g.moveTo(ax, ay - 9); g.lineTo(ax + gap - 12, ay); g.lineTo(ax, ay + 9); g.closePath(); g.fill(); }
     });
-    g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes her reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
+    g.fillStyle = SOFT; g.font = sans(22); wrapText(g, 'Your question is matched against the library, then the model writes Vee\'s reply. Tags in it become motion in the hall.', LX, 920, LW, 30);
     // 3 specifications
     section('03', 'Specifications', RX2, 350, RW2);
     [['Model', 'Mistral Small 3.1 (24B)'], ['Runtime', 'Cloudflare Workers AI, at the edge'], ['Knowledge', "This gallery's facts + live QRNG data"],
-     ['Library', '~1,000 Quantum V^ research passages'], ['Memory', 'One conversation; none between visits'], ['Face', '350 drones in 3D: the face from her chat widget']].forEach(([k, v], i) => {
+     ['Library', '~1,000 Quantum V^ research passages'], ['Memory', 'One conversation; none between visits'], ['Face', '350 drones in 3D: the face from Vee\'s chat widget']].forEach(([k, v], i) => {
       const y = 420 + i * 58;
       g.fillStyle = ACC; g.font = mono(21); g.fillText(k.toUpperCase(), RX2, y);
       g.fillStyle = INK; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 25);
@@ -4090,17 +4090,17 @@ function buildReception() {
     });
     // 4 care and charging
     section('04', 'Care & charging', RX2, 800, RW2);
-    [['Charging', 'Her nanobots rest and recharge in this dock.'],
-     ['Daily limit', 'After a very busy day she rests until 00:00 UTC.'],
-     ['Honesty', 'Answers only from her sources and credits each paper.'],
-     ["If she's unsure", 'She says so, and offers the contact details.']].forEach(([k, v], i) => {
+    [['Charging', 'Vee\'s nanobots rest and recharge in this dock.'],
+     ['Daily limit', 'After a very busy day Vee rests until 00:00 UTC.'],
+     ['Honesty', 'Answers only from Vee\'s sources and credits each paper.'],
+     ["If Vee is unsure", 'Vee says so, and offers the contact details.']].forEach(([k, v], i) => {
       const y = 864 + i * 46;
       g.fillStyle = INK; g.font = sans(23, 600); g.fillText(k, RX2, y);
       g.fillStyle = SOFT; fit(v, RX2 + 210, y, RW2 - 210, f => sans(f), 23);
     });
     // footer
     line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
-    g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK HER ANYTHING ABOUT THE WORK', 60, 1140);
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('QUANTUM V^ LLC · CHECKED BY AN EVAL SUITE · ASK VEE ANYTHING ABOUT THE WORK', 60, 1140);
     g.textAlign = 'right'; g.fillText('P. 1', 1740, 1140); g.textAlign = 'left';
     const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); plaque.position.set(PX, NY, 0.03); dockG.add(plaque);
@@ -4111,16 +4111,16 @@ function buildReception() {
     g.textAlign = 'right'; g.fillText('TECHNICAL DESCRIPTION', 1740, 108); g.textAlign = 'left';
     g.fillStyle = INK; g.font = serif(84); g.fillText('How Vee works', 60, 210);
     g.fillStyle = SOFT; g.font = sans(27);
-    wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what she says.', 60, 254, 1680, 36);
+    wrapText(g, 'An embodied conversational agent: a large language model, grounded by retrieval and running at the edge on Cloudflare, with a body in the hall that acts on what Vee says.', 60, 254, 1680, 36);
     line(60, 320, 1740, 2, 'rgba(95,240,255,0.55)');
-    [['EMBODIMENT', 'Her chat-widget face in 3D: 350 drones, eyes and a mouth that talk, moods, eyes that fly to what she points at, spins and bursts.'],
+    [['EMBODIMENT', 'Vee\'s chat-widget face in 3D: 350 drones, eyes and a mouth that talk, moods, eyes that fly to what Vee points at, spins and bursts.'],
      ['MODEL', 'Mistral Small 3.1 (24B) on Cloudflare Workers AI, served at the edge.'],
      ['GROUNDING', 'A persona, facts synced from this gallery, and live QRNG data sent by your page.'],
      ['RETRIEVAL', 'RAG over ~1,000 passages in Vectorize; AI tools like Claude can search them (and private notes) via MCP.'],
-     ['CONTEXT', "She knows your floor, what you're looking at, what you've explored, and the last few turns."],
-     ['ACTIONS', 'Tags in her reply become motion: walk you somewhere, change her mood, point at an exhibit.'],
-     ['GUARDRAILS', "Only her sources; credits each paper; says when she doesn't know; resists prompt injection."],
-     ['COST', 'An answer cache, rate limits and a daily neuron budget keep her on the free tier.'],
+     ['CONTEXT', "Vee knows your floor, what you're looking at, what you've explored, and the last few turns."],
+     ['ACTIONS', 'Tags in Vee\'s reply become motion: walk you somewhere, change Vee\'s mood, point at an exhibit.'],
+     ['GUARDRAILS', "Only Vee's sources; credits each paper; says when Vee doesn't know; resists prompt injection."],
+     ['COST', 'An answer cache, rate limits and a daily neuron budget keep Vee on the free tier.'],
      ['QUALITY', 'An evaluation suite checks accuracy, honesty, navigation and brand voice.']].forEach(([k, v], i) => {
       const y = 380 + i * 80;
       g.fillStyle = 'rgba(95,240,255,0.06)'; rr(g, 50, y - 44, 1700, 66, 10); g.fill();
@@ -4128,7 +4128,7 @@ function buildReception() {
       g.fillStyle = INK; fit(v, 330, y, 1390, f => sans(f), 27, 18);
     });
     line(60, 1100, 1740, 2, 'rgba(95,240,255,0.55)');
-    g.font = mono(20); g.fillStyle = SOFT; g.fillText('NOT TRAINED ON THE RESEARCH: SHE RETRIEVES IT · NO MEMORY BETWEEN VISITS', 60, 1140);
+    g.font = mono(20); g.fillStyle = SOFT; g.fillText('NOT TRAINED ON THE RESEARCH: VEE RETRIEVES IT · NO MEMORY BETWEEN VISITS', 60, 1140);
     g.textAlign = 'right'; g.fillText('P. 2', 1740, 1140); g.textAlign = 'left';
     const tex2 = new THREE.CanvasTexture(c2); tex2.anisotropy = 8;
     const page2 = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex2 })); page2.position.set(PX2, NY, 0.03); dockG.add(page2);
@@ -4298,7 +4298,7 @@ function buildAskVeeWall() {
     g.fillStyle = '#f1e6cf'; let px = 38; do { g.font = `${px}px "Young Serif", Georgia, serif`; } while (g.measureText(it.q).width > T + 60 && --px > 24); g.fillText(it.q, x + T / 2, 976);
     g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('PRESS E TO OPEN', x + T / 2, 1030);
   });
-  g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('OR ASK HER RIGHT HERE · SHE ANSWERS FROM QUANTUM V^ RESEARCH', 1100, 1170);
+  g.fillStyle = '#8e99b0'; g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('OR ASK VEE RIGHT HERE · VEE ANSWERS FROM QUANTUM V^ RESEARCH', 1100, 1170);
   const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ map: tex })); panel.position.set(X, CY, CZ); panel.rotation.y = Math.PI / 2; L1.g.add(panel);
   glassFrame(L1.g, PW, PH, X, CY, CZ, Math.PI / 2, 0.08, 0.09);   // glass, standing off the wall
