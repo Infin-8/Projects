@@ -3240,7 +3240,7 @@ function buildEntropyRoom() {
       phase = 'close'; t = 0; drawTerm(); commit();
     };
     const lst = exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 3.4);
-    lst.center.x = X; lst.pitch = 0.15;   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
+    lst.center.x = X + 0.4; lst.pitch = 0.15;   // x + 0.4 keeps the spot clear of the coin table   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
     const kst = exhibit('verify', 'Check the drop', 'Check', KX, KY, KZ + 0.1, 0, 1, [KW, KW * 800 / 1280, 0.2], check, 3.6);
     kst.pitch = 0.16;
     refresh(); drawTerm(); commit();
@@ -3258,6 +3258,101 @@ function buildEntropyRoom() {
       }
       if (shownTier >= 0 && items[shownTier].visible) { const m = items[shownTier]; m.rotation.y += dt * (reduceMotion ? 0 : 1.4); m.rotation.x += dt * (reduceMotion ? 0 : 0.6); if (shownTier === 3 && !reduceMotion) m.scale.setScalar(1 + 0.08 * Math.sin(performance.now() / 160)); }
       if (phase === 'idle' && glowIn.material.opacity > 0.25) glowIn.material.opacity -= dt * 0.2;
+    });
+  }
+
+  /* 7 · Two dice (the middle row, right, added 2026-11-25, where Check the drop first stood): throw two dice on a felt
+     table; each roll's sum drops a token into one of eleven tubes on the wall behind (2 to 12), which pile up on 7,
+     with a ring where fair dice would put each stack. Faces come from qrngBit() (3 bits, 6 and 7 thrown away, so
+     each face is exactly 1 in 6). The tubes stand on a rail above the table with their labels over them, so the
+     table doesn't hide them from the aisle. */
+  {
+    const X = 21.0, Z = A.z1 - 1.9, TOP = 1.0, DS = 0.24;   // counter height, so the dice are in plain view from the aisle
+    // the table: dark felt with a cyan rim
+    { const top = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.08, 1.0), new THREE.MeshStandardMaterial({ color: 0x0e3a3a, roughness: 0.95 })); top.position.set(X, TOP - 0.04, Z); g.add(top);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, TOP - 0.08, 0.8), colMat); base.position.set(X, (TOP - 0.08) / 2, Z); g.add(base);
+      for (const [w2, d2, dx, dz] of [[1.72, 0.04, 0, -0.5], [1.72, 0.04, 0, 0.5], [0.04, 1.02, -0.85, 0], [0.04, 1.02, 0.85, 0]]) { const e = new THREE.Mesh(new THREE.BoxGeometry(w2, 0.06, d2), lineMat); e.position.set(X + dx, TOP + 0.01, Z + dz); g.add(e); }
+      F.blocks.push({ x0: X - 1.2, x1: X + 1.2, z0: Z - 0.85, z1: A.z1 }); }
+    // the dice: pips on each face, opposite faces adding to 7 (BoxGeometry's faces: +x, -x, +y, -y, +z, -z)
+    const PIPS = { 1: [[0.5, 0.5]], 2: [[0.27, 0.27], [0.73, 0.73]], 3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]], 4: [[0.27, 0.27], [0.73, 0.27], [0.27, 0.73], [0.73, 0.73]],
+      5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]], 6: [[0.27, 0.22], [0.73, 0.22], [0.27, 0.5], [0.73, 0.5], [0.27, 0.78], [0.73, 0.78]] };
+    const faceMat = v => { const c = mk(128, 128), p = c.getContext('2d'); p.fillStyle = '#f4efe4'; rr(p, 0, 0, 128, 128, 18); p.fill(); p.strokeStyle = 'rgba(0,0,0,0.18)'; p.lineWidth = 4; rr(p, 2, 2, 124, 124, 16); p.stroke();
+      p.fillStyle = v === 1 ? '#c0262a' : '#14202e'; for (const [u, w2] of PIPS[v]) { p.beginPath(); p.arc(u * 128, w2 * 128, v === 1 ? 17 : 12, 0, Math.PI * 2); p.fill(); }
+      return new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), roughness: 0.4, metalness: 0.05 }); };
+    const FACES = [3, 4, 1, 6, 2, 5], mats = FACES.map(faceMat);
+    const UP = { 1: new THREE.Euler(0, 0, 0), 6: new THREE.Euler(Math.PI, 0, 0), 2: new THREE.Euler(-Math.PI / 2, 0, 0), 5: new THREE.Euler(Math.PI / 2, 0, 0), 3: new THREE.Euler(0, 0, Math.PI / 2), 4: new THREE.Euler(0, 0, -Math.PI / 2) };   // the turn that puts each face on top
+    const dice = [0, 1].map(i => { const m = new THREE.Mesh(new THREE.BoxGeometry(DS, DS, DS), mats); m.position.set(X + (i ? 0.22 : -0.22), TOP + DS / 2, Z); g.add(m);
+      return { m, v: 1, q0: new THREE.Quaternion(), q1: new THREE.Quaternion(), axis: new THREE.Vector3(), spin: 0, p0: new THREE.Vector3(), p1: new THREE.Vector3() }; });
+    // the tubes, on a rail against the north wall, sums 2 to 12; you face +z here, so your left is +x: 2 sits at high x
+    const N = 11, TS = 0.4, TZ = A.z1 - 0.45, TB = 1.2, TH = 1.45, CAPN = 120, tx = k => X + (5 - k) * TS;
+    const WAYS = [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1];
+    { const rail = new THREE.Mesh(new THREE.BoxGeometry(TS * N + 0.2, TB - 0.02, 0.3), colMat); rail.position.set(X, (TB - 0.02) / 2, TZ); g.add(rail);
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(TS * N + 0.22, 0.02, 0.32), lineMat); edge.position.set(X, TB, TZ); g.add(edge); }
+    for (let k = 0; k < N; k++) { const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, TH, 24, 1, true), glassMat); tube.position.set(tx(k), TB + TH / 2, TZ); g.add(tube); }
+    // their labels, over the tubes: the sum, and the number of ways two dice make it
+    { const SW = TS * N + 0.8, ppm = 2048 / SW, c = mk(2048, Math.round(0.42 * ppm)), p = c.getContext('2d'), CH = c.height, left = X + TS * N / 2 + 0.6;   // world x of the canvas's left edge
+      p.fillStyle = '#0b1220'; p.fillRect(0, 0, 2048, CH); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(4, 4, 2040, CH - 8);
+      p.textAlign = 'left'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillStyle = '#c9d2e3'; p.fillText('SUM', 24, CH * 0.44); p.fillStyle = '#5ff0ff'; p.fillText('WAYS', 24, CH * 0.84);
+      for (let k = 0; k < N; k++) { const x = (left - tx(k)) * ppm; p.textAlign = 'center'; p.fillStyle = k === 5 ? '#ffc24a' : '#f1e6cf'; p.font = '600 52px "IBM Plex Mono", monospace'; p.fillText(String(k + 2), x, CH * 0.46); p.fillStyle = '#5ff0ff'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText(String(WAYS[k]), x, CH * 0.86); }
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, 0.42), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+      m.position.set(left - SW / 2, TB + TH + 0.32, A.z1 - 0.06); m.rotation.y = Math.PI; g.add(m); }
+    const toks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 20), new THREE.MeshStandardMaterial({ color: 0xf4efe4, roughness: 0.4, emissive: 0x1a1a1a }), N * CAPN); toks.count = 0; toks.frustumCulled = false; g.add(toks);
+    const rings = WAYS.map((_, k) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.008, 6, 32), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); r.rotation.x = Math.PI / 2; r.position.set(tx(k), TB, TZ); r.visible = false; g.add(r); return r; });
+    const counts = new Array(N).fill(0); let rolls = 0, drop = null, rolling = false, idle = 3, t = 0;
+    const dummy = new THREE.Object3D();
+    const stack = () => {
+      const top = Math.max(...counts, ...WAYS.map(w2 => rolls * w2 / 36)), h = Math.min(0.12, (TH - 0.1) / Math.max(1, top));
+      let n = 0;
+      counts.forEach((c, k) => {
+        if (c > CAPN) { dummy.position.set(tx(k), TB + c * h / 2, TZ); dummy.scale.set(1, c * h, 1); dummy.updateMatrix(); toks.setMatrixAt(n++, dummy.matrix); }
+        else for (let j = 0; j < c; j++) {
+          const falling = drop && drop.k === k && j === c - 1 ? (1 - drop.t) * (1 - drop.t) * (TH - c * h) : 0;
+          dummy.position.set(tx(k), TB + (j + 0.5) * h + falling, TZ); dummy.scale.set(1, h * 0.8, 1); dummy.updateMatrix(); toks.setMatrixAt(n++, dummy.matrix);
+        }
+        rings[k].visible = rolls > 0; rings[k].position.y = TB + rolls * WAYS[k] / 36 * h;
+      });
+      toks.count = n; toks.instanceMatrix.needsUpdate = true;
+    };
+    const cap = caption(X + 1.4, Z - 0.7, Math.PI - 0.45, 'Two dice',   // beside the table (your left), turned toward the aisle, so it doesn't hide the dice
+     
+      'Snake eyes can happen only one way: 1 and 1. A seven can happen six ways: 1+6, 2+5, 3+4, 4+3, 5+2, 6+1. That is all it takes for 7 to come up most, and the same reason a shuffled deck stays shuffled.');
+    let shownLine = '';
+    const refresh = () => {
+      const [a, b] = dice.map(d => d.v), s = a + b, k = s - 2;
+      const line = rolls ? `${a} + ${b} = ${s}: ONE OF ${WAYS[k]} WAY${WAYS[k] > 1 ? 'S' : ''} · ROLLS: ${rolls} · SEVENS: ${counts[5]} · SNAKE EYES: ${counts[0]}` : 'A 7 COMES UP 1 TIME IN 6 · SNAKE EYES, 1 IN 36';
+      shownLine = line + sourceLine(); cap.redraw(line, `${TAP} TO ROLL · ${sourceLine()}`);
+    };
+    const face = () => { for (;;) { const v = (qrngBit() << 2) | (qrngBit() << 1) | qrngBit(); if (v < 6) return v + 1; } };   // 1 to 6, each exactly 1 in 6
+    const roll = () => {
+      if (rolling) return; rolling = true; idle = 0; t = 0;
+      dice.forEach((d, i) => {
+        d.v = face(); d.q0.copy(d.m.quaternion);
+        d.q1.setFromEuler(UP[d.v]).premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2));   // its face up, turned any way round
+        d.axis.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(); d.spin = 14 + Math.random() * 8;
+        d.p0.set(X + (i ? 0.62 : 0.5), TOP + DS / 2, Z + (i ? 0.25 : 0.05)); d.p1.set(X - 0.35 + i * 0.34 + (Math.random() - 0.5) * 0.15, TOP + DS / 2, Z + (Math.random() - 0.5) * 0.35);
+      });
+    };
+    stack(); refresh();
+    exhibit('dice', 'Two dice', 'Roll', X, TOP + 0.6, Z, 0, -1, [1.7, 1.2, 1.0], roll, 3.6).pitch = 0.14;
+    const qa = new THREE.Quaternion();
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (shownLine.endsWith(sourceLine()) === false) refresh();
+      idle += dt; if (!rolling && !drop && idle > 8) roll();   // they roll on their own now and then
+      if (rolling) {
+        t = Math.min(1, t + dt / (reduceMotion ? 0.05 : 1.5));
+        dice.forEach(d => {
+          const u = t, bounce = Math.abs(Math.sin(u * Math.PI * 3)) * 0.35 * (1 - u) * (1 - u);   // three hops, each lower
+          d.m.position.lerpVectors(d.p0, d.p1, ease(u)); d.m.position.y = TOP + DS / 2 + bounce;
+          if (u < 0.7) { qa.setFromAxisAngle(d.axis, d.spin * dt * (1 - u)); d.m.quaternion.premultiply(qa); }   // tumbling
+          else { if (!d.settle) d.settle = d.m.quaternion.clone(); d.m.quaternion.copy(d.settle).slerp(d.q1, ease((u - 0.7) / 0.3)); }   // and coming to rest on its face
+        });
+        if (t >= 1) {
+          rolling = false; dice.forEach(d => { d.m.quaternion.copy(d.q1); d.settle = null; });
+          const k = dice[0].v + dice[1].v - 2; counts[k]++; rolls++; drop = { k, t: 0 }; refresh();
+        }
+      }
+      if (drop) { drop.t = Math.min(1, drop.t + dt / (reduceMotion ? 0.05 : 0.6)); stack(); if (drop.t >= 1) drop = null; }
     });
   }
 }
@@ -6873,6 +6968,7 @@ function veeDestination(id) {
     case 'clu': return AI_LAB.stops[2];
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'loot-chest': return ENTROPY_ROOM.stops.loot;
+    case 'dice': return ENTROPY_ROOM.stops.dice;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -7375,7 +7471,7 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, dice: ENTROPY_ROOM.stops.dice, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
