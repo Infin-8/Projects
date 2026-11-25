@@ -910,7 +910,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
-    annexE: { x0: 8, x1: 17, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
+    annexE: { x0: 8, x1: 19, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -2792,16 +2792,19 @@ function buildAILab() {
     foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.annex.x0 + 0.06, 3.75, F.annex.door.z, Math.PI / 2, 3.0);   // on the room's back wall, high enough that the faces float below it seen from the doorway
 }
 /* ---------- L1 · The Entropy Room (the east annex, through the doorway where 'Entropy, rising' hung) ----------
-   Boltzmann's coin toss, the universe's rare start (the Past Hypothesis) and how the Quantum V^ QRNG fits, in the
-   order you walk round it. Left (south) wall: S = k log W, then the real coins, the ones-per-shot counts of the 1,024
-   shots of the display-only ibm_marrakesh job on B1 (MEAS) against a perfect coin's. Back wall: 256 coins, the
-   newest QES-256 draw while the page has live data (the same bytes the pillar outside carries), else the browser's
-   randomness, and it says which; each draw's count of 1s drops onto the curve of how many ways there are to get it.
-   Right (north) wall: the universe began at all heads, and the same story, small, in the QRNG. */
+   Why things mix and never unmix, told with everyday things you can play with (redesigned 2026-11-25: five
+   freestanding 3D exhibits in place of wall panels). Down the left as you walk in: a brand-new deck you can
+   shuffle, and cream in coffee. In the middle: ten coins you flip, whose heads-counts drop into eleven tubes and
+   pile up where the ways are (a bell curve), with a ring in each tube where a perfect coin would put it. Down the
+   right: the universe in a box (smooth matter clumping under gravity), and eight qubits that start all at 0 and
+   are measured, replaying the real ibm_marrakesh shots of B1's measurement record (MEAS). Coins and cards use
+   qrngBit(): bits from the QRNG API while it answers, else the browser's randomness, and the captions say which.
+   Every exhibit is a hallAct with tap: true, so a tap (or E, up close) plays it. */
 const ENTROPY_ROOM = { stops: {} };
 function buildEntropyRoom() {
   const F = FLOORS[FI.l1], A = F.annexE, D = A.door, g = F.g;
   const w = A.x1 - A.x0, d = A.z1 - A.z0, cx = (A.x0 + A.x1) / 2, cz = (A.z0 + A.z1) / 2;
+  const coarse = matchMedia('(pointer: coarse)').matches, TAP = coarse ? 'TAP' : 'CLICK OR PRESS E';
   // the room: floor, ceiling and walls, mirroring the AI Workers room across the lobby
   {
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), crystalMat(F, 5)); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
@@ -2814,158 +2817,340 @@ function buildEntropyRoom() {
     crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x0, D.h, D.z);
     { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(A.x1 - 0.03, 0.9, cz); g.add(b); }
     for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
-    const L = new THREE.PointLight(0xdfe8ff, 0.9, 12, 2); L.position.set(cx, A.h - 1, cz); g.add(L);
+    for (const lx of [A.x0 + 2.8, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
     floorSign(g, 'THROUGH HERE', 'The Entropy Room', F.x1 - 0.06, D.h + 0.9, D.z, -Math.PI / 2, 3.0);   // over the doorway, lobby side
-    floorSign(g, 'L1 · LOBBY ANNEX', 'The Entropy Room', A.x1 - 0.06, 5.35, cz, -Math.PI / 2, 3.4);    // over the coin wall
+    floorSign(g, 'WHY THINGS MIX, AND NEVER UNMIX', 'The Entropy Room', A.x1 - 0.06, 4.75, cz, -Math.PI / 2, 3.6);   // over the coin tubes
   }
-  const screen = (cw, ch, mw, x, y, z, ry) => {   // a canvas behind glass, a few centimetres off the wall
-    const c = mk(cw, ch), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c), mh = mw * ch / cw; tex.anisotropy = 8;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: tex }));
-    m.position.set(x, y, z); m.rotation.y = ry; g.add(m); m.translateZ(0.06);
-    glassFrame(g, mw, mh, m.position.x, y, m.position.z, ry, 0.06, 0.06);
-    return { p, tex };
-  };
-  const stop = (x, y, z, nx, nz, standOff, pitch) => ({ exhibit: true, floor: FI.l1, center: new THREE.Vector3(x, F.y + y, z), normal: new THREE.Vector3(nx, 0, nz), standOff, pitch });
-  const frame = (p, W, H) => { p.fillStyle = '#060a12'; p.fillRect(0, 0, W, H); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, W - 20, H - 20); };
-  const mono = (p, text, x, y, color = '#8e99b0', px = 22) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
-  const sans = (p, text, x, y, maxW, color = '#c9d2e3', px = 26, lh = px * 1.4) => { p.fillStyle = color; p.font = `${px}px "IBM Plex Sans", sans-serif`; return wrapText(p, text, x, y, maxW, lh); };
-  const serif = (p, text, x, y, px, color = '#f1e6cf') => { p.fillStyle = color; p.font = `${px}px "Young Serif", Georgia, serif`; p.fillText(text, x, y); };
-  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', sup = n => String(n).split('').map(ch => SUP[+ch]).join('');
-  const N = 256, lc = new Float64Array(N + 1);   // log10 of the number of ways to get k ones in 256 coins
-  for (let k = 1; k <= N; k++) lc[k] = lc[k - 1] + Math.log10((N - k + 1) / k);
-  const ways = l => { const e = Math.floor(l + 1e-9); return e < 4 ? String(Math.round(10 ** l)) : `${(10 ** (l - e)).toFixed(1)}\u00a0×\u00a010${sup(e)}`; };
-
-  // 1 · left wall, by the door: Boltzmann
-  infoPanel(g, { eyebrow: 'BOLTZMANN · VIENNA, 1877', title: 'Entropy is counting',
-    body: `Flip 256 coins. Every exact sequence is equally likely, all heads included. What differs is how many look alike: all heads, 1 way; 128 heads, ${ways(lc[128])} ways. Entropy counts the ways.`,
-    foot: 'S = k log W · W IS THE NUMBER OF WAYS' }, 10.4, 2.4, A.z0 + 0.06, 0, 2.8);
-  ENTROPY_ROOM.stops.boltz = stop(10.4, 2.4, A.z0, 0, 1, 3.2, 0.04);
-
-  // 2 · left wall, toward the back: the real coins (B1's display-only job, 1,024 shots × 8 qubits)
-  {
-    const { p, tex } = screen(1280, 800, 3.4, 14.4, 2.5, A.z0, 0), W = 1280;
-    const hist = new Array(9).fill(0); let ones = 0;
-    for (const s of MEAS.shots) { let c = 0; for (let b = s; b; b >>= 1) c += b & 1; hist[c]++; ones += c; }
-    const C8 = [1, 8, 28, 56, 70, 56, 28, 8, 1], ideal = C8.map(c => MEAS.shots.length * c / 256), pct = 100 * ones / (8 * MEAS.shots.length);
-    frame(p, W, 800); p.textAlign = 'left';
-    mono(p, `THE REAL COINS · ${MEAS.backend.toUpperCase()} · ${MEAS.when.toUpperCase()}`, 60, 70, '#5ff0ff', 24);
-    serif(p, `Eight qubits, ${MEAS.shots.length.toLocaleString('en-US')} times`, 60, 148, 62);
-    sans(p, 'Each shot measures 8 qubits: 8 coins. Bars: how many shots had 0, 1, … 8 ones. Outline: a perfect coin.', 60, 200, 1160, '#c9d2e3', 26);
-    const GX = 70, GW = 700, GY = 270, GH = 330, bw = GW / 9, top = Math.max(...hist, ...ideal) * 1.08;
-    p.strokeStyle = 'rgba(142,153,176,0.4)'; p.lineWidth = 1.5; p.beginPath(); p.moveTo(GX, GY + GH); p.lineTo(GX + GW, GY + GH); p.stroke();
-    hist.forEach((n, k) => {
-      const x = GX + k * bw, hgt = GH * n / top, hi = GH * ideal[k] / top;
-      p.fillStyle = k === 0 || k === 8 ? '#ffc24a' : '#3fe0e0'; p.fillRect(x + bw * 0.16, GY + GH - hgt, bw * 0.68, hgt);
-      p.strokeStyle = '#f1e6cf'; p.lineWidth = 2.5; p.setLineDash([7, 5]); p.strokeRect(x + bw * 0.1, GY + GH - hi, bw * 0.8, hi); p.setLineDash([]);
-      p.textAlign = 'center'; mono(p, String(n), x + bw / 2, GY + GH - Math.max(hgt, hi) - 12, '#f1e6cf', 20);
-      mono(p, String(k), x + bw / 2, GY + GH + 34, '#c9d2e3', 24); mono(p, String(C8[k]), x + bw / 2, GY + GH + 70, '#8e99b0', 20);
-    });
-    p.textAlign = 'left'; mono(p, 'ONES IN THE SHOT', GX + GW + 14, GY + GH + 34, '#c9d2e3', 15); mono(p, 'WAYS (OF 256)', GX + GW + 14, GY + GH + 70, '#8e99b0', 15);
-    const RX = 900;
-    mono(p, '00000000', RX, 300, '#ffc24a', 36); mono(p, `${hist[0]} times`, RX + 210, 300, '#f1e6cf', 26);
-    mono(p, '11111111', RX, 352, '#ffc24a', 36); mono(p, `${hist[8]} times`, RX + 210, 352, '#f1e6cf', 26);
-    let y = sans(p, `A perfect coin: about ${ideal[0]} of each. Rare, not impossible.`, RX, 404, 320, '#c9d2e3', 23);
-    mono(p, `${pct.toFixed(1)}% ONES`, RX, y + 34, '#5ff0ff', 30);
-    sans(p, `Real qubits lean: qubit 1 gave ${Math.round(MEAS.ones[1] * 100)}% ones.`, RX, y + 76, 320, '#c9d2e3', 23);
-    sans(p, 'That lean is why the platform counts min-entropy, the worst case rather than the average, and a seed counts as full entropy only with at least 256 + 64 bits of it in for 256 out.', 60, 690, 1160, '#d6ecf3', 24);
-    mono(p, `JOB ${MEAS.job} · DISPLAY ONLY, NEVER USED FOR KEYS · ITS SHOTS PLAY ON B1`, 60, 770, '#5b6680', 17);
-    tex.needsUpdate = true;
-    ENTROPY_ROOM.stops.real = stop(14.4, 2.5, A.z0, 0, 1, 3.6, 0.04);
-  }
-
-  // 3 · back wall: 256 coins, live while the QRNG API answers
-  {
-    const { p, tex } = screen(1536, 960, 4.6, A.x1, 2.7, cz, -Math.PI / 2), W = 1536, H = 960;
-    const counts = new Uint16Array(N + 1); let cur = null, seen = 0, seenLive = 0;
-    const draw = () => {
-      frame(p, W, H); p.textAlign = 'left';
-      const live = cur && cur.live;
-      mono(p, !cur ? 'WAITING FOR THE FIRST DRAW' : live ? '● LIVE · THE NEWEST QES-256 DRAW, AS ON THE PILLAR OUTSIDE' : 'NOT LIVE · THE QRNG API ISN\'T ANSWERING · COINS FROM YOUR BROWSER', 60, 72, live ? '#6dffa8' : '#8e99b0', 24);
-      serif(p, 'Entropy, counted', 60, 165, 84);
-      sans(p, 'Each square is a coin, lit for heads (1). Every exact pattern is equally likely, all heads included.', 60, 222, 1420, '#c9d2e3', 30);
-      const GX = 60, GY = 280, CS = 34;
-      for (let i = 0; i < N; i++) {
-        const on = cur && cur.bits[i], x = GX + (i % 16) * CS, y = GY + Math.floor(i / 16) * CS;
-        p.fillStyle = on ? (live ? '#e8fdff' : '#c9d2e3') : 'rgba(63,224,224,0.12)'; p.fillRect(x + 3, y + 3, CS - 6, CS - 6);
-      }
-      const RX = 680, ones = cur ? cur.ones : 0;
-      mono(p, 'HEADS IN THIS DRAW', RX, 310, '#5ff0ff', 24);
-      p.fillStyle = '#f1e6cf'; p.font = '600 70px "IBM Plex Mono", monospace'; p.fillText(cur ? `${ones} of 256` : '— of 256', RX, 385);
-      mono(p, cur ? `WAYS TO GET EXACTLY ${ones}` : 'WAYS TO GET EXACTLY 128', RX, 440, '#5ff0ff', 24);
-      p.fillStyle = '#f1e6cf'; p.font = '600 52px "IBM Plex Mono", monospace'; p.fillText(ways(lc[cur ? ones : 128]), RX, 500);
-      mono(p, 'WAYS TO GET ALL HEADS: 1', RX + 470, 500, '#ffc24a', 22);
-      sans(p, 'Nearly every draw lands near 128, because nearly all the ways are there.', RX, 556, 800, '#d6ecf3', 28);
-      // the curve: ways to get each count, as a share of the most (at 128); and a dot for every draw this visit
-      const CX = RX, CW = 796, CY = 620, CH = 240, xk = k => CX + CW * k / N;
-      p.beginPath(); p.moveTo(CX, CY + CH);
-      for (let k = 0; k <= N; k++) p.lineTo(xk(k), CY + CH - CH * 0.92 * 10 ** (lc[k] - lc[128]));
-      p.lineTo(CX + CW, CY + CH); p.closePath(); p.fillStyle = 'rgba(63,224,224,0.16)'; p.fill(); p.strokeStyle = '#3fe0e0'; p.lineWidth = 2.5; p.stroke();
-      const mx = Math.max(1, ...counts), step = Math.min(10, CH * 0.92 / mx);
-      p.fillStyle = '#f1e6cf';
-      for (let k = 0; k <= N; k++) for (let j = 0; j < counts[k]; j++) { p.beginPath(); p.arc(xk(k), CY + CH - 5 - j * step, 4, 0, Math.PI * 2); p.fill(); }
-      if (cur) { p.strokeStyle = live ? '#6dffa8' : '#ffffff'; p.lineWidth = 2; p.beginPath(); p.moveTo(xk(ones), CY - 6); p.lineTo(xk(ones), CY + CH); p.stroke(); }
-      p.textAlign = 'center'; [0, 64, 128, 192, 256].forEach(k => mono(p, String(k), xk(k), CY + CH + 32, '#8e99b0', 20));
-      p.textAlign = 'left'; mono(p, '← ALL TAILS', CX, CY + CH + 62, '#ffc24a', 18); p.textAlign = 'right'; mono(p, 'ALL HEADS →', CX + CW, CY + CH + 62, '#ffc24a', 18);
-      p.textAlign = 'left';
-      mono(p, `${seen} DRAW${seen === 1 ? '' : 'S'} THIS VISIT · ${seenLive} LIVE · CURVE: THE WAYS TO GET EACH COUNT · DOTS: YOUR DRAWS`, 60, 912, '#5b6680', 19);
+  const inRoom = () => F.g.visible && player.floor === FI.l1 && player.pos.x > F.x1 - 0.6;
+  const rbyte = () => { let v = 0; for (let k = 0; k < 8; k++) v = (v << 1) | qrngBit(); return v; };   // QRNG bits while live, else the browser's
+  const sourceLine = () => qrngLive() ? 'RANDOMNESS: THE QUANTUM V^ QRNG, LIVE' : 'RANDOMNESS: YOUR BROWSER (THE QRNG ISN\'T ANSWERING)';
+  // a museum caption on a low stand in front of each exhibit, tilted up toward you; redraw(live lines) keeps its numbers fresh
+  const caption = (x, z, ry, title, body) => {
+    const grp = new THREE.Group(); grp.position.set(x, 0, z); grp.rotation.y = ry; g.add(grp);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.86, 0.07), colMat); post.position.y = 0.43; grp.add(post);
+    const W = 1024, H = 600, c = mk(W, H), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    const PW = 1.05, plate = new THREE.Mesh(new THREE.PlaneGeometry(PW, PW * H / W), new THREE.MeshBasicMaterial({ map: tex }));
+    plate.position.set(0, 0.98, 0); plate.rotation.x = -0.62; grp.add(plate);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.04, PW * H / W + 0.04, 0.02), colMat); back.position.set(0, 0.98, 0); back.rotation.x = -0.62; back.translateZ(-0.012); grp.add(back);
+    const redraw = (live, action) => {
+      p.fillStyle = '#0b1220'; p.fillRect(0, 0, W, H);
+      p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(12, 12, W - 24, H - 24);
+      p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; let px = 62; do { p.font = `${px}px "Young Serif", Georgia, serif`; } while (p.measureText(title).width > 920 && --px > 30); p.fillText(title, 48, 98);
+      p.fillStyle = '#d6ecf3'; p.font = '31px "IBM Plex Sans", sans-serif'; wrapText(p, body, 48, 156, 928, 42);
+      p.fillStyle = '#5ff0ff'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(live || '', 48, 512);
+      p.fillStyle = '#ffc24a'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(action || '', 48, 556);
       tex.needsUpdate = true;
     };
-    const show = (bits, live) => {
-      let ones = 0; for (const b of bits) ones += b;
-      cur = { bits, ones, live }; counts[ones]++; seen++; if (live) seenLive++; draw();
-    };
-    const hexBits = hex => { const b = new Uint8Array(N); for (let i = 0; i < N; i++) b[i] = (parseInt(hex[i >> 2], 16) >> (3 - (i & 3))) & 1; return b; };
-    const browserBits = () => { const r = new Uint8Array(32), b = new Uint8Array(N); crypto.getRandomValues(r); for (let i = 0; i < N; i++) b[i] = (r[i >> 3] >> (7 - (i & 7))) & 1; return b; };
-    draw();
-    const queue = [], used = new Set(); let nextAt = 0;
-    buildingUpdates.push((dt, t) => {
-      if (!F.g.visible || player.floor !== FI.l1 || player.pos.x < F.x1 - 3) return;   // only from the doorway in
-      for (const h of QRNG.draws) if (!used.has(h)) { used.add(h); queue.push(h); }   // each live draw shown once
-      if (t < nextAt) return; nextAt = t + (reduceMotion ? 8 : 4);
-      const live = qrngLive();
-      if (live && queue.length) show(hexBits(queue.shift()), true);
-      else if (!live) { show(browserBits(), false); qrngRefill(); }   // rate-limited inside (at most every 20 s)
-      else if (Date.now() - QRNG.last > 30000) qrngRefill();   // live, out of fresh draws: ask for more, gently
-    });
-    ENTROPY_ROOM.stops.live = stop(A.x1, 2.7, cz, -1, 0, 4.8, 0.06);
-  }
+    return { redraw };
+  };
+  // a tappable exhibit: an invisible box to hit, and a spot to stand (normal points at you)
+  const exhibit = (id, title, verb, x, y, z, nx, nz, size, act, standOff = 2.4) => {
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), new THREE.MeshBasicMaterial({ visible: false }));
+    hit.position.set(x, y, z); g.add(hit);
+    const st = { id: 'entropy-' + id, tap: true, mesh: hit, floor: FI.l1, info: { title }, center: new THREE.Vector3(x, F.y + y, z), normal: new THREE.Vector3(nx, 0, nz).normalize(),
+      standOff, pitch: -0.12, actVerb: () => verb, act, actLift: 0.15 };
+    hallActs.push(st); ENTROPY_ROOM.stops[id] = st;
+    return st;
+  };
+  const plinth = (x, z, wx, h, wz) => {   // a dark plinth with a cyan edge, blocking the floor around it
+    const m = new THREE.Mesh(new THREE.BoxGeometry(wx, h, wz), colMat); m.position.set(x, h / 2, z); g.add(m);
+    const e = new THREE.Mesh(new THREE.BoxGeometry(wx + 0.02, 0.02, wz + 0.02), lineMat); e.position.set(x, h, z); g.add(e);
+    F.blocks.push({ x0: x - wx / 2 - 0.35, x1: x + wx / 2 + 0.35, z0: z - wz / 2 - 0.35, z1: z + wz / 2 + 0.35 });
+  };
+  const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const dot = (() => { const c = mk(64, 64), p = c.getContext('2d'), gr = p.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); p.fillStyle = gr; p.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();   // round, soft-edged points
 
-  // 4 · right wall, toward the back: the universe began at all heads
+  /* 1 · A brand-new deck (left, by the door): 52 cards fanned in new-deck order; tap to riffle-shuffle (the
+     Gilbert–Shannon–Reeds model: cut where the bits say, then drop cards from each half in proportion to its size) */
   {
-    const { p, tex } = screen(1280, 800, 3.4, 14.4, 2.5, A.z1, Math.PI), W = 1280;
-    let s = 0x9e3779b9; const rnd = () => { s = (s + 0x6d2b79f5) | 0; let x = Math.imul(s ^ (s >>> 15), 1 | s); x ^= x + Math.imul(x ^ (x >>> 7), 61 | x); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };   // fixed, so it draws the same each visit
-    frame(p, W, 800); p.textAlign = 'left';
-    mono(p, 'THE PAST HYPOTHESIS', 60, 70, '#5ff0ff', 24);
-    serif(p, 'The universe began at all heads', 60, 148, 62);
-    const box = (x, label) => { p.strokeStyle = 'rgba(142,153,176,0.35)'; p.lineWidth = 2; p.strokeRect(x, 220, 500, 270); mono(p, label, x, 206, '#8e99b0', 18); };
-    box(60, 'EARLY UNIVERSE · THE CMB, 380,000 YEARS IN'); box(720, 'NOW, AND LATER');
-    for (let i = 0; i < 26; i++) for (let j = 0; j < 13; j++) {   // smooth: one dot every few pixels, barely jittered
-      p.fillStyle = `rgba(255,${190 + Math.floor(rnd() * 30)},120,0.75)`; p.beginPath(); p.arc(78 + i * 18.5 + rnd() * 3, 238 + j * 19 + rnd() * 3, 3, 0, Math.PI * 2); p.fill();
+    const X = 10.9, Z = 2.0, TOP = 0.95, grp = new THREE.Group(); grp.position.set(X, TOP, Z); g.add(grp);
+    plinth(X, Z, 2.0, TOP, 0.7);
+    const SUITS = [['♠', '#7fb4ff'], ['♥', '#ff6b6b'], ['♦', '#ffb04a'], ['♣', '#6dffa8']], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const CW = 0.15, CH = 0.21, R = 0.72, PIV = 0.22, cards = [];
+    const cardGeo = new THREE.PlaneGeometry(CW, CH);
+    for (let i = 0; i < 52; i++) {
+      const [sym, col] = SUITS[Math.floor(i / 13)], rank = RANKS[i % 13];
+      const c = mk(150, 210), p = c.getContext('2d');
+      p.fillStyle = '#f4efe4'; rr(p, 2, 2, 146, 206, 12); p.fill(); p.strokeStyle = col; p.lineWidth = 5; rr(p, 6, 6, 138, 198, 10); p.stroke();
+      p.fillStyle = col === '#7fb4ff' ? '#1d4f9c' : col === '#6dffa8' ? '#13804a' : col === '#ffb04a' ? '#b3560a' : '#c0262a';
+      p.font = '700 36px "IBM Plex Sans", sans-serif'; p.textAlign = 'left'; p.fillText(rank, 14, 44); p.font = '34px serif'; p.fillText(sym, 14, 80);
+      p.textAlign = 'center'; p.font = '80px serif'; p.fillText(sym, 82, 150);
+      const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+      const m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); grp.add(m);
+      cards.push({ m, from: i, to: i });
     }
-    const clumps = [[820, 300, 30], [1010, 270, 22], [880, 430, 18], [1140, 400, 26]];   // lumpy: galaxies, and a black hole
-    for (const [x0, y0, r] of clumps) for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, rr2 = r * Math.sqrt(-Math.log(1 - rnd() * 0.98)) * 0.7; p.fillStyle = 'rgba(200,230,255,0.8)'; p.beginPath(); p.arc(x0 + Math.cos(a) * rr2, y0 + Math.sin(a) * rr2 * 0.7, 2.2, 0, Math.PI * 2); p.fill(); }
-    p.fillStyle = '#000'; p.beginPath(); p.arc(1020, 380, 26, 0, Math.PI * 2); p.fill();
-    p.strokeStyle = '#ffc24a'; p.lineWidth = 3; p.beginPath(); p.ellipse(1020, 380, 46, 12, -0.25, 0, Math.PI * 2); p.stroke();
-    p.fillStyle = '#000'; p.beginPath(); p.arc(1020, 380, 24, Math.PI * 1.05, Math.PI * 1.95); p.fill();
-    p.textAlign = 'center'; mono(p, '→', 640, 368, '#5ff0ff', 48); mono(p, 'GRAVITY', 640, 404, '#5ff0ff', 16); p.textAlign = 'left';
-    sans(p, 'Smooth to 1 part in 100,000. In a box of gas that is disorder; under gravity it is the rare arrangement.', 60, 530, 500, '#c9d2e3', 22);
-    sans(p, 'Matter clumps into stars, galaxies and black holes: the many ways. Entropy has risen ever since.', 720, 530, 500, '#c9d2e3', 22);
-    // Penrose's number, with its tower of exponents drawn by hand
-    p.fillStyle = '#d6ecf3'; p.font = '28px "IBM Plex Sans", sans-serif';
-    const lead = "How rare was the start? Roger Penrose's estimate: 1 in 10"; p.fillText(lead, 60, 668);
-    const lx = 60 + p.measureText(lead).width;
-    p.fillStyle = '#f1e6cf'; p.font = '600 20px "IBM Plex Sans", sans-serif'; p.fillText('10', lx + 3, 652);
-    p.font = '600 14px "IBM Plex Sans", sans-serif'; p.fillText('123', lx + 3 + 23, 640);
-    sans(p, 'Breaking eggs, burning stars, memory: every arrow of time runs downhill from that start. Why it began there is still open.', 60, 720, 1160, '#8e99b0', 22);
-    tex.needsUpdate = true;
-    ENTROPY_ROOM.stops.universe = stop(14.4, 2.5, A.z1, 0, -1, 3.6, 0.04);
+    let order = [...Array(52).keys()], shuffles = 0, anim = 1;   // order[slot] = card
+    const place = (cd, s, lift) => {
+      const a = (-72 + 144 * s / 51) * Math.PI / 180, r = R + lift;
+      cd.m.position.set(Math.sin(a) * r, PIV + Math.cos(a) * r, 0.002 * s + lift * 0.4); cd.m.rotation.z = -a;
+    };
+    const layout = t => { const e = ease(Math.min(1, t)); cards.forEach(cd => place(cd, cd.from + (cd.to - cd.from) * e, Math.sin(Math.PI * e) * 0.18)); };
+    const inOrder = () => { let n = 0; for (let s = 0; s < 51; s++) if (order[s + 1] === order[s] + 1) n++; return n; };
+    const cap = caption(X, Z + 0.95, 0, 'A brand-new deck',
+      'Fresh from the box, every card is in order. Shuffle and that order is gone for good: 52 cards can be ordered 8 × 10⁶⁷ ways, and only one of them is new-deck order. Mixed-up simply has far more ways to happen.');
+    const refresh = () => cap.redraw(shuffles ? `SHUFFLES: ${shuffles} · CARDS STILL BESIDE THEIR NEIGHBOUR: ${inOrder()} OF 51` : 'NEW-DECK ORDER · 51 OF 51 CARDS BESIDE THEIR NEIGHBOUR',
+      shuffles >= 7 ? `${TAP} TO OPEN A NEW DECK (SHUFFLING NEVER GETS BACK THERE)` : `${TAP} TO SHUFFLE`);
+    const shuffle = () => {
+      if (anim < 1) return;
+      let next;
+      if (shuffles >= 7) { next = [...Array(52).keys()]; shuffles = 0; }   // a fresh deck, by hand
+      else {
+        let cut = 0; for (let k = 0; k < 52; k++) cut += qrngBit();
+        const L = order.slice(0, cut), Rr = order.slice(cut); next = [];
+        while (L.length || Rr.length) { const u = rbyte() / 256; next.push((u < L.length / (L.length + Rr.length) ? L : Rr).shift()); }
+        shuffles++;
+      }
+      const slotOf = new Array(52); next.forEach((cd, s) => { slotOf[cd] = s; });
+      cards.forEach((cd, i) => { cd.from = cd.to; cd.to = slotOf[i]; });
+      order = next; anim = 0; refresh();
+    };
+    layout(1); refresh();
+    exhibit('deck', 'A brand-new deck', 'Shuffle', X, TOP + 0.9, Z, 0, 1, [2.0, 1.4, 0.6], shuffle, 3.0);
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (anim < 1) { anim = Math.min(1, anim + dt / (reduceMotion ? 0.01 : 1.3)); layout(anim); }
+    });
   }
 
-  // 5 · right wall, by the door: the QRNG runs the same story, small
-  infoPanel(g, { eyebrow: 'QUANTUM V^ · THE SAME STORY, SMALL', title: 'Start rare, then measure',
-    body: 'Each run starts with every qubit reset to 0: all heads, one arrangement, kept near 10 mK. Measuring them gives 0s and 1s by quantum chance. Hashing and the generator can keep that entropy, never add to it.',
-    foot: 'THE SECOND LAW, FOR BITS' }, 10.4, 2.4, A.z1 - 0.06, Math.PI, 2.8);
-  ENTROPY_ROOM.stops.qrng = stop(10.4, 2.4, A.z1, 0, -1, 3.2, 0.04);
+  /* 2 · Cream in your coffee (left, toward the back): cream poured on top spreads by itself and never gathers again */
+  {
+    const X = 15.6, Z = 2.0, TOP = 0.9, MR = 0.4, MH = 0.8, N = 1400;
+    plinth(X, Z, 1.2, TOP, 1.2);
+    const mug = new THREE.Mesh(new THREE.CylinderGeometry(MR + 0.03, MR + 0.03, MH + 0.06, 48, 1, true), glassMat); mug.position.set(X, TOP + (MH + 0.06) / 2, Z); g.add(mug);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(MR + 0.03, 0.012, 8, 64), steel); rim.rotation.x = Math.PI / 2; rim.position.set(X, TOP + MH + 0.06, Z); g.add(rim);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.03, 10, 32, Math.PI), glassMat); handle.position.set(X + MR + 0.03, TOP + MH / 2, Z); handle.rotation.z = -Math.PI / 2; g.add(handle);
+    const pos = new Float32Array(N * 3), col = new Float32Array(N * 3), cream = new Uint8Array(N);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.05, map: dot, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
+    pts.position.set(X, TOP + 0.02, Z); pts.frustumCulled = false; g.add(pts);
+    const COFFEE = new THREE.Color('#9a6234'), CREAM = new THREE.Color('#fff1d6');
+    const pour = () => {
+      for (let i = 0; i < N; i++) {
+        const a = Math.random() * Math.PI * 2, r = MR * 0.95 * Math.sqrt(Math.random()), top = i < N * 0.22;
+        cream[i] = top ? 1 : 0;
+        pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 2] = Math.sin(a) * r;
+        pos[i * 3 + 1] = top ? MH * (0.8 + 0.18 * Math.random()) : MH * 0.78 * Math.random();
+        (top ? CREAM : COFFEE).toArray(col, i * 3);
+      }
+      geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
+    };
+    const mixed = () => {   // how spread the cream is: its share in the lower half, against the 50% of fully mixed
+      let lo = 0, n = 0; for (let i = 0; i < N; i++) if (cream[i]) { n++; if (pos[i * 3 + 1] < MH / 2) lo++; }
+      return Math.min(100, Math.round(100 * (lo / n) / 0.5));
+    };
+    const cap = caption(X, Z + 0.95, 0, 'Cream in your coffee',
+      'Pour in cream and it spreads out by itself. Wait all day and it never gathers back on top. Nothing forbids it; there are just vastly more mixed ways for the drops to be than unmixed ones.');
+    let shown = -1;
+    const refresh = m => cap.redraw(`MIXED: ${m}%  ${m >= 95 ? '· AND IT STAYS THAT WAY' : ''}`, `${TAP} TO POUR A FRESH CUP`);
+    pour(); refresh(0);
+    exhibit('coffee', 'Cream in your coffee', 'Pour', X, TOP + 0.5, Z, 0, 1, [1.1, 1.1, 1.1], () => { pour(); shown = -1; }, 3.0);
+    let acc = 0;
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      acc += dt; if (acc < 1 / 30) return; acc = 0;
+      const s = reduceMotion ? 0.04 : 0.024;   // mixed in about half a minute
+      for (let i = 0; i < N; i++) {   // a random walk, with a slow swirl; the glass walls bounce the drops back in
+        let x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+        x += (Math.random() - 0.5) * s * 2 - z * 0.004; z += (Math.random() - 0.5) * s * 2 + x * 0.004; y += (Math.random() - 0.5) * s * 2.2;
+        const r = Math.hypot(x, z), mr = MR * 0.95; if (r > mr) { x *= mr / r * 0.99; z *= mr / r * 0.99; }
+        y = Math.max(0.01, Math.min(MH * 0.98, y));
+        pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
+      }
+      geo.attributes.position.needsUpdate = true;
+      const m = mixed(); if (m !== shown) { shown = m; refresh(m); }
+    });
+  }
+
+  /* 3 · Ten coins (the middle): flip them; each flip's count of heads drops a token into its tube at the back, and
+     the tubes build the bell curve. The ring in each tube is where a perfect coin would have the stack by now. */
+  {
+    const X = 13.4, Z = cz, TOP = 0.92, NC = 10;
+    // the table
+    { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.06, 48), colMat); t.position.set(X, TOP - 0.03, Z); g.add(t);
+      const e = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.012, 8, 64), lineMat); e.rotation.x = Math.PI / 2; e.position.set(X, TOP, Z); g.add(e);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.3, TOP - 0.06, 24), colMat); leg.position.set(X, (TOP - 0.06) / 2, Z); g.add(leg);
+      F.blocks.push({ x0: X - 1.15, x1: X + 1.15, z0: Z - 1.15, z1: Z + 1.15 }); }
+    const face = (txt, bg, fg) => { const c = mk(256, 256), p = c.getContext('2d'); const gr = p.createRadialGradient(110, 100, 10, 128, 128, 128); gr.addColorStop(0, bg[0]); gr.addColorStop(1, bg[1]); p.fillStyle = gr; p.beginPath(); p.arc(128, 128, 126, 0, Math.PI * 2); p.fill(); p.strokeStyle = fg; p.lineWidth = 8; p.beginPath(); p.arc(128, 128, 108, 0, Math.PI * 2); p.stroke(); p.fillStyle = fg; p.textAlign = 'center'; p.textBaseline = 'middle'; p.font = '120px "Young Serif", Georgia, serif'; p.fillText(txt, 128, 136); return new THREE.CanvasTexture(c); };
+    const headsM = new THREE.MeshStandardMaterial({ map: face('H', ['#ffe39a', '#c98f1c'], '#6b4300'), metalness: 0.5, roughness: 0.35 });
+    const tailsM = new THREE.MeshStandardMaterial({ map: face('T', ['#e9eef5', '#8d98a8'], '#3a4252'), metalness: 0.5, roughness: 0.35 });
+    const rimM = new THREE.MeshStandardMaterial({ color: 0xb08a3a, metalness: 0.8, roughness: 0.3 });
+    const coinGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.018, 40);
+    const coins = [];
+    for (let i = 0; i < NC; i++) {
+      const a = i / NC * Math.PI * 2, r = i % 2 ? 0.55 : 0.36, m = new THREE.Mesh(coinGeo, [rimM, headsM, tailsM]);
+      const hx = X + Math.cos(a) * r, hz = Z + Math.sin(a) * r; m.position.set(hx, TOP + 0.009, hz); m.rotation.y = a; g.add(m);
+      coins.push({ m, hx, hz, heads: true, r0: 0, r1: 0, t: 1, delay: 0 });
+    }
+    // the tubes, along the back wall: one per count of heads, 0 to 10
+    const TX = A.x1 - 1.0, TZ0 = Z - 2.0, TS = 0.4, TB = 0.42, TH = 2.3, CAPN = 140;
+    const ways = [1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1];
+    for (let k = 0; k <= NC; k++) {
+      const tz = TZ0 + k * TS, tube = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, TH, 24, 1, true), glassMat); tube.position.set(TX, TB + TH / 2, tz); g.add(tube);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 24), steel); base.position.set(TX, TB - 0.02, tz); g.add(base);
+    }
+    { const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, TB - 0.04, TS * 11 + 0.8), colMat); rail.position.set(TX, (TB - 0.04) / 2, Z - 0.4); g.add(rail);
+      F.blocks.push({ x0: TX - 0.5, x1: A.x1, z0: TZ0 - 0.4, z1: TZ0 + TS * NC + 0.4 }); }
+    const tokM = new THREE.MeshStandardMaterial({ color: 0xffc24a, metalness: 0.6, roughness: 0.35, emissive: 0x3a2400 });
+    const toks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 20), tokM, (NC + 1) * CAPN); toks.count = 0; toks.frustumCulled = false; g.add(toks);
+    const rings = ways.map((_, k) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.008, 6, 32), new THREE.MeshBasicMaterial({ color: 0x5ff0ff })); r.rotation.x = Math.PI / 2; r.position.set(TX, TB, TZ0 + k * TS); r.visible = false; g.add(r); return r; });
+    // the label strip under the tubes, read facing the back wall (its left is low z): a label column, then heads and ways under each tube
+    { const SW = TS * 11 + 0.8, z0 = TZ0 - TS / 2 - 0.8, ppm = 2048 / SW, c = mk(2048, Math.round(0.4 * ppm)), p = c.getContext('2d'), CH = c.height;
+      p.fillStyle = '#0b1220'; p.fillRect(0, 0, 2048, CH); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(4, 4, 2040, CH - 8);
+      p.textAlign = 'left'; p.fillStyle = '#c9d2e3'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillText('HEADS', 24, CH * 0.44); p.fillStyle = '#5ff0ff'; p.fillText('WAYS', 24, CH * 0.84);
+      for (let k = 0; k <= NC; k++) { const x = (TZ0 + k * TS - z0) * ppm; p.textAlign = 'center'; p.fillStyle = '#f1e6cf'; p.font = '600 52px "IBM Plex Mono", monospace'; p.fillText(String(k), x, CH * 0.46); p.fillStyle = '#5ff0ff'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText(String(ways[k]), x, CH * 0.86); }
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, 0.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+      m.position.set(TX - 0.16, 0.2, z0 + SW / 2); m.rotation.y = -Math.PI / 2; g.add(m); }
+    const counts = new Array(NC + 1).fill(0); let flips = 0, allHeads = 0, allTails = 0, drop = null, flipping = false, idle = 6;
+    const dummy = new THREE.Object3D();
+    const stack = () => {
+      const top = Math.max(...counts, ...ways.map(w2 => flips * w2 / 1024)), h = Math.min(0.12, (TH - 0.1) / Math.max(1, top));   // chunky while there are few, thinner as the stacks grow
+      let n = 0;
+      counts.forEach((c, k) => {
+        const tz = TZ0 + k * TS;
+        if (c > CAPN) { dummy.position.set(TX, TB + c * h / 2, tz); dummy.scale.set(1, c * h, 1); dummy.updateMatrix(); toks.setMatrixAt(n++, dummy.matrix); }   // too many to draw one by one: a column
+        else for (let j = 0; j < c; j++) {
+          const falling = drop && drop.k === k && j === c - 1 ? (1 - drop.t) * (1 - drop.t) * (TH - c * h) : 0;
+          dummy.position.set(TX, TB + (j + 0.5) * h + falling, tz); dummy.scale.set(1, h * 0.8, 1); dummy.updateMatrix(); toks.setMatrixAt(n++, dummy.matrix);
+        }
+        rings[k].visible = flips > 0; rings[k].position.y = TB + flips * ways[k] / 1024 * h;
+      });
+      toks.count = n; toks.instanceMatrix.needsUpdate = true;
+    };
+    const cap = caption(X - 1.3, Z, -Math.PI / 2, 'Ten coins',
+      'Flip ten coins. All heads can happen just one way in 1,024. Five heads can happen 252 ways. Flip and watch the tubes: your flips pile up where the ways are, close to the rings a perfect coin would reach.');
+    const refresh = () => cap.redraw(`FLIPS: ${flips} · ALL HEADS: ${allHeads} · ALL TAILS: ${allTails}`, `${TAP} TO FLIP · ${sourceLine()}`);
+    const flip = () => {
+      if (flipping) return; flipping = true; idle = 0;
+      coins.forEach((cn, i) => { const h = qrngBit() === 1, turns = 3 + (i % 3); cn.r0 = cn.m.rotation.x; cn.r1 = Math.round(cn.r0 / Math.PI) * Math.PI + Math.PI * (2 * turns + (h === cn.heads ? 0 : 1)); cn.heads = h; cn.t = 0; cn.delay = i * 0.05; });
+    };
+    stack(); refresh();
+    exhibit('coins', 'Ten coins', 'Flip', X, TOP + 0.35, Z, -1, 0, [1.8, 0.8, 1.8], flip, 3.0);
+    let lastSrc = '';
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (sourceLine() !== lastSrc) { lastSrc = sourceLine(); refresh(); }
+      idle += dt; if (!flipping && !drop && idle > 5) flip();   // the room flips on its own now and then
+      if (flipping) {
+        let done = true;
+        coins.forEach(cn => {
+          cn.t += dt / (reduceMotion ? 0.05 : 1.2); const u = Math.max(0, Math.min(1, (cn.t - cn.delay) / (1 - cn.delay * 0.5)));
+          if (u < 1) done = false;
+          cn.m.rotation.x = cn.r0 + (cn.r1 - cn.r0) * ease(u); cn.m.position.y = TOP + 0.009 + Math.sin(Math.PI * u) * 0.55;
+        });
+        if (done) {
+          flipping = false; const k = coins.filter(cn => cn.heads).length;
+          counts[k]++; flips++; if (k === NC) allHeads++; if (k === 0) allTails++;
+          drop = { k, t: 0 }; refresh();
+        }
+      }
+      if (drop) { drop.t = Math.min(1, drop.t + dt / (reduceMotion ? 0.05 : 0.6)); stack(); if (drop.t >= 1) drop = null; }
+    });
+    ENTROPY_ROOM.flip = flip;
+  }
+
+  /* 4 · The universe in a box (right, toward the back): matter starts smooth, and gravity clumps it, over and over */
+  {
+    const X = 15.6, Z = A.z1 - 1.4, TOP = 0.8, S = 1.3, n = 7, N = n * n * n;
+    plinth(X, Z, 1.5, TOP, 1.5);
+    const boxG = new THREE.BoxGeometry(S, S, S), box = new THREE.Mesh(boxG, glassMat); box.position.set(X, TOP + S / 2 + 0.05, Z); g.add(box);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxG), new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.5 })); edges.position.copy(box.position); g.add(edges);
+    const p = new Float32Array(N * 3), v = new Float32Array(N * 3), acc3 = new Float32Array(N * 3);
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.05, map: dot, color: 0xffe3b0, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
+    pts.position.copy(box.position); pts.frustumCulled = false; g.add(pts);
+    const H = S / 2 * 0.94, L = 2 * H, CYCLE = 32;   // the box wraps round (no edge to fall toward), so clumps form all through it rather than one blob in the middle
+    let T = 0;
+    const bang = () => {   // smooth: a grid, nudged a little (the universe's tiny ripples), at rest
+      let i = 0; const sp = 2 * H / n;
+      for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) for (let c = 0; c < n; c++, i++) {
+        p[i * 3] = -H + (a + 0.5) * sp + (Math.random() - 0.5) * sp * 0.35; p[i * 3 + 1] = -H + (b + 0.5) * sp + (Math.random() - 0.5) * sp * 0.35; p[i * 3 + 2] = -H + (c + 0.5) * sp + (Math.random() - 0.5) * sp * 0.35;
+        v[i * 3] = v[i * 3 + 1] = v[i * 3 + 2] = 0;
+      }
+      geo.attributes.position.needsUpdate = true; T = 0;
+    };
+    const step = h => {
+      const G = 1e-8, E2 = 0.0025;   // tuned offline (60 steps a second): smooth until ~12 s, about 14 clumps by 20 s, merging into a handful by 28 s
+      acc3.fill(0);
+      for (let i = 0; i < N; i++) {
+        const xi = p[i * 3], yi = p[i * 3 + 1], zi = p[i * 3 + 2];
+        for (let j = i + 1; j < N; j++) {
+          let dx = p[j * 3] - xi, dy = p[j * 3 + 1] - yi, dz = p[j * 3 + 2] - zi;
+          dx -= L * Math.round(dx / L); dy -= L * Math.round(dy / L); dz -= L * Math.round(dz / L);   // the nearest copy: the box wraps round
+          const r2 = dx * dx + dy * dy + dz * dz + E2, f = G / (r2 * Math.sqrt(r2));
+          acc3[i * 3] += dx * f; acc3[i * 3 + 1] += dy * f; acc3[i * 3 + 2] += dz * f; acc3[j * 3] -= dx * f; acc3[j * 3 + 1] -= dy * f; acc3[j * 3 + 2] -= dz * f;
+        }
+      }
+      for (let i = 0; i < N * 3; i++) {
+        v[i] = (v[i] + acc3[i] * h) * 0.998; p[i] += v[i] * h;
+        if (p[i] > H) p[i] -= L; else if (p[i] < -H) p[i] += L;   // out one side, in the other
+      }
+      geo.attributes.position.needsUpdate = true;
+    };
+    const cap = caption(X, Z - 1.05, Math.PI, 'The universe, in a box',
+      'Our universe began smooth, the same everywhere. For gravity, smooth is the rare all-heads state; ever since, matter has been clumping into stars and galaxies. That one-way slide is why time only runs forward.');
+    let shownY = -1;
+    const refresh = () => { const y = Math.min(13.8, 13.8 * T / (CYCLE - 4)); shownY = y.toFixed(1); cap.redraw(`13.8 BILLION YEARS IN ${CYCLE - 4} SECONDS · NOW: ${shownY} BILLION YEARS`, `${TAP} TO START AGAIN, SMOOTH`); };
+    bang(); refresh();
+    exhibit('universe', 'The universe, in a box', 'Restart', X, TOP + S / 2, Z, 0, -1, [1.4, 1.4, 1.4], () => { bang(); refresh(); }, 3.0);
+    let due = 0;
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      T += dt; if (T > CYCLE) bang();
+      if (T < CYCLE - 4 && !reduceMotion) { due = Math.min(due + dt * 60, 2); while (due >= 1) { step(1); due--; } }   // fixed 60 Hz steps; then it holds a moment on today's clumps
+      if (Math.min(13.8, 13.8 * T / (CYCLE - 4)).toFixed(1) !== shownY) refresh();
+    });
+  }
+
+  /* 5 · Eight quantum coins (right, by the door): qubits that start all at 0; measuring replays the next of the
+     1,024 real shots from ibm_marrakesh (B1's measurement record), q7 on the left as the bits are written */
+  {
+    const X = 10.9, Z = A.z1 - 1.4, TOP = 1.0, SP = 0.24;
+    plinth(X, Z, 2.1, TOP, 0.6);
+    const q = [];
+    for (let i = 0; i < 8; i++) {
+      const x = X + 3.5 * SP - i * SP, y = TOP + 0.38;   // you face +z here, so your left is +x: q7 first, as the bits are written
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.1, 28, 20), glassMat); ball.position.set(x, y, Z); g.add(ball);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.005, 6, 40), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.5 })); ring.position.set(x, y, Z); g.add(ring);
+      const arrow = new THREE.Group(); arrow.position.set(x, y, Z); g.add(arrow);
+      const am = new THREE.MeshBasicMaterial({ color: 0x5ff0ff });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.13, 8), am); shaft.position.y = 0.04; arrow.add(shaft);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.05, 12), am); head.position.y = 0.12; arrow.add(head);
+      const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 0.28, 12), steel); stand.position.set(x, TOP + 0.14, Z); g.add(stand);
+      q.push({ arrow, am, from: 0, to: 0, bit: 0 });
+    }
+    // the readout over them
+    const rc = mk(1024, 200), rp = rc.getContext('2d'), rtex = new THREE.CanvasTexture(rc);
+    const read = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9 * 200 / 1024), new THREE.MeshBasicMaterial({ map: rtex, transparent: true })); read.position.set(X, TOP + 0.85, Z); read.rotation.y = Math.PI; g.add(read);
+    let shot = -1, t0 = 1;
+    const drawRead = () => {
+      rp.clearRect(0, 0, 1024, 200); rp.textAlign = 'center';
+      rp.fillStyle = 'rgba(11,18,32,0.85)'; rp.fillRect(0, 0, 1024, 200);
+      const bits = shot < 0 ? '00000000' : MEAS.shots[shot].toString(2).padStart(8, '0');
+      rp.font = '600 96px "IBM Plex Mono", monospace'; bits.split('').forEach((b, i) => { rp.fillStyle = b === '1' ? '#ffc24a' : '#5ff0ff'; rp.fillText(t0 < 1 ? '·' : b, 512 + (i - 3.5) * 118, 110); });
+      rp.fillStyle = '#8e99b0'; rp.font = '600 26px "IBM Plex Mono", monospace';
+      rp.fillText(shot < 0 ? 'ALL RESET TO 0 · ONE ARRANGEMENT' : `SHOT ${shot + 1} OF ${MEAS.shots.length} · ${MEAS.backend.toUpperCase()} · ${MEAS.when.toUpperCase()}`, 512, 172);
+      rtex.needsUpdate = true;
+    };
+    const cap = caption(X, Z - 0.95, Math.PI, 'Eight quantum coins',
+      'Each qubit starts at 0, all of them alike: one arrangement. Measure them and each lands 0 or 1 by quantum chance. Quantum V^ seeds its random number generator with results like these, from IBM quantum computers.');
+    const zeros = MEAS.shots.filter(s => s === 0).length;
+    const refresh = () => cap.redraw(shot < 0 ? 'REAL SHOTS FROM IBM QUANTUM HARDWARE, REPLAYED IN ORDER' : `00000000 CAME UP ${zeros} TIMES IN ${MEAS.shots.length} · A PERFECT COIN: ABOUT 4`, `${TAP} TO ${shot < 0 ? 'MEASURE' : 'RESET AND MEASURE THE NEXT SHOT'}`);
+    const measure = () => {
+      if (t0 < 1) return;
+      shot = (shot + 1) % MEAS.shots.length;
+      const bits = MEAS.shots[shot].toString(2).padStart(8, '0');
+      q.forEach((qq, i) => { qq.from = qq.arrow.rotation.z % (Math.PI * 2); qq.bit = +bits[i]; qq.to = Math.PI * 2 * (2 + (i % 3)) + (qq.bit ? Math.PI : 0); });
+      t0 = 0; drawRead(); refresh();
+    };
+    drawRead(); refresh();
+    exhibit('qubits', 'Eight quantum coins', 'Measure', X, TOP + 0.5, Z, 0, -1, [2.1, 1.0, 0.6], measure, 3.0);
+    buildingUpdates.push(dt => {
+      if (!inRoom() || t0 >= 1) return;
+      t0 = Math.min(1, t0 + dt / (reduceMotion ? 0.05 : 1.4));
+      q.forEach((qq, i) => { const u = Math.max(0, Math.min(1, t0 * 1.15 - i * 0.02)); qq.arrow.rotation.z = qq.from + (qq.to - qq.from) * ease(u); if (u >= 1) qq.am.color.set(qq.bit ? 0xffc24a : 0x5ff0ff); else qq.am.color.set(0xffffff); });
+      if (t0 >= 1) drawRead();
+    });
+  }
 }
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
@@ -3364,7 +3549,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
   { const A = L1.annex, zd = A.door.z, px = AI_LAB.x + 1.3;   // to the AI Workers room: across the lobby, through its doorway, then along the podiums
     add(FI.l1, -PATH_W.main / 2, zd, px, zd); add(FI.l1, px, zd, px, AI_LAB.zs[0] - 0.4); add(FI.l1, px, zd, px, AI_LAB.zs[AI_LAB.zs.length - 1] + 0.4); }
-  { const E = L1.annexE; add(FI.l1, X, E.door.z, E.x1 - 1.6, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway to its coin wall
+  { const E = L1.annexE; add(FI.l1, X, E.door.z, 11.9, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway, down its aisle to the coin table
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
@@ -4853,7 +5038,7 @@ function clickAt(x, y) {
   if (world) { const h = ray.intersectObjects(world.hit, false)[0]; if (h) { const st = h.object.userData.station; if (h.distance < (st.site ? 9 : st.portal ? 6.5 : 5.5)) worldAct(st, h.uv); else walkTo(st); } return; }
   const here = paintings.filter(p => p.floor === player.floor || p.mascot), links = hallLinks.filter(l => l.floor === player.floor);
   const veeHit = vee && !vee.away && vee.scale > 0.5 ? [vee.hitM] : [];
-  const acts = hallActs.filter(a => a.floor === player.floor && a.mesh && a.act && a.id === 'veeworld');   // the loading plate in front of her desk
+  const acts = hallActs.filter(a => a.floor === player.floor && a.mesh && a.act && (a.id === 'veeworld' || a.tap));   // the loading plate in front of her desk; the Entropy Room's exhibits
   const hit = ray.intersectObjects([...veeHit, ...here.map(p => p.mesh), ...links.map(l => l.mesh), ...acts.map(a => a.mesh), liftCab.userData.shaft])[0];
   if (!hit) return;
   if (vee && hit.object === vee.hitM) { if (!openAsk()) vee.talk.next(); return; }   // tap Vee to talk, on any floor
@@ -5114,7 +5299,7 @@ function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP]);
-  if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]], ['Entropy Room', ENTROPY_ROOM.stops.live]);
+  if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]], ['Entropy Room', ENTROPY_ROOM.stops.coins]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
   if (i === FI.l2 && RECLUDA_DEVICES.stops) out.push(['Recluda devices', { ...RECLUDA_DEVICES.stops[1], standOff: 4.0, pitch: -0.02 }]);   // all three podiums in view   // after Recluda's display
@@ -6577,7 +6762,7 @@ function veeDestination(id) {
     case 'ai-guides': return AI_LAB.stops[0];
     case 'dr-z': return AI_LAB.stops[1];
     case 'clu': return AI_LAB.stops[2];
-    case 'entropy-room': return ENTROPY_ROOM.stops.live;
+    case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -7080,7 +7265,7 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.live, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
