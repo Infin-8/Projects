@@ -909,7 +909,8 @@ const FLOORS = [
   { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -18, h: 9, x0: -8, x1: 8, z0: -11, z1: 5.5, atrium: false, lightX: 0, lightsZ: [2.5, -6.5], look: [-0.5, -2.75, 0.17], hello: ['B2 · Recluda. The Gate.', 'A VPN sign-in runs through the glass server room in front of you.'] },
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
-    annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } } },   // the AI Workers room, through a doorway in the west wall,
+    annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
+    annexE: { x0: 8, x1: 17, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -1398,10 +1399,15 @@ FLOORS.forEach((F, i) => {
     wallBand(F, g, za - F.z0, F.h, F.x0, F.h / 2, (F.z0 + za) / 2, Math.PI / 2); wallBand(F, g, F.z1 - zb, F.h, F.x0, F.h / 2, (zb + F.z1) / 2, Math.PI / 2);
     wallBand(F, g, D.w, F.h - D.h, F.x0, D.h + (F.h - D.h) / 2, D.z, Math.PI / 2);
   } else wallBand(F, g, d, F.h, F.x0, F.h / 2, cz, Math.PI / 2);
-  wallBand(F, g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
+  if (F.annexE) {   // the east wall around the Entropy Room's doorway, the same way
+    const D = F.annexE.door, za = D.z - D.w / 2, zb = D.z + D.w / 2;
+    wallBand(F, g, za - F.z0, F.h, F.x1, F.h / 2, (F.z0 + za) / 2, -Math.PI / 2); wallBand(F, g, F.z1 - zb, F.h, F.x1, F.h / 2, (zb + F.z1) / 2, -Math.PI / 2);
+    wallBand(F, g, D.w, F.h - D.h, F.x1, D.h + (F.h - D.h) / 2, D.z, -Math.PI / 2);
+  } else wallBand(F, g, d, F.h, F.x1, F.h / 2, cz, -Math.PI / 2);
   wallBand(F, g, w, F.h, cx, F.h / 2, F.z0, 0); wallBand(F, g, w, F.h, cx, F.h / 2, F.z1, Math.PI);
   for (const x of [F.x0 + 0.03, F.x1 - 0.03]) {
-    const spans = x < cx && F.annex ? [[F.z0, F.annex.door.z - F.annex.door.w / 2], [F.annex.door.z + F.annex.door.w / 2, F.z1]] : [[F.z0, F.z1]];   // the light line stops at the doorway
+    const An = x < cx ? F.annex : F.annexE;
+    const spans = An ? [[F.z0, An.door.z - An.door.w / 2], [An.door.z + An.door.w / 2, F.z1]] : [[F.z0, F.z1]];   // the light line stops at a doorway
     for (const [a, b2] of spans) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, b2 - a), lineMat); b.position.set(x, 0.9, (a + b2) / 2); g.add(b); }
   }
   // the atrium: a lit edge where the floor opens, and a glass railing around it (on B1, around the cryostat; none on B2)
@@ -1438,10 +1444,12 @@ function walkable(x, z, f = player.floor) {
   const F = typeof f === 'number' ? FLOORS[f] : f;
   const inMain = !(x < F.x0 + 0.9 || x > F.x1 - 0.9 || z < F.z0 + 0.9 || z > F.z1 - 0.8);
   if (!inMain) {
-    const A = F.annex; if (!A) return false;
-    const inRoom = x > A.x0 + 0.9 && x < A.x1 - 0.5 && z > A.z0 + 0.9 && z < A.z1 - 0.9;
-    const inDoor = x >= A.x1 - 0.9 && x <= F.x0 + 1.0 && Math.abs(z - A.door.z) < A.door.w / 2 - 0.35;
-    if (!inRoom && !inDoor) return false;
+    const A = F.annex, E = F.annexE;
+    const inRoom = A && x > A.x0 + 0.9 && x < A.x1 - 0.5 && z > A.z0 + 0.9 && z < A.z1 - 0.9;
+    const inDoor = A && x >= A.x1 - 0.9 && x <= F.x0 + 1.0 && Math.abs(z - A.door.z) < A.door.w / 2 - 0.35;
+    const inRoomE = E && x > E.x0 + 0.5 && x < E.x1 - 0.9 && z > E.z0 + 0.9 && z < E.z1 - 0.9;
+    const inDoorE = E && x >= F.x1 - 1.0 && x <= E.x0 + 0.9 && Math.abs(z - E.door.z) < E.door.w / 2 - 0.35;
+    if (!inRoom && !inDoor && !inRoomE && !inDoorE) return false;
   }
   if (F.atrium !== false && Math.hypot(x - ATRIUM.x, z - ATRIUM.z) < ATRIUM.r + 0.55) return false;
   const lx = x - LIFT.x, lz = z - LIFT.z, lr = Math.hypot(lx, lz);
@@ -1459,6 +1467,10 @@ for (const F of FLOORS) {
   if (F.annex) {   // through the annex doorway: just outside, in it, just inside, and the middle of the room
     const A = F.annex, z = A.door.z;
     for (const x of [F.x0 + 1.4, F.x0, A.x1 - 1.4, (A.x0 + A.x1) / 2 + 1]) F.nodes.push(new THREE.Vector3(x, 0, z));
+  }
+  if (F.annexE) {   // and through the Entropy Room's doorway
+    const E = F.annexE, z = E.door.z;
+    for (const x of [F.x1 - 1.4, F.x1, E.x0 + 1.4, (E.x0 + E.x1) / 2 - 1]) F.nodes.push(new THREE.Vector3(x, 0, z));
   }
 }
 
@@ -1608,8 +1620,9 @@ for (const z of COLS_Z) for (const x of [L1.x0 + 0.5, L1.x1 - 0.5]) {
     if (ln.live) ln.plateLive = false;
     ln.data = data; ln.tex = tex; ln.next = 4 + li; ln.drawPlate = drawPlate;
   });
-  // the board that explains them: glass with glowing text on the east wall between VIPER™ and QES-256, across from the AI Workers doorway
-  const BW2 = 3.9, BH2 = BW2 * 1144 / 2048, BZ = 5.25, BX = L1.x1 - 0.14, BY = 2.55;
+  // the board that explains them: glass with glowing text on the east wall between VIPER™ and QES-256. Since 2026-11-25
+  // it hangs high, over the Entropy Room's doorway (and its sign), where it hung at eye height before the room opened there
+  const BW2 = 3.6, BH2 = BW2 * 1144 / 2048, BZ = L1.annexE.door.z, BX = L1.x1 - 0.14, BY = 6.0;
   const bc = mk(2048, 1144), bg = bc.getContext('2d'), btex = new THREE.CanvasTexture(bc); btex.anisotropy = 8;
   const glow = (text, x, y, font, col, blur) => { bg.font = font; bg.shadowColor = col; bg.shadowBlur = blur; bg.fillStyle = col; bg.fillText(text, x, y); bg.shadowBlur = 0; bg.fillStyle = 'rgba(255,255,255,0.45)'; bg.fillText(text, x, y); };
   const drawBoard = (live, hex) => {
@@ -2778,6 +2791,182 @@ function buildAILab() {
     body: 'One Cloudflare Worker, three personas. A question is matched against about 1,000 passages (the sites, the Quantum Library papers, research notes); a model answers from what it finds and links its sources. Vee guides this hall; Dr. Z coaches on kaizendoku.com; Clu answers on recluda.com.',
     foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.annex.x0 + 0.06, 3.75, F.annex.door.z, Math.PI / 2, 3.0);   // on the room's back wall, high enough that the faces float below it seen from the doorway
 }
+/* ---------- L1 · The Entropy Room (the east annex, through the doorway where 'Entropy, rising' hung) ----------
+   Boltzmann's coin toss, the universe's rare start (the Past Hypothesis) and how the Quantum V^ QRNG fits, in the
+   order you walk round it. Left (south) wall: S = k log W, then the real coins, the ones-per-shot counts of the 1,024
+   shots of the display-only ibm_marrakesh job on B1 (MEAS) against a perfect coin's. Back wall: 256 coins, the
+   newest QES-256 draw while the page has live data (the same bytes the pillar outside carries), else the browser's
+   randomness, and it says which; each draw's count of 1s drops onto the curve of how many ways there are to get it.
+   Right (north) wall: the universe began at all heads, and the same story, small, in the QRNG. */
+const ENTROPY_ROOM = { stops: {} };
+function buildEntropyRoom() {
+  const F = FLOORS[FI.l1], A = F.annexE, D = A.door, g = F.g;
+  const w = A.x1 - A.x0, d = A.z1 - A.z0, cx = (A.x0 + A.x1) / 2, cz = (A.z0 + A.z1) / 2;
+  // the room: floor, ceiling and walls, mirroring the AI Workers room across the lobby
+  {
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), crystalMat(F, 5)); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
+    const ce = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshLambertMaterial({ color: 0x0b0d14, side: THREE.DoubleSide })); ce.rotation.x = Math.PI / 2; ce.position.set(cx, A.h, cz); g.add(ce);
+    roomWall(F, g, d, A.h, A.x1, A.h / 2, cz, -Math.PI / 2); roomWall(F, g, w, A.h, cx, A.h / 2, A.z0, 0); roomWall(F, g, w, A.h, cx, A.h / 2, A.z1, Math.PI);
+    const za = D.z - D.w / 2, zb = D.z + D.w / 2, ex = A.x0 + 0.02;   // the lobby wall, seen from inside the room
+    roomWall(F, g, za - A.z0, A.h, ex, A.h / 2, (A.z0 + za) / 2, Math.PI / 2); roomWall(F, g, A.z1 - zb, A.h, ex, A.h / 2, (zb + A.z1) / 2, Math.PI / 2);
+    roomWall(F, g, D.w, A.h - D.h, ex, D.h + (A.h - D.h) / 2, D.z, Math.PI / 2);
+    for (const z of [za, zb]) crystalBar(g, 0.34, D.h, 0.08, A.x0, D.h / 2, z);   // a crystal frame round the doorway
+    crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x0, D.h, D.z);
+    { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(A.x1 - 0.03, 0.9, cz); g.add(b); }
+    for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
+    const L = new THREE.PointLight(0xdfe8ff, 0.9, 12, 2); L.position.set(cx, A.h - 1, cz); g.add(L);
+    floorSign(g, 'THROUGH HERE', 'The Entropy Room', F.x1 - 0.06, D.h + 0.9, D.z, -Math.PI / 2, 3.0);   // over the doorway, lobby side
+    floorSign(g, 'L1 · LOBBY ANNEX', 'The Entropy Room', A.x1 - 0.06, 5.35, cz, -Math.PI / 2, 3.4);    // over the coin wall
+  }
+  const screen = (cw, ch, mw, x, y, z, ry) => {   // a canvas behind glass, a few centimetres off the wall
+    const c = mk(cw, ch), p = c.getContext('2d'), tex = new THREE.CanvasTexture(c), mh = mw * ch / cw; tex.anisotropy = 8;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), new THREE.MeshBasicMaterial({ map: tex }));
+    m.position.set(x, y, z); m.rotation.y = ry; g.add(m); m.translateZ(0.06);
+    glassFrame(g, mw, mh, m.position.x, y, m.position.z, ry, 0.06, 0.06);
+    return { p, tex };
+  };
+  const stop = (x, y, z, nx, nz, standOff, pitch) => ({ exhibit: true, floor: FI.l1, center: new THREE.Vector3(x, F.y + y, z), normal: new THREE.Vector3(nx, 0, nz), standOff, pitch });
+  const frame = (p, W, H) => { p.fillStyle = '#060a12'; p.fillRect(0, 0, W, H); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, W - 20, H - 20); };
+  const mono = (p, text, x, y, color = '#8e99b0', px = 22) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
+  const sans = (p, text, x, y, maxW, color = '#c9d2e3', px = 26, lh = px * 1.4) => { p.fillStyle = color; p.font = `${px}px "IBM Plex Sans", sans-serif`; return wrapText(p, text, x, y, maxW, lh); };
+  const serif = (p, text, x, y, px, color = '#f1e6cf') => { p.fillStyle = color; p.font = `${px}px "Young Serif", Georgia, serif`; p.fillText(text, x, y); };
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', sup = n => String(n).split('').map(ch => SUP[+ch]).join('');
+  const N = 256, lc = new Float64Array(N + 1);   // log10 of the number of ways to get k ones in 256 coins
+  for (let k = 1; k <= N; k++) lc[k] = lc[k - 1] + Math.log10((N - k + 1) / k);
+  const ways = l => { const e = Math.floor(l + 1e-9); return e < 4 ? String(Math.round(10 ** l)) : `${(10 ** (l - e)).toFixed(1)}\u00a0×\u00a010${sup(e)}`; };
+
+  // 1 · left wall, by the door: Boltzmann
+  infoPanel(g, { eyebrow: 'BOLTZMANN · VIENNA, 1877', title: 'Entropy is counting',
+    body: `Flip 256 coins. Every exact sequence is equally likely, all heads included. What differs is how many look alike: all heads, 1 way; 128 heads, ${ways(lc[128])} ways. Entropy counts the ways.`,
+    foot: 'S = k log W · W IS THE NUMBER OF WAYS' }, 10.4, 2.4, A.z0 + 0.06, 0, 2.8);
+  ENTROPY_ROOM.stops.boltz = stop(10.4, 2.4, A.z0, 0, 1, 3.2, 0.04);
+
+  // 2 · left wall, toward the back: the real coins (B1's display-only job, 1,024 shots × 8 qubits)
+  {
+    const { p, tex } = screen(1280, 800, 3.4, 14.4, 2.5, A.z0, 0), W = 1280;
+    const hist = new Array(9).fill(0); let ones = 0;
+    for (const s of MEAS.shots) { let c = 0; for (let b = s; b; b >>= 1) c += b & 1; hist[c]++; ones += c; }
+    const C8 = [1, 8, 28, 56, 70, 56, 28, 8, 1], ideal = C8.map(c => MEAS.shots.length * c / 256), pct = 100 * ones / (8 * MEAS.shots.length);
+    frame(p, W, 800); p.textAlign = 'left';
+    mono(p, `THE REAL COINS · ${MEAS.backend.toUpperCase()} · ${MEAS.when.toUpperCase()}`, 60, 70, '#5ff0ff', 24);
+    serif(p, `Eight qubits, ${MEAS.shots.length.toLocaleString('en-US')} times`, 60, 148, 62);
+    sans(p, 'Each shot measures 8 qubits: 8 coins. Bars: how many shots had 0, 1, … 8 ones. Outline: a perfect coin.', 60, 200, 1160, '#c9d2e3', 26);
+    const GX = 70, GW = 700, GY = 270, GH = 330, bw = GW / 9, top = Math.max(...hist, ...ideal) * 1.08;
+    p.strokeStyle = 'rgba(142,153,176,0.4)'; p.lineWidth = 1.5; p.beginPath(); p.moveTo(GX, GY + GH); p.lineTo(GX + GW, GY + GH); p.stroke();
+    hist.forEach((n, k) => {
+      const x = GX + k * bw, hgt = GH * n / top, hi = GH * ideal[k] / top;
+      p.fillStyle = k === 0 || k === 8 ? '#ffc24a' : '#3fe0e0'; p.fillRect(x + bw * 0.16, GY + GH - hgt, bw * 0.68, hgt);
+      p.strokeStyle = '#f1e6cf'; p.lineWidth = 2.5; p.setLineDash([7, 5]); p.strokeRect(x + bw * 0.1, GY + GH - hi, bw * 0.8, hi); p.setLineDash([]);
+      p.textAlign = 'center'; mono(p, String(n), x + bw / 2, GY + GH - Math.max(hgt, hi) - 12, '#f1e6cf', 20);
+      mono(p, String(k), x + bw / 2, GY + GH + 34, '#c9d2e3', 24); mono(p, String(C8[k]), x + bw / 2, GY + GH + 70, '#8e99b0', 20);
+    });
+    p.textAlign = 'left'; mono(p, 'ONES IN THE SHOT', GX + GW + 14, GY + GH + 34, '#c9d2e3', 15); mono(p, 'WAYS (OF 256)', GX + GW + 14, GY + GH + 70, '#8e99b0', 15);
+    const RX = 900;
+    mono(p, '00000000', RX, 300, '#ffc24a', 36); mono(p, `${hist[0]} times`, RX + 210, 300, '#f1e6cf', 26);
+    mono(p, '11111111', RX, 352, '#ffc24a', 36); mono(p, `${hist[8]} times`, RX + 210, 352, '#f1e6cf', 26);
+    let y = sans(p, `A perfect coin: about ${ideal[0]} of each. Rare, not impossible.`, RX, 404, 320, '#c9d2e3', 23);
+    mono(p, `${pct.toFixed(1)}% ONES`, RX, y + 34, '#5ff0ff', 30);
+    sans(p, `Real qubits lean: qubit 1 gave ${Math.round(MEAS.ones[1] * 100)}% ones.`, RX, y + 76, 320, '#c9d2e3', 23);
+    sans(p, 'That lean is why the platform counts min-entropy, the worst case rather than the average, and a seed counts as full entropy only with at least 256 + 64 bits of it in for 256 out.', 60, 690, 1160, '#d6ecf3', 24);
+    mono(p, `JOB ${MEAS.job} · DISPLAY ONLY, NEVER USED FOR KEYS · ITS SHOTS PLAY ON B1`, 60, 770, '#5b6680', 17);
+    tex.needsUpdate = true;
+    ENTROPY_ROOM.stops.real = stop(14.4, 2.5, A.z0, 0, 1, 3.6, 0.04);
+  }
+
+  // 3 · back wall: 256 coins, live while the QRNG API answers
+  {
+    const { p, tex } = screen(1536, 960, 4.6, A.x1, 2.7, cz, -Math.PI / 2), W = 1536, H = 960;
+    const counts = new Uint16Array(N + 1); let cur = null, seen = 0, seenLive = 0;
+    const draw = () => {
+      frame(p, W, H); p.textAlign = 'left';
+      const live = cur && cur.live;
+      mono(p, !cur ? 'WAITING FOR THE FIRST DRAW' : live ? '● LIVE · THE NEWEST QES-256 DRAW, AS ON THE PILLAR OUTSIDE' : 'NOT LIVE · THE QRNG API ISN\'T ANSWERING · COINS FROM YOUR BROWSER', 60, 72, live ? '#6dffa8' : '#8e99b0', 24);
+      serif(p, 'Entropy, counted', 60, 165, 84);
+      sans(p, 'Each square is a coin, lit for heads (1). Every exact pattern is equally likely, all heads included.', 60, 222, 1420, '#c9d2e3', 30);
+      const GX = 60, GY = 280, CS = 34;
+      for (let i = 0; i < N; i++) {
+        const on = cur && cur.bits[i], x = GX + (i % 16) * CS, y = GY + Math.floor(i / 16) * CS;
+        p.fillStyle = on ? (live ? '#e8fdff' : '#c9d2e3') : 'rgba(63,224,224,0.12)'; p.fillRect(x + 3, y + 3, CS - 6, CS - 6);
+      }
+      const RX = 680, ones = cur ? cur.ones : 0;
+      mono(p, 'HEADS IN THIS DRAW', RX, 310, '#5ff0ff', 24);
+      p.fillStyle = '#f1e6cf'; p.font = '600 70px "IBM Plex Mono", monospace'; p.fillText(cur ? `${ones} of 256` : '— of 256', RX, 385);
+      mono(p, cur ? `WAYS TO GET EXACTLY ${ones}` : 'WAYS TO GET EXACTLY 128', RX, 440, '#5ff0ff', 24);
+      p.fillStyle = '#f1e6cf'; p.font = '600 52px "IBM Plex Mono", monospace'; p.fillText(ways(lc[cur ? ones : 128]), RX, 500);
+      mono(p, 'WAYS TO GET ALL HEADS: 1', RX + 470, 500, '#ffc24a', 22);
+      sans(p, 'Nearly every draw lands near 128, because nearly all the ways are there.', RX, 556, 800, '#d6ecf3', 28);
+      // the curve: ways to get each count, as a share of the most (at 128); and a dot for every draw this visit
+      const CX = RX, CW = 796, CY = 620, CH = 240, xk = k => CX + CW * k / N;
+      p.beginPath(); p.moveTo(CX, CY + CH);
+      for (let k = 0; k <= N; k++) p.lineTo(xk(k), CY + CH - CH * 0.92 * 10 ** (lc[k] - lc[128]));
+      p.lineTo(CX + CW, CY + CH); p.closePath(); p.fillStyle = 'rgba(63,224,224,0.16)'; p.fill(); p.strokeStyle = '#3fe0e0'; p.lineWidth = 2.5; p.stroke();
+      const mx = Math.max(1, ...counts), step = Math.min(10, CH * 0.92 / mx);
+      p.fillStyle = '#f1e6cf';
+      for (let k = 0; k <= N; k++) for (let j = 0; j < counts[k]; j++) { p.beginPath(); p.arc(xk(k), CY + CH - 5 - j * step, 4, 0, Math.PI * 2); p.fill(); }
+      if (cur) { p.strokeStyle = live ? '#6dffa8' : '#ffffff'; p.lineWidth = 2; p.beginPath(); p.moveTo(xk(ones), CY - 6); p.lineTo(xk(ones), CY + CH); p.stroke(); }
+      p.textAlign = 'center'; [0, 64, 128, 192, 256].forEach(k => mono(p, String(k), xk(k), CY + CH + 32, '#8e99b0', 20));
+      p.textAlign = 'left'; mono(p, '← ALL TAILS', CX, CY + CH + 62, '#ffc24a', 18); p.textAlign = 'right'; mono(p, 'ALL HEADS →', CX + CW, CY + CH + 62, '#ffc24a', 18);
+      p.textAlign = 'left';
+      mono(p, `${seen} DRAW${seen === 1 ? '' : 'S'} THIS VISIT · ${seenLive} LIVE · CURVE: THE WAYS TO GET EACH COUNT · DOTS: YOUR DRAWS`, 60, 912, '#5b6680', 19);
+      tex.needsUpdate = true;
+    };
+    const show = (bits, live) => {
+      let ones = 0; for (const b of bits) ones += b;
+      cur = { bits, ones, live }; counts[ones]++; seen++; if (live) seenLive++; draw();
+    };
+    const hexBits = hex => { const b = new Uint8Array(N); for (let i = 0; i < N; i++) b[i] = (parseInt(hex[i >> 2], 16) >> (3 - (i & 3))) & 1; return b; };
+    const browserBits = () => { const r = new Uint8Array(32), b = new Uint8Array(N); crypto.getRandomValues(r); for (let i = 0; i < N; i++) b[i] = (r[i >> 3] >> (7 - (i & 7))) & 1; return b; };
+    draw();
+    const queue = [], used = new Set(); let nextAt = 0;
+    buildingUpdates.push((dt, t) => {
+      if (!F.g.visible || player.floor !== FI.l1 || player.pos.x < F.x1 - 3) return;   // only from the doorway in
+      for (const h of QRNG.draws) if (!used.has(h)) { used.add(h); queue.push(h); }   // each live draw shown once
+      if (t < nextAt) return; nextAt = t + (reduceMotion ? 8 : 4);
+      const live = qrngLive();
+      if (live && queue.length) show(hexBits(queue.shift()), true);
+      else if (!live) { show(browserBits(), false); qrngRefill(); }   // rate-limited inside (at most every 20 s)
+      else if (Date.now() - QRNG.last > 30000) qrngRefill();   // live, out of fresh draws: ask for more, gently
+    });
+    ENTROPY_ROOM.stops.live = stop(A.x1, 2.7, cz, -1, 0, 4.8, 0.06);
+  }
+
+  // 4 · right wall, toward the back: the universe began at all heads
+  {
+    const { p, tex } = screen(1280, 800, 3.4, 14.4, 2.5, A.z1, Math.PI), W = 1280;
+    let s = 0x9e3779b9; const rnd = () => { s = (s + 0x6d2b79f5) | 0; let x = Math.imul(s ^ (s >>> 15), 1 | s); x ^= x + Math.imul(x ^ (x >>> 7), 61 | x); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };   // fixed, so it draws the same each visit
+    frame(p, W, 800); p.textAlign = 'left';
+    mono(p, 'THE PAST HYPOTHESIS', 60, 70, '#5ff0ff', 24);
+    serif(p, 'The universe began at all heads', 60, 148, 62);
+    const box = (x, label) => { p.strokeStyle = 'rgba(142,153,176,0.35)'; p.lineWidth = 2; p.strokeRect(x, 220, 500, 270); mono(p, label, x, 206, '#8e99b0', 18); };
+    box(60, 'EARLY UNIVERSE · THE CMB, 380,000 YEARS IN'); box(720, 'NOW, AND LATER');
+    for (let i = 0; i < 26; i++) for (let j = 0; j < 13; j++) {   // smooth: one dot every few pixels, barely jittered
+      p.fillStyle = `rgba(255,${190 + Math.floor(rnd() * 30)},120,0.75)`; p.beginPath(); p.arc(78 + i * 18.5 + rnd() * 3, 238 + j * 19 + rnd() * 3, 3, 0, Math.PI * 2); p.fill();
+    }
+    const clumps = [[820, 300, 30], [1010, 270, 22], [880, 430, 18], [1140, 400, 26]];   // lumpy: galaxies, and a black hole
+    for (const [x0, y0, r] of clumps) for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, rr2 = r * Math.sqrt(-Math.log(1 - rnd() * 0.98)) * 0.7; p.fillStyle = 'rgba(200,230,255,0.8)'; p.beginPath(); p.arc(x0 + Math.cos(a) * rr2, y0 + Math.sin(a) * rr2 * 0.7, 2.2, 0, Math.PI * 2); p.fill(); }
+    p.fillStyle = '#000'; p.beginPath(); p.arc(1020, 380, 26, 0, Math.PI * 2); p.fill();
+    p.strokeStyle = '#ffc24a'; p.lineWidth = 3; p.beginPath(); p.ellipse(1020, 380, 46, 12, -0.25, 0, Math.PI * 2); p.stroke();
+    p.fillStyle = '#000'; p.beginPath(); p.arc(1020, 380, 24, Math.PI * 1.05, Math.PI * 1.95); p.fill();
+    p.textAlign = 'center'; mono(p, '→', 640, 368, '#5ff0ff', 48); mono(p, 'GRAVITY', 640, 404, '#5ff0ff', 16); p.textAlign = 'left';
+    sans(p, 'Smooth to 1 part in 100,000. In a box of gas that is disorder; under gravity it is the rare arrangement.', 60, 530, 500, '#c9d2e3', 22);
+    sans(p, 'Matter clumps into stars, galaxies and black holes: the many ways. Entropy has risen ever since.', 720, 530, 500, '#c9d2e3', 22);
+    // Penrose's number, with its tower of exponents drawn by hand
+    p.fillStyle = '#d6ecf3'; p.font = '28px "IBM Plex Sans", sans-serif';
+    const lead = "How rare was the start? Roger Penrose's estimate: 1 in 10"; p.fillText(lead, 60, 668);
+    const lx = 60 + p.measureText(lead).width;
+    p.fillStyle = '#f1e6cf'; p.font = '600 20px "IBM Plex Sans", sans-serif'; p.fillText('10', lx + 3, 652);
+    p.font = '600 14px "IBM Plex Sans", sans-serif'; p.fillText('123', lx + 3 + 23, 640);
+    sans(p, 'Breaking eggs, burning stars, memory: every arrow of time runs downhill from that start. Why it began there is still open.', 60, 720, 1160, '#8e99b0', 22);
+    tex.needsUpdate = true;
+    ENTROPY_ROOM.stops.universe = stop(14.4, 2.5, A.z1, 0, -1, 3.6, 0.04);
+  }
+
+  // 5 · right wall, by the door: the QRNG runs the same story, small
+  infoPanel(g, { eyebrow: 'QUANTUM V^ · THE SAME STORY, SMALL', title: 'Start rare, then measure',
+    body: 'Each run starts with every qubit reset to 0: all heads, one arrangement, kept near 10 mK. Measuring them gives 0s and 1s by quantum chance. Hashing and the generator can keep that entropy, never add to it.',
+    foot: 'THE SECOND LAW, FOR BITS' }, 10.4, 2.4, A.z1 - 0.06, Math.PI, 2.8);
+  ENTROPY_ROOM.stops.qrng = stop(10.4, 2.4, A.z1, 0, -1, 3.2, 0.04);
+}
 // STEADYWATCH™ HANDHELD also runs on Apple Watch: a small podium beside its phone (outboard), with a watch on a
 // puck stand cycling through the Watch app's screens (tuner, tempo and the remote's PLAY, LOOP and REC). Tap the
 // watch to open the App Store, like the phone.
@@ -3175,6 +3364,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
   { const A = L1.annex, zd = A.door.z, px = AI_LAB.x + 1.3;   // to the AI Workers room: across the lobby, through its doorway, then along the podiums
     add(FI.l1, -PATH_W.main / 2, zd, px, zd); add(FI.l1, px, zd, px, AI_LAB.zs[0] - 0.4); add(FI.l1, px, zd, px, AI_LAB.zs[AI_LAB.zs.length - 1] + 0.4); }
+  { const E = L1.annexE; add(FI.l1, X, E.door.z, E.x1 - 1.6, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway to its coin wall
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
@@ -4924,7 +5114,7 @@ function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
   if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP]);
-  if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]]);
+  if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]], ['Entropy Room', ENTROPY_ROOM.stops.live]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
   if (i === FI.l2 && RECLUDA_DEVICES.stops) out.push(['Recluda devices', { ...RECLUDA_DEVICES.stops[1], standOff: 4.0, pitch: -0.02 }]);   // all three podiums in view   // after Recluda's display
@@ -6387,6 +6577,7 @@ function veeDestination(id) {
     case 'ai-guides': return AI_LAB.stops[0];
     case 'dr-z': return AI_LAB.stops[1];
     case 'clu': return AI_LAB.stops[2];
+    case 'entropy-room': return ENTROPY_ROOM.stops.live;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -6885,11 +7076,11 @@ Promise.all([
     if (P.kind === 'oidc' && LOGOS['assets/recluda-icon.png']) { P.logo = 'assets/recluda-icon.png'; continue; }   // Recluda's own app icon
     const c = P.kind === 'pool' ? poolArtCanvas(P.prime, P.name, P.poolColor, P.poolColor2, 512) : oidcArtCanvas(512); P.logo = c.toDataURL('image/png'); LOGOS[P.logo] = c; }
   qrngRefill(); qrngAttest();   // the first draw from the live pool, and where it comes from
-  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildRecludaDevices(); buildAILab(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
+  buildPaintings(); buildKiosk(); buildReception(); buildAskVeeWall(); buildAppKiosks(); buildRecludaDevices(); buildAILab(); buildEntropyRoom(); buildPlatformWall(); buildRecludaWall(); buildMascot(); setFloorVis(FI.l1 - 1, FI.l1 + 1); renderLiftPanel(); camera.fov = baseFov; camera.updateProjectionMatrix();
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.live, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
