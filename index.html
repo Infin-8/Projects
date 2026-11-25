@@ -3566,25 +3566,27 @@ function buildEntropyRoom() {
     });
   }
 
-  /* 10 · A slot machine (left wall, third row, added 2026-11-25): an upright cabinet with three
+  /* 10 · A slot machine (left wall, third row, added 2026-11-25): a comically big upright cabinet, twice life size
+     (about 4.6 m tall, built life size in its own group and scaled), with marquee lights down its edges and three
      reels of 16 stops each (nine cherries, four stars, two sevens, one V^), so three V^s can happen 1 way in 4,096 and
      three cherries 729 ways: the top prize is the all-heads arrangement. Each reel's stop is 4 QRNG bits (exactly 1 in
      16). The caption takes on the near miss: two V^s on the line and the third just off it feels close, but each reel
      lands on its own. Tap the cabinet or its lever to spin. Play only. */
   {
-    const X = ROWS[2], ZB = A.z0 + 0.02, D = 0.6, ZF = ZB + D, H = 1.95, W = 0.92;
+    const X = ROWS[2], SC = 2.0, ZB = 0.02, D = 0.6, ZF = ZB + D, H = 1.95, W = 0.92;   // life-size measurements, in the group's own frame (the wall at z 0)
+    const sm = new THREE.Group(); sm.position.set(X, 0, A.z0); sm.scale.setScalar(SC); g.add(sm);
     const STRIP = ['C', 'S', 'C', '7', 'C', 'S', 'C', 'C', 'V', 'C', 'S', 'C', '7', 'C', 'S', 'C'], NS = 16, V_AT = 8;
     // the cabinet
     const cab = new THREE.MeshStandardMaterial({ color: 0x1b2333, roughness: 0.35, metalness: 0.5 }), trim = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
-    { const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), cab); body.position.set(X, H / 2, ZB + D / 2); g.add(body);
-      const ledge = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.05, 0.22), trim); ledge.position.set(X, 0.95, ZF + 0.1); g.add(ledge);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.34, D * 0.7), cab); top.position.set(X, H + 0.17, ZB + D * 0.35); g.add(top);
-      F.blocks.push({ x0: X - W / 2 - 0.35, x1: X + W / 2 + 0.55, z0: A.z0, z1: ZF + 0.45 }); }
+    { const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), cab); body.position.set(0, H / 2, ZB + D / 2); sm.add(body);
+      const ledge = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.05, 0.22), trim); ledge.position.set(0, 0.95, ZF + 0.1); sm.add(ledge);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.34, D * 0.7), cab); top.position.set(0, H + 0.17, ZB + D * 0.35); sm.add(top);
+      F.blocks.push({ x0: X - (W / 2 + 0.2) * SC, x1: X + (W / 2 + 0.35) * SC, z0: A.z0, z1: A.z0 + (ZF + 0.25) * SC }); }
     // the topper: lit glass with the name
     { const c = mk(1024, 300), p = c.getContext('2d'), gr = p.createLinearGradient(0, 0, 0, 300); gr.addColorStop(0, '#2a0f3a'); gr.addColorStop(1, '#0b1220'); p.fillStyle = gr; p.fillRect(0, 0, 1024, 300);
       p.strokeStyle = '#ffc24a'; p.lineWidth = 8; p.strokeRect(10, 10, 1004, 280); p.textAlign = 'center'; p.fillStyle = '#ffc24a'; p.shadowColor = '#ffc24a'; p.shadowBlur = 24;
       p.font = '110px "Young Serif", Georgia, serif'; p.fillText('Three of a kind', 512, 180); p.shadowBlur = 0; p.fillStyle = '#c9d2e3'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText('V^ V^ V^ · 1 WAY IN 4,096', 512, 252);
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(W + 0.02, (W + 0.02) * 300 / 1024), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); m.position.set(X, H + 0.17, ZB + D * 0.7 + 0.002); g.add(m); }
+      const tt = new THREE.CanvasTexture(c); tt.anisotropy = 8; const m = new THREE.Mesh(new THREE.PlaneGeometry(W + 0.02, (W + 0.02) * 300 / 1024), new THREE.MeshBasicMaterial({ map: tt })); m.position.set(0, H + 0.17, ZB + D * 0.7 + 0.01); sm.add(m); }
     // the reel strip: one texture, the symbols top to bottom, wrapping round
     const symDraw = (p, s, cx, cy) => {
       p.textAlign = 'center'; p.textBaseline = 'middle';
@@ -3596,29 +3598,30 @@ function buildEntropyRoom() {
     };
     const stripTex = (() => { const c = mk(128, 128 * NS), p = c.getContext('2d'); p.fillStyle = '#f4efe4'; p.fillRect(0, 0, 128, 128 * NS);
       STRIP.forEach((s, i) => { p.strokeStyle = 'rgba(0,0,0,0.08)'; p.lineWidth = 2; p.beginPath(); p.moveTo(0, i * 128); p.lineTo(128, i * 128); p.stroke(); symDraw(p, s, 64, i * 128 + 64); });
-      const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; return t; })();
+      const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return t; })();   // sharp from across the room and at an angle
     const RW = 0.2, RH = 0.42, RY = 1.3, reels = [-1, 0, 1].map(k => {
       const tex = stripTex.clone(); tex.needsUpdate = true; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, 3 / NS);
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(X + k * 0.25, RY, ZF + 0.004); g.add(m);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(k * 0.25, RY, ZF + 0.012); sm.add(m);
       const shade = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ map: (() => { const c = mk(8, 128), p = c.getContext('2d'), gr = p.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(0,0,0,0.65)'); gr.addColorStop(0.3, 'rgba(0,0,0,0)'); gr.addColorStop(0.7, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.65)'); p.fillStyle = gr; p.fillRect(0, 0, 8, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false }));
-      shade.position.set(X + k * 0.25, RY, ZF + 0.008); g.add(shade);   // the curve of a drum, in shading
+      shade.position.set(k * 0.25, RY, ZF + 0.02); sm.add(shade);   // the curve of a drum, in shading
       return { tex, pos: 4 + k, p0: 0, p1: 0, t: 1, dur: 1 };
     });
     const setReel = r => { r.tex.offset.y = (((1 - (r.pos + 2) / NS) % 1) + 1) % 1; };   // the symbol at index pos sits on the payline
     reels.forEach(setReel);
-    { const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.02), trim); frame.position.set(X, RY, ZF - 0.006); g.add(frame);
-      const line = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.008, 0.004), new THREE.MeshBasicMaterial({ color: 0xff5a4e })); line.position.set(X, RY, ZF + 0.012); g.add(line);
-      const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.46), new THREE.MeshBasicMaterial({ color: 0x9fe7ee, transparent: true, opacity: 0.08, depthWrite: false })); glass.position.set(X, RY, ZF + 0.016); g.add(glass); }
+    { const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.02), trim); frame.position.set(0, RY, ZF - 0.006); sm.add(frame);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.008, 0.004), new THREE.MeshBasicMaterial({ color: 0xff5a4e })); line.position.set(0, RY, ZF + 0.026); sm.add(line);
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.46), new THREE.MeshBasicMaterial({ color: 0x9fe7ee, transparent: true, opacity: 0.08, depthWrite: false })); glass.position.set(0, RY, ZF + 0.03); sm.add(glass); }
     // chase lights round the window
-    const bulbs = []; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, b = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc24a })); b.position.set(X + Math.cos(a) * 0.46, RY + Math.sin(a) * 0.31, ZF + 0.012); g.add(b); bulbs.push(b); }
+    const bulbs = []; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, b = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc24a })); b.position.set(Math.cos(a) * 0.46, RY + Math.sin(a) * 0.31, ZF + 0.026); sm.add(b); bulbs.push(b); }
+    for (const side of [-1, 1]) for (let i = 0; i < 16; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc24a })); b.position.set(side * (W / 2 - 0.035), 0.12 + i * 0.118, ZF + 0.02); sm.add(b); bulbs.push(b); }   // marquee lights down both front edges
     // the lever, on your right (+x): an arm on a pivot, a red ball on top
-    const lever = new THREE.Group(); lever.position.set(X + W / 2 + 0.05, 1.25, ZB + D * 0.55); g.add(lever);
+    const lever = new THREE.Group(); lever.position.set(W / 2 + 0.05, 1.25, ZB + D * 0.55); sm.add(lever);
     { const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 20), trim); hub.rotation.z = Math.PI / 2; lever.add(hub);
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.5, 12), steel); arm.position.set(0.04, 0.25, 0); lever.add(arm);
       const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), new THREE.MeshStandardMaterial({ color: 0xd1343a, roughness: 0.3, emissive: 0x300000 })); knob.position.set(0.04, 0.52, 0); lever.add(knob); }
     // its screen: this machine's ways, and what it has done
-    const dc = mk(1024, 360), dp = dc.getContext('2d'), dtex = new THREE.CanvasTexture(dc);
-    { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8 * 360 / 1024), new THREE.MeshBasicMaterial({ map: dtex })); m.position.set(X, 1.78, ZF + 0.004); g.add(m); }   // over the reels' lights, under the topper
+    const dc = mk(1024, 360), dp = dc.getContext('2d'), dtex = new THREE.CanvasTexture(dc); dtex.anisotropy = 8;
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8 * 360 / 1024), new THREE.MeshBasicMaterial({ map: dtex })); m.position.set(0, 1.78, ZF + 0.012); sm.add(m); }   // over the reels' lights, under the topper
     let spins = 0, wins = { V: 0, 7: 0, S: 0, C: 0 }, twoV = 0, near = 0, lastMsg = '';
     const drawDisplay = () => {
       const p = dp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 360); p.strokeStyle = 'rgba(255,194,74,0.7)'; p.lineWidth = 4; p.strokeRect(6, 6, 1012, 348);
@@ -3628,7 +3631,7 @@ function buildEntropyRoom() {
       p.fillStyle = lastMsg.startsWith('THREE') ? '#ffc24a' : '#5ff0ff'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillText(lastMsg || 'PLAY ONLY · NOTHING TO BET', 36, 300);
       dtex.needsUpdate = true;
     };
-    const cap = caption(X + 0.95, ZF + 1.0, -0.45, 'A slot machine',
+    const cap = caption(X + (W / 2) * SC + 1.0, A.z0 + ZF * SC + 1.2, -0.45, 'A slot machine',
       'Each reel has 16 stops and one V^. Three V^s can happen 1 way in 4,096; three cherries, 729 ways. Two V^s with the third just off the line feels close, but the third reel never knew: each one lands on its own.');
     const refresh = () => cap.redraw(`SPINS: ${spins} · TOP PRIZE: ${wins.V} · TWO V^s: ${twoV} · NEAR MISSES: ${near}`, `${TAP} TO SPIN · ${sourceLine()}`);
     let spinning = false, pull = 1, idle = 4, flash = 0, lastSrc = '';
@@ -3638,7 +3641,7 @@ function buildEntropyRoom() {
         r.p0 = r.pos; const back = ((r.pos - v) % NS + NS) % NS; r.p1 = r.pos - (NS * (3 + i) + back); r.t = 0; r.dur = 1.3 + i * 0.5; });   // backwards through the strip: the symbols roll down
     };
     drawDisplay(); refresh();
-    exhibit('slots', 'A slot machine', 'Spin', X + 0.05, RY, ZF + 0.1, 0, 1, [W + 0.2, 1.1, 0.3], spin, 2.9).pitch = -0.04;
+    exhibit('slots', 'A slot machine', 'Spin', X, RY * SC, A.z0 + (ZF + 0.1) * SC, 0, 1, [(W + 0.2) * SC, 1.6 * SC, 0.3 * SC], spin, 5.4).pitch = 0.3;   // stand well back and look up: it's big
     buildingUpdates.push(dt => {
       if (!inRoom()) return;
       if (sourceLine() !== lastSrc) { lastSrc = sourceLine(); refresh(); }
