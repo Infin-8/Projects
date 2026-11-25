@@ -910,7 +910,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
-    annexE: { x0: 8, x1: 28, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
+    annexE: { x0: 8, x1: 40, z0: -1.4, z1: 11.4, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -2805,6 +2805,10 @@ function buildEntropyRoom() {
   const F = FLOORS[FI.l1], A = F.annexE, D = A.door, g = F.g;
   const w = A.x1 - A.x0, d = A.z1 - A.z0, cx = (A.x0 + A.x1) / 2, cz = (A.z0 + A.z1) / 2;
   const coarse = matchMedia('(pointer: coarse)').matches, TAP = coarse ? 'TAP' : 'CLICK OR PRESS E';
+  // the layout (2026-11-25, room to breathe): five rows 5 m apart down both long walls, a wide aisle between, the coin
+  // table and its tubes at the back. Each exhibit keeps its distance from the wall behind it, so its wall pieces stay put.
+  //   row:    0 deck / qubits · 1 coffee / universe · 2 slot machine / (open) · 3 loot chest / dice · 4 roulette / blackjack
+  const ROWS = [11.5, 16.5, 21.5, 26.5, 31.5];
   // the room: floor, ceiling and walls, mirroring the AI Workers room across the lobby
   {
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(w, d), crystalMat(F, 5)); fl.rotation.x = -Math.PI / 2; fl.position.set(cx, 0, cz); g.add(fl);
@@ -2817,7 +2821,7 @@ function buildEntropyRoom() {
     crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x0, D.h, D.z);
     { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(A.x1 - 0.03, 0.9, cz); g.add(b); }
     for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
-    for (const lx of [A.x0 + 2.8, A.x0 + 7.6, A.x1 - 7.6, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
+    for (const lx of [A.x0 + 3, A.x0 + 9.5, cx, A.x1 - 9.5, A.x1 - 3]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
     floorSign(g, 'THROUGH HERE', 'The Entropy Room', F.x1 - 0.06, D.h + 0.9, D.z, -Math.PI / 2, 3.0);   // over the doorway, lobby side
     floorSign(g, 'WHY THINGS MIX, AND NEVER UNMIX', 'The Entropy Room', A.x1 - 0.06, 4.75, cz, -Math.PI / 2, 3.6);   // over the coin tubes
   }
@@ -2863,7 +2867,7 @@ function buildEntropyRoom() {
   /* 1 · A brand-new deck (left, by the door): 52 cards fanned in new-deck order; tap to riffle-shuffle (the
      Gilbert–Shannon–Reeds model: cut where the bits say, then drop cards from each half in proportion to its size) */
   {
-    const X = 10.9, Z = 2.0, TOP = 0.95, grp = new THREE.Group(); grp.position.set(X, TOP, Z); g.add(grp);
+    const X = ROWS[0], Z = A.z0 + 1.4, TOP = 0.95, grp = new THREE.Group(); grp.position.set(X, TOP, Z); g.add(grp);
     plinth(X, Z, 2.0, TOP, 0.7);
     const SUITS = [['♠', '#7fb4ff'], ['♥', '#ff6b6b'], ['♦', '#ffb04a'], ['♣', '#6dffa8']], RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const CW = 0.15, CH = 0.21, R = 0.72, PIV = 0.22, cards = [];
@@ -2914,7 +2918,7 @@ function buildEntropyRoom() {
 
   /* 2 · Cream in your coffee (left, toward the back): cream poured on top spreads by itself and never gathers again */
   {
-    const X = 15.6, Z = 2.0, TOP = 0.9, MR = 0.4, MH = 0.8, N = 1400;
+    const X = ROWS[1], Z = A.z0 + 1.4, TOP = 0.9, MR = 0.4, MH = 0.8, N = 1400;
     plinth(X, Z, 1.2, TOP, 1.2);
     const mug = new THREE.Mesh(new THREE.CylinderGeometry(MR + 0.03, MR + 0.03, MH + 0.06, 48, 1, true), glassMat); mug.position.set(X, TOP + (MH + 0.06) / 2, Z); g.add(mug);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(MR + 0.03, 0.012, 8, 64), steel); rim.rotation.x = Math.PI / 2; rim.position.set(X, TOP + MH + 0.06, Z); g.add(rim);
@@ -3050,7 +3054,7 @@ function buildEntropyRoom() {
 
   /* 4 · The universe in a box (right, toward the back): matter starts smooth, and gravity clumps it, over and over */
   {
-    const X = 15.6, Z = A.z1 - 1.4, TOP = 0.8, S = 1.3, n = 7, N = n * n * n;
+    const X = ROWS[1], Z = A.z1 - 1.4, TOP = 0.8, S = 1.3, n = 7, N = n * n * n;
     plinth(X, Z, 1.5, TOP, 1.5);
     const boxG = new THREE.BoxGeometry(S, S, S), box = new THREE.Mesh(boxG, glassMat); box.position.set(X, TOP + S / 2 + 0.05, Z); g.add(box);
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(boxG), new THREE.LineBasicMaterial({ color: 0x5ff0ff, transparent: true, opacity: 0.5 })); edges.position.copy(box.position); g.add(edges);
@@ -3104,7 +3108,7 @@ function buildEntropyRoom() {
   /* 5 · Eight quantum coins (right, by the door): qubits that start all at 0; measuring replays the next of the
      1,024 real shots from ibm_marrakesh (B1's measurement record), q7 on the left as the bits are written */
   {
-    const X = 10.9, Z = A.z1 - 1.4, TOP = 1.0, SP = 0.24;
+    const X = ROWS[0], Z = A.z1 - 1.4, TOP = 1.0, SP = 0.24;
     plinth(X, Z, 2.1, TOP, 0.6);
     const q = [];
     for (let i = 0; i < 8; i++) {
@@ -3168,7 +3172,7 @@ function buildEntropyRoom() {
     const serif = (p, text, x, y, px) => { p.fillStyle = '#f1e6cf'; p.font = `${px}px "Young Serif", Georgia, serif`; p.fillText(text, x, y); };
     const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
     const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
-    const X = 20.6, Z = 2.1, TOP = 0.85;
+    const X = ROWS[3], Z = A.z0 + 1.5, TOP = 0.85;
     plinth(X, Z, 2.4, TOP, 0.9);
     // the chest: a wooden-dark body with gold bands, and a rounded lid hinged at the back
     const CX = X - 0.55, chest = new THREE.Group(); chest.position.set(CX, TOP, Z); g.add(chest);
@@ -3240,7 +3244,7 @@ function buildEntropyRoom() {
       phase = 'close'; t = 0; drawTerm(); commit();
     };
     const lst = exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 3.4);
-    lst.center.x = X + 0.4; lst.pitch = 0.15;   // x + 0.4 keeps the spot clear of the coin table   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
+    lst.center.x = X; lst.pitch = 0.15;   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
     const kst = exhibit('verify', 'Check the drop', 'Check', KX, KY, KZ + 0.1, 0, 1, [KW, KW * 800 / 1280, 0.2], check, 3.6);
     kst.pitch = 0.16;
     refresh(); drawTerm(); commit();
@@ -3267,7 +3271,7 @@ function buildEntropyRoom() {
      each face is exactly 1 in 6). The tubes stand on a rail above the table with their labels over them, so the
      table doesn't hide them from the aisle. */
   {
-    const X = 21.0, Z = A.z1 - 1.9, TOP = 1.0, DS = 0.24;   // counter height, so the dice are in plain view from the aisle
+    const X = ROWS[3], Z = A.z1 - 1.9, TOP = 1.0, DS = 0.24;   // counter height, so the dice are in plain view from the aisle
     // the table: dark felt with a cyan rim
     { const top = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.08, 1.0), new THREE.MeshStandardMaterial({ color: 0x0e3a3a, roughness: 0.95 })); top.position.set(X, TOP - 0.04, Z); g.add(top);
       const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, TOP - 0.08, 0.8), colMat); base.position.set(X, (TOP - 0.08) / 2, Z); g.add(base);
@@ -3362,7 +3366,7 @@ function buildEntropyRoom() {
      On the wall behind, 37 bars count where it has landed against an even line (every number is as likely), and the
      caption follows the colour streak: the wheel has no memory, so after reds black is never 'due'. Play only. */
   {
-    const X = 25.6, Z = 2.3, TOP = 1.0, R = 0.5;   // counter height, so the wheel is in plain view
+    const X = ROWS[4], Z = A.z0 + 1.7, TOP = 1.0, R = 0.5;   // counter height, so the wheel is in plain view
     const ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];   // round a single-zero wheel
     const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
     const colOf = n => n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black', HEX = { red: '#d1343a', black: '#1b1f27', green: '#1f9a55' };
@@ -3459,7 +3463,7 @@ function buildEntropyRoom() {
      card is a ten or an ace, and the next card's uncertainty in bits (the Shannon entropy of the ranks left). At 26
      cards left the shoe is reshuffled. Play only: nothing to bet. */
   {
-    const X = 25.6, Z = A.z1 - 2.3, TOP = 1.0, DECKS = 2, CW = 0.13, CH = 0.18;
+    const X = ROWS[4], Z = A.z1 - 2.3, TOP = 1.0, DECKS = 2, CW = 0.13, CH = 0.18;
     const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SUITS = [['♠', '#14202e'], ['♥', '#c0262a'], ['♦', '#c0262a'], ['♣', '#14202e']];
     const tagOf = r => r >= 1 && r <= 5 ? 1 : r >= 6 && r <= 8 ? 0 : -1;   // r is the index into RANKS
     // the table: a half-round of felt, the dealer's straight edge against the wall side, and the shoe at the dealer's right
@@ -3559,6 +3563,103 @@ function buildEntropyRoom() {
         }
       });
       if (done) dealing = false;
+    });
+  }
+
+  /* 10 · A slot machine (left wall, third row, added 2026-11-25): an upright cabinet with three
+     reels of 16 stops each (nine cherries, four stars, two sevens, one V^), so three V^s can happen 1 way in 4,096 and
+     three cherries 729 ways: the top prize is the all-heads arrangement. Each reel's stop is 4 QRNG bits (exactly 1 in
+     16). The caption takes on the near miss: two V^s on the line and the third just off it feels close, but each reel
+     lands on its own. Tap the cabinet or its lever to spin. Play only. */
+  {
+    const X = ROWS[2], ZB = A.z0 + 0.02, D = 0.6, ZF = ZB + D, H = 1.95, W = 0.92;
+    const STRIP = ['C', 'S', 'C', '7', 'C', 'S', 'C', 'C', 'V', 'C', 'S', 'C', '7', 'C', 'S', 'C'], NS = 16, V_AT = 8;
+    // the cabinet
+    const cab = new THREE.MeshStandardMaterial({ color: 0x1b2333, roughness: 0.35, metalness: 0.5 }), trim = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
+    { const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), cab); body.position.set(X, H / 2, ZB + D / 2); g.add(body);
+      const ledge = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.05, 0.22), trim); ledge.position.set(X, 0.95, ZF + 0.1); g.add(ledge);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.34, D * 0.7), cab); top.position.set(X, H + 0.17, ZB + D * 0.35); g.add(top);
+      F.blocks.push({ x0: X - W / 2 - 0.35, x1: X + W / 2 + 0.55, z0: A.z0, z1: ZF + 0.45 }); }
+    // the topper: lit glass with the name
+    { const c = mk(1024, 300), p = c.getContext('2d'), gr = p.createLinearGradient(0, 0, 0, 300); gr.addColorStop(0, '#2a0f3a'); gr.addColorStop(1, '#0b1220'); p.fillStyle = gr; p.fillRect(0, 0, 1024, 300);
+      p.strokeStyle = '#ffc24a'; p.lineWidth = 8; p.strokeRect(10, 10, 1004, 280); p.textAlign = 'center'; p.fillStyle = '#ffc24a'; p.shadowColor = '#ffc24a'; p.shadowBlur = 24;
+      p.font = '110px "Young Serif", Georgia, serif'; p.fillText('Three of a kind', 512, 180); p.shadowBlur = 0; p.fillStyle = '#c9d2e3'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText('V^ V^ V^ · 1 WAY IN 4,096', 512, 252);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(W + 0.02, (W + 0.02) * 300 / 1024), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); m.position.set(X, H + 0.17, ZB + D * 0.7 + 0.002); g.add(m); }
+    // the reel strip: one texture, the symbols top to bottom, wrapping round
+    const symDraw = (p, s, cx, cy) => {
+      p.textAlign = 'center'; p.textBaseline = 'middle';
+      if (s === 'V') { p.fillStyle = '#ffc24a'; p.shadowColor = '#ffc24a'; p.shadowBlur = 16; p.font = '700 70px "IBM Plex Sans", sans-serif'; p.fillText('V^', cx, cy + 4); p.shadowBlur = 0; }
+      else if (s === '7') { p.fillStyle = '#d1343a'; p.font = '800 92px "IBM Plex Sans", sans-serif'; p.fillText('7', cx, cy + 6); }
+      else if (s === 'S') { p.fillStyle = '#4aa3ff'; p.font = '84px serif'; p.fillText('★', cx, cy + 4); }
+      else { p.strokeStyle = '#2fbf71'; p.lineWidth = 6; p.beginPath(); p.moveTo(cx - 16, cy + 12); p.quadraticCurveTo(cx - 6, cy - 30, cx + 10, cy - 34); p.moveTo(cx + 18, cy + 8); p.quadraticCurveTo(cx + 14, cy - 22, cx + 10, cy - 34); p.stroke();
+        p.fillStyle = '#d1343a'; for (const [dx, dy] of [[-18, 18], [18, 14]]) { p.beginPath(); p.arc(cx + dx, cy + dy, 19, 0, Math.PI * 2); p.fill(); } }
+    };
+    const stripTex = (() => { const c = mk(128, 128 * NS), p = c.getContext('2d'); p.fillStyle = '#f4efe4'; p.fillRect(0, 0, 128, 128 * NS);
+      STRIP.forEach((s, i) => { p.strokeStyle = 'rgba(0,0,0,0.08)'; p.lineWidth = 2; p.beginPath(); p.moveTo(0, i * 128); p.lineTo(128, i * 128); p.stroke(); symDraw(p, s, 64, i * 128 + 64); });
+      const t = new THREE.CanvasTexture(c); t.wrapT = THREE.RepeatWrapping; return t; })();
+    const RW = 0.2, RH = 0.42, RY = 1.3, reels = [-1, 0, 1].map(k => {
+      const tex = stripTex.clone(); tex.needsUpdate = true; tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, 3 / NS);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(X + k * 0.25, RY, ZF + 0.004); g.add(m);
+      const shade = new THREE.Mesh(new THREE.PlaneGeometry(RW, RH), new THREE.MeshBasicMaterial({ map: (() => { const c = mk(8, 128), p = c.getContext('2d'), gr = p.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(0,0,0,0.65)'); gr.addColorStop(0.3, 'rgba(0,0,0,0)'); gr.addColorStop(0.7, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.65)'); p.fillStyle = gr; p.fillRect(0, 0, 8, 128); return new THREE.CanvasTexture(c); })(), transparent: true, depthWrite: false }));
+      shade.position.set(X + k * 0.25, RY, ZF + 0.008); g.add(shade);   // the curve of a drum, in shading
+      return { tex, pos: 4 + k, p0: 0, p1: 0, t: 1, dur: 1 };
+    });
+    const setReel = r => { r.tex.offset.y = (((1 - (r.pos + 2) / NS) % 1) + 1) % 1; };   // the symbol at index pos sits on the payline
+    reels.forEach(setReel);
+    { const frame = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.02), trim); frame.position.set(X, RY, ZF - 0.006); g.add(frame);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.008, 0.004), new THREE.MeshBasicMaterial({ color: 0xff5a4e })); line.position.set(X, RY, ZF + 0.012); g.add(line);
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.46), new THREE.MeshBasicMaterial({ color: 0x9fe7ee, transparent: true, opacity: 0.08, depthWrite: false })); glass.position.set(X, RY, ZF + 0.016); g.add(glass); }
+    // chase lights round the window
+    const bulbs = []; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, b = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc24a })); b.position.set(X + Math.cos(a) * 0.46, RY + Math.sin(a) * 0.31, ZF + 0.012); g.add(b); bulbs.push(b); }
+    // the lever, on your right (+x): an arm on a pivot, a red ball on top
+    const lever = new THREE.Group(); lever.position.set(X + W / 2 + 0.05, 1.25, ZB + D * 0.55); g.add(lever);
+    { const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 20), trim); hub.rotation.z = Math.PI / 2; lever.add(hub);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.5, 12), steel); arm.position.set(0.04, 0.25, 0); lever.add(arm);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), new THREE.MeshStandardMaterial({ color: 0xd1343a, roughness: 0.3, emissive: 0x300000 })); knob.position.set(0.04, 0.52, 0); lever.add(knob); }
+    // its screen: this machine's ways, and what it has done
+    const dc = mk(1024, 360), dp = dc.getContext('2d'), dtex = new THREE.CanvasTexture(dc);
+    { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8 * 360 / 1024), new THREE.MeshBasicMaterial({ map: dtex })); m.position.set(X, 1.78, ZF + 0.004); g.add(m); }   // over the reels' lights, under the topper
+    let spins = 0, wins = { V: 0, 7: 0, S: 0, C: 0 }, twoV = 0, near = 0, lastMsg = '';
+    const drawDisplay = () => {
+      const p = dp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 360); p.strokeStyle = 'rgba(255,194,74,0.7)'; p.lineWidth = 4; p.strokeRect(6, 6, 1012, 348);
+      p.textAlign = 'left'; p.fillStyle = '#8e99b0'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText('THREE OF A KIND · WAYS IN 4,096', 36, 56);
+      [['V', 1], ['7', 8], ['S', 64], ['C', 729]].forEach(([s, wy], i) => { const x = 36 + i * 245; for (let k = 0; k < 3; k++) { p.save(); p.translate(x + k * 50, 112); p.scale(0.42, 0.42); symDraw(p, s, 0, 0); p.restore(); }
+        p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '600 40px "IBM Plex Mono", monospace'; p.fillText(String(wy), x, 190); p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(`HIT ${wins[s]}×`, x, 228); });
+      p.fillStyle = lastMsg.startsWith('THREE') ? '#ffc24a' : '#5ff0ff'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillText(lastMsg || 'PLAY ONLY · NOTHING TO BET', 36, 300);
+      dtex.needsUpdate = true;
+    };
+    const cap = caption(X + 0.95, ZF + 1.0, -0.45, 'A slot machine',
+      'Each reel has 16 stops and one V^. Three V^s can happen 1 way in 4,096; three cherries, 729 ways. Two V^s with the third just off the line feels close, but the third reel never knew: each one lands on its own.');
+    const refresh = () => cap.redraw(`SPINS: ${spins} · TOP PRIZE: ${wins.V} · TWO V^s: ${twoV} · NEAR MISSES: ${near}`, `${TAP} TO SPIN · ${sourceLine()}`);
+    let spinning = false, pull = 1, idle = 4, flash = 0, lastSrc = '';
+    const spin = () => {
+      if (spinning) return; spinning = true; idle = 0; pull = 0;
+      reels.forEach((r, i) => { let v = 0; for (let k = 0; k < 4; k++) v = (v << 1) | qrngBit(); r.target = v;   // 0 to 15, each exactly 1 in 16
+        r.p0 = r.pos; const back = ((r.pos - v) % NS + NS) % NS; r.p1 = r.pos - (NS * (3 + i) + back); r.t = 0; r.dur = 1.3 + i * 0.5; });   // backwards through the strip: the symbols roll down
+    };
+    drawDisplay(); refresh();
+    exhibit('slots', 'A slot machine', 'Spin', X + 0.05, RY, ZF + 0.1, 0, 1, [W + 0.2, 1.1, 0.3], spin, 2.9).pitch = -0.04;
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (sourceLine() !== lastSrc) { lastSrc = sourceLine(); refresh(); }
+      const T = performance.now() / 1000;
+      bulbs.forEach((b, i) => b.material.color.set(flash > 0 ? ((Math.floor(T * 12) + i) % 2 ? 0xffffff : 0xffc24a) : (Math.floor(T * (spinning ? 10 : 3)) + i) % 3 ? 0x6b4a1a : 0xffc24a));
+      if (flash > 0) flash -= dt;
+      if (pull < 1) { pull = Math.min(1, pull + dt / 0.6); lever.rotation.x = Math.sin(Math.PI * pull) * 1.1; }   // down and back up
+      idle += dt; if (!spinning && idle > 9) spin();
+      if (!spinning) return;
+      let done = true;
+      reels.forEach(r => { if (r.t >= 1) return; done = false; r.t = Math.min(1, r.t + dt / (reduceMotion ? 0.05 : r.dur)); const e = 1 - Math.pow(1 - r.t, 3); r.pos = r.p0 + (r.p1 - r.p0) * e; setReel(r); if (r.t >= 1) { r.pos = ((r.target % NS) + NS) % NS; setReel(r); } });
+      if (done) {
+        spinning = false; spins++;
+        const line = reels.map(r => STRIP[r.pos]), vs = line.filter(s => s === 'V').length;
+        if (line[0] === line[1] && line[1] === line[2]) { wins[line[0]]++; flash = line[0] === 'V' ? 4 : 1.5; lastMsg = `THREE ${{ V: 'V^s', 7: 'SEVENS', S: 'STARS', C: 'CHERRIES' }[line[0]]}: ${{ V: 1, 7: 8, S: 64, C: 729 }[line[0]]} WAY${line[0] === 'V' ? '' : 'S'} IN 4,096`; }
+        else if (vs === 2) {
+          twoV++; const odd = reels[line.findIndex(s => s !== 'V')], off = (odd.pos === V_AT + 1 || odd.pos === V_AT - 1);
+          if (off) { near++; lastMsg = 'A NEAR MISS: THE THIRD V^ IS ONE STOP AWAY, AND IT NEVER KNEW'; } else lastMsg = 'TWO V^s: THE THIRD REEL LANDS ON ITS OWN';
+        } else lastMsg = line.map(s => ({ V: 'V^', 7: '7', S: '★', C: 'CHERRY' }[s])).join(' · ');
+        drawDisplay(); refresh();
+      }
     });
   }
 }
@@ -7174,6 +7275,7 @@ function veeDestination(id) {
     case 'clu': return AI_LAB.stops[2];
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'loot-chest': return ENTROPY_ROOM.stops.loot;
+    case 'slots': return ENTROPY_ROOM.stops.slots;
     case 'dice': return ENTROPY_ROOM.stops.dice;
     case 'roulette': return ENTROPY_ROOM.stops.roulette;
     case 'blackjack': return ENTROPY_ROOM.stops.blackjack;
@@ -7679,7 +7781,7 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, dice: ENTROPY_ROOM.stops.dice, roulette: ENTROPY_ROOM.stops.roulette, blackjack: ENTROPY_ROOM.stops.blackjack, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, slots: ENTROPY_ROOM.stops.slots, dice: ENTROPY_ROOM.stops.dice, roulette: ENTROPY_ROOM.stops.roulette, blackjack: ENTROPY_ROOM.stops.blackjack, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
