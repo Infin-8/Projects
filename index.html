@@ -910,7 +910,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
-    annexE: { x0: 8, x1: 19, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
+    annexE: { x0: 8, x1: 24, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -2792,8 +2792,8 @@ function buildAILab() {
     foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.annex.x0 + 0.06, 3.75, F.annex.door.z, Math.PI / 2, 3.0);   // on the room's back wall, high enough that the faces float below it seen from the doorway
 }
 /* ---------- L1 · The Entropy Room (the east annex, through the doorway where 'Entropy, rising' hung) ----------
-   Why things mix and never unmix, told with everyday things you can play with (redesigned 2026-11-25: five
-   freestanding 3D exhibits in place of wall panels). Down the left as you walk in: a brand-new deck you can
+   Why things mix and never unmix, told with everyday things you can play with (redesigned 2026-11-25: freestanding
+   3D exhibits in place of wall panels; a sixth, loot drops, in the middle row, and the room 16 m deep). Down the left as you walk in: a brand-new deck you can
    shuffle, and cream in coffee. In the middle: ten coins you flip, whose heads-counts drop into eleven tubes and
    pile up where the ways are (a bell curve), with a ring in each tube where a perfect coin would put it. Down the
    right: the universe in a box (smooth matter clumping under gravity), and eight qubits that start all at 0 and
@@ -2817,7 +2817,7 @@ function buildEntropyRoom() {
     crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x0, D.h, D.z);
     { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(A.x1 - 0.03, 0.9, cz); g.add(b); }
     for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
-    for (const lx of [A.x0 + 2.8, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
+    for (const lx of [A.x0 + 2.8, cx, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
     floorSign(g, 'THROUGH HERE', 'The Entropy Room', F.x1 - 0.06, D.h + 0.9, D.z, -Math.PI / 2, 3.0);   // over the doorway, lobby side
     floorSign(g, 'WHY THINGS MIX, AND NEVER UNMIX', 'The Entropy Room', A.x1 - 0.06, 4.75, cz, -Math.PI / 2, 3.6);   // over the coin tubes
   }
@@ -2964,7 +2964,7 @@ function buildEntropyRoom() {
   /* 3 · Ten coins (the middle): flip them; each flip's count of heads drops a token into its tube at the back, and
      the tubes build the bell curve. The ring in each tube is where a perfect coin would have the stack by now. */
   {
-    const X = 13.4, Z = cz, TOP = 0.92, NC = 10;
+    const X = A.x1 - 4.4, Z = cz, TOP = 0.92, NC = 10;   // at the back of the room, in front of its tubes
     // the table
     { const t = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.06, 48), colMat); t.position.set(X, TOP - 0.03, Z); g.add(t);
       const e = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.012, 8, 64), lineMat); e.rotation.x = Math.PI / 2; e.position.set(X, TOP, Z); g.add(e);
@@ -3149,6 +3149,115 @@ function buildEntropyRoom() {
       t0 = Math.min(1, t0 + dt / (reduceMotion ? 0.05 : 1.4));
       q.forEach((qq, i) => { const u = Math.max(0, Math.min(1, t0 * 1.15 - i * 0.02)); qq.arrow.rotation.z = qq.from + (qq.to - qq.from) * ease(u); if (u >= 1) qq.am.color.set(qq.bit ? 0xffc24a : 0x5ff0ff); else qq.am.color.set(0xffffff); });
       if (t0 >= 1) drawRead();
+    });
+  }
+
+  /* 6 · Loot drops (the middle row, added 2026-11-25): a chest with a published drop table on the left, and across the
+     aisle a terminal that shows each drop is checkable. Before each open the room draws a 16-byte seed (QRNG bits while
+     live, else the browser's) and shows its SHA-256 as a commitment; opening reveals the seed, and the roll is its first
+     4 bytes (big-endian) mod 10,000: 0–199 legendary, 200–799 epic, 800–2,999 rare, 3,000–9,999 common. Tapping the
+     terminal re-hashes the revealed seed in your browser and checks it against the commitment. Free, nothing to buy. */
+  {
+    const TIERS = [   // [name, share, colour, shape]
+      ['COMMON', 0.70, '#c9d2e3', new THREE.BoxGeometry(0.16, 0.16, 0.16)],
+      ['RARE', 0.22, '#4aa3ff', new THREE.OctahedronGeometry(0.13)],
+      ['EPIC', 0.06, '#b36bff', new THREE.IcosahedronGeometry(0.13)],
+      ['LEGENDARY', 0.02, '#ffc24a', new THREE.DodecahedronGeometry(0.14)]];
+    const tierOf = roll => roll < 200 ? 3 : roll < 800 ? 2 : roll < 3000 ? 1 : 0;
+    const mono = (p, text, x, y, color = '#8e99b0', px = 22) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
+    const serif = (p, text, x, y, px) => { p.fillStyle = '#f1e6cf'; p.font = `${px}px "Young Serif", Georgia, serif`; p.fillText(text, x, y); };
+    const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+    const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
+    const X = 20.6, Z = 2.1, TOP = 0.85;
+    plinth(X, Z, 2.4, TOP, 0.9);
+    // the chest: a wooden-dark body with gold bands, and a rounded lid hinged at the back
+    const CX = X - 0.55, chest = new THREE.Group(); chest.position.set(CX, TOP, Z); g.add(chest);
+    const wood = new THREE.MeshStandardMaterial({ color: 0x3a2a1e, roughness: 0.7, metalness: 0.1 }), band = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.85, roughness: 0.3 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.46), wood); body.position.y = 0.2; chest.add(body);
+    for (const bx of [-0.25, 0.25]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.41, 0.47), band); b.position.set(bx, 0.2, 0); chest.add(b); }
+    const glowIn = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.38), new THREE.MeshBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glowIn.rotation.x = -Math.PI / 2; glowIn.position.y = 0.41; chest.add(glowIn);
+    const hinge = new THREE.Group(); hinge.position.set(0, 0.4, -0.23); chest.add(hinge);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.7, 24, 1, false, 0, Math.PI), wood); lid.rotation.z = Math.PI / 2;   // a half cylinder along x, dome up lid.position.set(0, 0, 0.23); hinge.add(lid);
+    const lock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.03), band); lock.position.set(0, 0.36, 0.245); chest.add(lock);
+    const items = TIERS.map(([, , c, geo]) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, metalness: 0.4, roughness: 0.25 })); m.visible = false; m.position.set(CX, TOP + 0.3, Z); g.add(m); return m; });
+    const itemLight = new THREE.PointLight(0xffffff, 0, 3, 2); itemLight.position.set(CX, TOP + 0.9, Z + 0.3); g.add(itemLight);
+    // the bars: what has dropped so far, against the published odds (a ring at each tier's share); 1 m is 100%
+    const BX0 = X + 0.25, BS = 0.27, BH = 1.0, bars = [];
+    TIERS.forEach(([name, share, c], k) => {
+      const bx = BX0 + k * BS, tube = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, BH, 20, 1, true), glassMat); tube.position.set(bx, TOP + BH / 2, Z); g.add(tube);
+      const fill = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1, 20), new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.35 })); fill.scale.y = 0.0001; fill.position.set(bx, TOP, Z); g.add(fill);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.008, 6, 32), new THREE.MeshBasicMaterial({ color: 0xf1e6cf })); ring.rotation.x = Math.PI / 2; ring.position.set(bx, TOP + share * BH, Z); g.add(ring);
+      const tag = textSprite([[name, '600 30px "IBM Plex Mono", monospace', c], [`${Math.round(share * 100)}%`, '600 30px "IBM Plex Mono", monospace', '#f1e6cf']], 320, 120, 0.3);
+      tag.position.set(bx, TOP + BH + 0.14, Z); g.add(tag);
+      bars.push(fill);
+    });
+    const counts = [0, 0, 0, 0]; let opens = 0, dry = 0, best = 0;
+    const cap = caption(X, Z + 1.0, 0, 'The loot chest',
+      'Games publish their drop odds, but players can\'t check them. Here a legendary drops 2% of the time, so 50 opens still leave a 36% chance of none: a dry streak is normal, not rigged. Over many opens the bars settle on the odds.');
+    const refresh = () => cap.redraw(opens ? `OPENS: ${opens} · NO LEGENDARY FOR ${dry} · ODDS OF THAT: ${Math.round(100 * 0.98 ** dry)}%` : 'PUBLISHED ODDS: COMMON 70% · RARE 22% · EPIC 6% · LEGENDARY 2%',
+      `${TAP} TO OPEN · FREE, NOTHING TO BUY`);
+    // the commitment for the next drop, made before you open
+    let next = null, last = null;
+    const commit = async () => {
+      const seed = new Uint8Array(16); for (let i = 0; i < 16; i++) seed[i] = rbyte();
+      const live = !QRNG.fallback && qrngLive();
+      next = { seed, live, hash: await sha(seed) }; drawTerm();
+    };
+    // the terminal across the aisle
+    const KX = X, KZ = A.z1 - 1.5, tc = mk(1280, 800), tp = tc.getContext('2d'), ttex = new THREE.CanvasTexture(tc); ttex.anisotropy = 8;
+    { const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.05, 0.12), colMat); post.position.set(KX, 0.525, KZ); g.add(post);
+      const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7 * 800 / 1280), new THREE.MeshBasicMaterial({ map: ttex })); scr.position.set(KX, 1.65, KZ); scr.rotation.y = Math.PI; scr.rotation.x = 0; g.add(scr);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.76, 1.7 * 800 / 1280 + 0.06, 0.05), colMat); back.position.set(KX, 1.65, KZ + 0.04); g.add(back);
+      F.blocks.push({ x0: KX - 1.2, x1: KX + 1.2, z0: KZ - 0.4, z1: A.z1 }); }
+    let verified = null, flash = 0;
+    const drawTerm = () => {
+      const p = tp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1280, 800); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1260, 780);
+      p.textAlign = 'left'; mono(p, 'CHECK THE DROP', 50, 70, '#5ff0ff', 26); serif(p, 'Locked in before you open', 50, 140, 56);
+      mono(p, '1 · BEFORE THE NEXT OPEN: THE SEED\'S FINGERPRINT (SHA-256)', 50, 210, '#8e99b0', 21);
+      mono(p, next ? next.hash.slice(0, 32) : '…', 50, 254, '#f1e6cf', 30); mono(p, next ? next.hash.slice(32) : '', 50, 292, '#f1e6cf', 30);
+      mono(p, '2 · AFTER THE LAST OPEN: ITS SEED, REVEALED', 50, 360, '#8e99b0', 21);
+      if (last) {
+        mono(p, hex(last.seed), 50, 404, '#f1e6cf', 30);
+        mono(p, `SEED FROM: ${last.live ? 'THE QUANTUM V^ QRNG, LIVE' : 'YOUR BROWSER (THE QRNG WASN\'T ANSWERING)'}`, 50, 442, '#5b6680', 18);
+        mono(p, '3 · THE ROLL: FIRST 4 BYTES MOD 10,000', 50, 500, '#8e99b0', 21);
+        const [name, , c] = TIERS[last.tier]; mono(p, `${String(last.roll).padStart(4, '0')}  →  ${name}`, 50, 548, c, 40);
+        mono(p, '0–199 LEGENDARY · 200–799 EPIC · 800–2,999 RARE · 3,000–9,999 COMMON', 50, 590, '#5b6680', 18);
+        const ok = verified === true, bad = verified === false;
+        p.fillStyle = ok ? `rgba(109,255,168,${0.12 + 0.25 * flash})` : 'rgba(63,224,224,0.08)'; p.fillRect(50, 640, 1180, 100);
+        mono(p, ok ? '✓ SHA-256(SEED) MATCHES THE FINGERPRINT SHOWN BEFORE THE OPEN' : bad ? '✗ NO MATCH' : `${TAP} HERE TO RE-HASH THE SEED AND CHECK IT`, 76, 700, ok ? '#6dffa8' : bad ? '#ff5a4e' : '#ffc24a', 24);
+      } else mono(p, 'OPEN THE CHEST ACROSS THE AISLE, THEN CHECK IT HERE', 50, 404, '#5b6680', 22);
+      ttex.needsUpdate = true;
+    };
+    const check = async () => { if (!last) return; verified = (await sha(last.seed)) === last.hash; flash = 1; drawTerm(); };
+    // opening: close the lid if it's open, open it, and lift the drop out
+    let phase = 'idle', t = 0, shownTier = -1;
+    const open = () => {
+      if (phase !== 'idle' || !next) return;
+      const d = next; next = null;
+      const roll = ((d.seed[0] << 24) >>> 0 | d.seed[1] << 16 | d.seed[2] << 8 | d.seed[3]) >>> 0;
+      last = { ...d, roll: roll % 10000, tier: tierOf(roll % 10000) }; verified = null;
+      counts[last.tier]++; opens++; if (last.tier === 3) { best = Math.max(best, dry); dry = 0; } else dry++;
+      phase = 'close'; t = 0; drawTerm(); commit();
+    };
+    exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 2.8);
+    const kst = exhibit('verify', 'Check the drop', 'Check', KX, 1.65, KZ, 0, -1, [1.8, 1.2, 0.3], check, 2.6);
+    kst.pitch = 0.02;
+    refresh(); drawTerm(); commit();
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (flash > 0) { flash = Math.max(0, flash - dt); drawTerm(); }
+      if (next && !next.live && !next.busy && phase === 'idle' && qrngLive() && QRNG.hex.length >= 32) { next.busy = true; commit(); }   // the first seed of a visit is drawn before the QRNG answers: once it's live (and before an open), draw it again from the QRNG
+      const sp = reduceMotion ? 20 : 1;
+      if (phase === 'close') { t += dt * sp / 0.3; hinge.rotation.x = Math.max(hinge.rotation.x, -1.9 * (1 - Math.min(1, t))); items.forEach(m => { m.position.y = Math.max(TOP + 0.3, m.position.y - dt * 3); }); if (t >= 1) { items.forEach(m => { m.visible = false; }); phase = 'open'; t = 0; } }
+      else if (phase === 'open') { t += dt * sp / 0.5; hinge.rotation.x = -1.9 * ease(Math.min(1, t)); glowIn.material.opacity = 0.6 * Math.min(1, t); if (t >= 1) { phase = 'rise'; t = 0; shownTier = last.tier; const m = items[shownTier]; m.visible = true; m.position.y = TOP + 0.3; itemLight.color.set(TIERS[shownTier][2]); } }
+      else if (phase === 'rise') {
+        t += dt * sp / 0.9; const u = ease(Math.min(1, t)), m = items[shownTier];
+        m.position.y = TOP + 0.3 + u * 0.75; itemLight.intensity = u * (shownTier === 3 ? 2.2 : 0.9);
+        if (t >= 1) { phase = 'idle'; bars.forEach((b, k) => { const h = Math.max(0.0001, BH * counts[k] / opens); b.scale.y = h; b.position.y = TOP + h / 2; }); refresh(); }
+      }
+      if (shownTier >= 0 && items[shownTier].visible) { const m = items[shownTier]; m.rotation.y += dt * (reduceMotion ? 0 : 1.4); m.rotation.x += dt * (reduceMotion ? 0 : 0.6); if (shownTier === 3 && !reduceMotion) m.scale.setScalar(1 + 0.08 * Math.sin(performance.now() / 160)); }
+      if (phase === 'idle' && glowIn.material.opacity > 0.25) glowIn.material.opacity -= dt * 0.2;
     });
   }
 }
@@ -3549,7 +3658,7 @@ const LIGHT_PATHS = (() => {
   add(FI.l1, PATH_W.main / 2, 5, X, 5); add(FI.l1, X, 5, X, door);
   { const A = L1.annex, zd = A.door.z, px = AI_LAB.x + 1.3;   // to the AI Workers room: across the lobby, through its doorway, then along the podiums
     add(FI.l1, -PATH_W.main / 2, zd, px, zd); add(FI.l1, px, zd, px, AI_LAB.zs[0] - 0.4); add(FI.l1, px, zd, px, AI_LAB.zs[AI_LAB.zs.length - 1] + 0.4); }
-  { const E = L1.annexE; add(FI.l1, X, E.door.z, 11.9, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway, down its aisle to the coin table
+  { const E = L1.annexE; add(FI.l1, X, E.door.z, E.x1 - 6.2, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway, down its aisle to the coin table
   add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
@@ -6763,6 +6872,7 @@ function veeDestination(id) {
     case 'dr-z': return AI_LAB.stops[1];
     case 'clu': return AI_LAB.stops[2];
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
+    case 'loot-chest': return ENTROPY_ROOM.stops.loot;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -7265,7 +7375,7 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
