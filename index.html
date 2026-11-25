@@ -3152,8 +3152,8 @@ function buildEntropyRoom() {
     });
   }
 
-  /* 6 · Loot drops (the middle row, added 2026-11-25): a chest with a published drop table on the left, and across the
-     aisle a terminal that shows each drop is checkable. Before each open the room draws a 16-byte seed (QRNG bits while
+  /* 6 · Loot drops (the middle row, left, added 2026-11-25): a chest with a published drop table, and on the wall right
+     behind it a screen that shows each drop is checkable, so the drop and its proof are in one view. Before each open the room draws a 16-byte seed (QRNG bits while
      live, else the browser's) and shows its SHA-256 as a commitment; opening reveals the seed, and the roll is its first
      4 bytes (big-endian) mod 10,000: 0–199 legendary, 200–799 epic, 800–2,999 rare, 3,000–9,999 common. Tapping the
      terminal re-hashes the revealed seed in your browser and checks it against the commitment. Free, nothing to buy. */
@@ -3204,12 +3204,11 @@ function buildEntropyRoom() {
       const live = !QRNG.fallback && qrngLive();
       next = { seed, live, hash: await sha(seed) }; drawTerm();
     };
-    // the terminal across the aisle
-    const KX = X, KZ = A.z1 - 1.5, tc = mk(1280, 800), tp = tc.getContext('2d'), ttex = new THREE.CanvasTexture(tc); ttex.anisotropy = 8;
-    { const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.05, 0.12), colMat); post.position.set(KX, 0.525, KZ); g.add(post);
-      const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7 * 800 / 1280), new THREE.MeshBasicMaterial({ map: ttex })); scr.position.set(KX, 1.65, KZ); scr.rotation.y = Math.PI; scr.rotation.x = 0; g.add(scr);
-      const back = new THREE.Mesh(new THREE.BoxGeometry(1.76, 1.7 * 800 / 1280 + 0.06, 0.05), colMat); back.position.set(KX, 1.65, KZ + 0.04); g.add(back);
-      F.blocks.push({ x0: KX - 1.2, x1: KX + 1.2, z0: KZ - 0.4, z1: A.z1 }); }
+    // the screen on the wall behind the chest, above it and its bars, facing the aisle
+    const KX = X, KZ = A.z0 + 0.08, KY = 2.95, KW = 2.4,   // its bottom clears the bars' labels
+      tc = mk(1280, 800), tp = tc.getContext('2d'), ttex = new THREE.CanvasTexture(tc); ttex.anisotropy = 8;
+    { const scr = new THREE.Mesh(new THREE.PlaneGeometry(KW, KW * 800 / 1280), new THREE.MeshBasicMaterial({ map: ttex })); scr.position.set(KX, KY, KZ); g.add(scr);
+      glassFrame(g, KW, KW * 800 / 1280, KX, KY, KZ, 0, 0.06, 0.06); }
     let verified = null, flash = 0;
     const drawTerm = () => {
       const p = tp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1280, 800); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1260, 780);
@@ -3226,7 +3225,7 @@ function buildEntropyRoom() {
         const ok = verified === true, bad = verified === false;
         p.fillStyle = ok ? `rgba(109,255,168,${0.12 + 0.25 * flash})` : 'rgba(63,224,224,0.08)'; p.fillRect(50, 640, 1180, 100);
         mono(p, ok ? '✓ SHA-256(SEED) MATCHES THE FINGERPRINT SHOWN BEFORE THE OPEN' : bad ? '✗ NO MATCH' : `${TAP} HERE TO RE-HASH THE SEED AND CHECK IT`, 76, 700, ok ? '#6dffa8' : bad ? '#ff5a4e' : '#ffc24a', 24);
-      } else mono(p, 'OPEN THE CHEST ACROSS THE AISLE, THEN CHECK IT HERE', 50, 404, '#5b6680', 22);
+      } else mono(p, 'OPEN THE CHEST BELOW, THEN CHECK IT HERE', 50, 404, '#5b6680', 22);
       ttex.needsUpdate = true;
     };
     const check = async () => { if (!last) return; verified = (await sha(last.seed)) === last.hash; flash = 1; drawTerm(); };
@@ -3240,9 +3239,10 @@ function buildEntropyRoom() {
       counts[last.tier]++; opens++; if (last.tier === 3) { best = Math.max(best, dry); dry = 0; } else dry++;
       phase = 'close'; t = 0; drawTerm(); commit();
     };
-    exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 2.8);
-    const kst = exhibit('verify', 'Check the drop', 'Check', KX, 1.65, KZ, 0, -1, [1.8, 1.2, 0.3], check, 2.6);
-    kst.pitch = 0.02;
+    const lst = exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 3.4);
+    lst.center.x = X; lst.pitch = 0.15;   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
+    const kst = exhibit('verify', 'Check the drop', 'Check', KX, KY, KZ + 0.1, 0, 1, [KW, KW * 800 / 1280, 0.2], check, 3.6);
+    kst.pitch = 0.16;
     refresh(); drawTerm(); commit();
     buildingUpdates.push(dt => {
       if (!inRoom()) return;
