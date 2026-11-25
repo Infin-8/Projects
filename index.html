@@ -910,7 +910,7 @@ const FLOORS = [
   { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
-    annexE: { x0: 8, x1: 24, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
+    annexE: { x0: 8, x1: 28, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
   { id: 'l2', short: 'Apps', tag: 'L2', name: 'Apps', y: 10, h: 8, x0: -8, x1: 8, z0: -11, z1: 7, lightsZ: [3, -6], look: [0, 6.9, 0.06], hello: ['L2 · Apps.', 'KaizenDoku, STEADYWATCH™ HANDHELD and Recluda, all on the App Store.'] },
   { id: 'l3', short: 'Platform', tag: 'L3', name: 'Platform Wing', y: 18, h: 8, x0: -8, x1: 8, z0: -11, z1: 6, lightsZ: [-6], look: [0, -4, 0.1], hello: ['L3 · The Platform Wing.', 'Three entropy pools: VAULT™, VIPER™ and LOTUS™.'] },
   { id: 'l4', short: 'Office', tag: 'L4', name: "Builder's Office", y: 26, h: 6, x0: -8, x1: 8, z0: -8, z1: 4, lightsZ: [-2], look: [0, 3.86, 0.05], hello: ["L4 · The builder's office.", 'Step through the glass door for the Resume.'] }];
@@ -2817,7 +2817,7 @@ function buildEntropyRoom() {
     crystalBar(g, 0.34, 0.08, D.w + 0.16, A.x0, D.h, D.z);
     { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, d), lineMat); b.position.set(A.x1 - 0.03, 0.9, cz); g.add(b); }
     for (const z of [A.z0 + 0.03, A.z1 - 0.03]) { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, 0.04), lineMat); b.position.set(cx, 0.9, z); g.add(b); }
-    for (const lx of [A.x0 + 2.8, cx, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
+    for (const lx of [A.x0 + 2.8, A.x0 + 7.6, A.x1 - 7.6, A.x1 - 2.8]) { const L = new THREE.PointLight(0xdfe8ff, 0.75, 11, 2); L.position.set(lx, A.h - 1, cz); g.add(L); }
     floorSign(g, 'THROUGH HERE', 'The Entropy Room', F.x1 - 0.06, D.h + 0.9, D.z, -Math.PI / 2, 3.0);   // over the doorway, lobby side
     floorSign(g, 'WHY THINGS MIX, AND NEVER UNMIX', 'The Entropy Room', A.x1 - 0.06, 4.75, cz, -Math.PI / 2, 3.6);   // over the coin tubes
   }
@@ -3353,6 +3353,212 @@ function buildEntropyRoom() {
         }
       }
       if (drop) { drop.t = Math.min(1, drop.t + dt / (reduceMotion ? 0.05 : 0.6)); stack(); if (drop.t >= 1) drop = null; }
+    });
+  }
+
+  /* 8 · A roulette wheel (left, past the loot chest, added 2026-11-25; the room is 20 m deep for it): a single-zero
+     wheel of 37 pockets. Tap to spin: the wheel turns one way and the ball the other, slowing, dropping in and riding
+     the wheel into its pocket, chosen from qrngBit() (6 bits, 37 to 63 thrown away, so each pocket is exactly 1 in 37).
+     On the wall behind, 37 bars count where it has landed against an even line (every number is as likely), and the
+     caption follows the colour streak: the wheel has no memory, so after reds black is never 'due'. Play only. */
+  {
+    const X = 25.6, Z = 2.3, TOP = 1.0, R = 0.5;   // counter height, so the wheel is in plain view
+    const ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];   // round a single-zero wheel
+    const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+    const colOf = n => n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black', HEX = { red: '#d1343a', black: '#1b1f27', green: '#1f9a55' };
+    // the table
+    { const t = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.08, 1.7), new THREE.MeshStandardMaterial({ color: 0x0e3a3a, roughness: 0.95 })); t.position.set(X, TOP - 0.04, Z); g.add(t);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, TOP - 0.08, 1.5), colMat); base.position.set(X, (TOP - 0.08) / 2, Z); g.add(base);
+      for (const [w2, d2, dx, dz] of [[1.72, 0.04, 0, -0.85], [1.72, 0.04, 0, 0.85], [0.04, 1.72, -0.85, 0], [0.04, 1.72, 0.85, 0]]) { const e = new THREE.Mesh(new THREE.BoxGeometry(w2, 0.06, d2), lineMat); e.position.set(X + dx, TOP + 0.01, Z + dz); g.add(e); }
+      F.blocks.push({ x0: X - 1.2, x1: X + 1.15, z0: A.z0, z1: Z + 1.2 }); }
+    // the bowl (still) and the wheel (turning): a wooden rim with the ball track, and the pocket disc with a gold turret
+    const wood = new THREE.MeshStandardMaterial({ color: 0x4a2f1c, roughness: 0.55, metalness: 0.1 }), gold2 = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.9, roughness: 0.25 });
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.16, R + 0.12, 0.14, 64, 1, true), wood); bowl.position.set(X, TOP + 0.07, Z); g.add(bowl);
+    const rimTop = new THREE.Mesh(new THREE.RingGeometry(R + 0.005, R + 0.16, 64), new THREE.MeshStandardMaterial({ color: 0x3a2416, roughness: 0.4, side: THREE.DoubleSide })); rimTop.rotation.x = -Math.PI / 2; rimTop.position.set(X, TOP + 0.1, Z); g.add(rimTop);
+    const floorB = new THREE.Mesh(new THREE.CircleGeometry(R + 0.12, 64), wood); floorB.rotation.x = -Math.PI / 2; floorB.position.set(X, TOP + 0.005, Z); g.add(floorB);
+    const wheel = new THREE.Group(); wheel.position.set(X, TOP + 0.06, Z); g.add(wheel);
+    { const c = mk(1024, 1024), p = c.getContext('2d'), C = 512, step = Math.PI * 2 / 37;
+      p.fillStyle = '#2a1a10'; p.beginPath(); p.arc(C, C, 512, 0, Math.PI * 2); p.fill();
+      ORDER.forEach((n, i) => {   // wedge i centred on angle i·step, counterclockwise from +x (the wheel's own frame)
+        const a0 = i * step - step / 2, a1 = a0 + step;
+        p.fillStyle = HEX[colOf(n)]; p.beginPath(); p.arc(C, C, 512, -a1, -a0); p.arc(C, C, 300, -a0, -a1, true); p.closePath(); p.fill();
+        p.strokeStyle = '#d9a441'; p.lineWidth = 3; p.beginPath(); p.moveTo(C + Math.cos(a0) * 300, C - Math.sin(a0) * 300); p.lineTo(C + Math.cos(a0) * 512, C - Math.sin(a0) * 512); p.stroke();
+        p.save(); p.translate(C + Math.cos(i * step) * 452, C - Math.sin(i * step) * 452); p.rotate(-i * step + Math.PI / 2);
+        p.fillStyle = '#f4efe4'; p.font = '600 44px "IBM Plex Sans", sans-serif'; p.textAlign = 'center'; p.textBaseline = 'middle'; p.fillText(String(n), 0, 0); p.restore();
+      });
+      p.strokeStyle = '#d9a441'; p.lineWidth = 6; for (const r of [300, 395]) { p.beginPath(); p.arc(C, C, r, 0, Math.PI * 2); p.stroke(); }
+      const gr = p.createRadialGradient(C, C, 20, C, C, 300); gr.addColorStop(0, '#6b4a2a'); gr.addColorStop(1, '#2a1a10'); p.fillStyle = gr; p.beginPath(); p.arc(C, C, 296, 0, Math.PI * 2); p.fill();
+      const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(R, 74), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.45, metalness: 0.1 })); disc.rotation.x = -Math.PI / 2; wheel.add(disc);
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.09, 32), gold2); cone.position.y = 0.045; wheel.add(cone);
+      const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 12), gold2); spindle.position.y = 0.12; wheel.add(spindle);
+      for (let k = 0; k < 4; k++) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 8), gold2); arm.rotation.z = Math.PI / 2; arm.rotation.y = k * Math.PI / 4; arm.position.y = 0.17; wheel.add(arm); } }
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.022, 20, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1, emissive: 0x333333 })); g.add(ball);
+    const STEP = Math.PI * 2 / 37, R_TRACK = R + 0.09, R_POCKET = R * 0.69;
+    const putBall = (phi, r, y) => ball.position.set(X + r * Math.cos(phi), y, Z - r * Math.sin(phi));   // the wheel's (cos, -sin) frame, as its texture is laid
+    // the tally on the wall behind: 37 bars, 0 to 36 left to right as you face it, and the even line
+    const BW = 0.085, BX0 = X - 18 * BW, SHELF = 1.55, BMAX = 1.15, WZ = A.z0 + 0.12, bars = [];
+    { const shelf = new THREE.Mesh(new THREE.BoxGeometry(37 * BW + 0.2, 0.04, 0.2), colMat); shelf.position.set(X, SHELF - 0.02, WZ + 0.04); g.add(shelf);
+      const c = mk(2048, 140), p = c.getContext('2d'), cw = 2048 / (37 + 2.35);
+      p.fillStyle = '#0b1220'; p.fillRect(0, 0, 2048, 140); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(3, 3, 2042, 134);
+      for (let n = 0; n <= 36; n++) { const x = (n + 1.175 + 0.5) * cw; p.fillStyle = HEX[colOf(n)] === '#1b1f27' ? '#c9d2e3' : HEX[colOf(n)]; p.font = '600 30px "IBM Plex Mono", monospace'; p.textAlign = 'center'; p.fillText(String(n), x, 86); }
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(37 * BW + 0.2, (37 * BW + 0.2) * 140 / 2048), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
+      m.position.set(X, SHELF - 0.16, WZ + 0.145); g.add(m); }
+    for (let n = 0; n <= 36; n++) { const col = colOf(n), b = new THREE.Mesh(new THREE.BoxGeometry(BW * 0.72, 1, 0.08), new THREE.MeshStandardMaterial({ color: col === 'black' ? 0x8e99b0 : HEX[col], emissive: col === 'black' ? 0x20242c : HEX[col], emissiveIntensity: 0.25 }));
+      b.position.set(BX0 + n * BW, SHELF, WZ + 0.04); b.scale.y = 0.0001; g.add(b); bars.push(b); }
+    const even = new THREE.Mesh(new THREE.BoxGeometry(37 * BW + 0.1, 0.012, 0.012), new THREE.MeshBasicMaterial({ color: 0xf1e6cf })); even.position.set(X, SHELF, WZ + 0.1); even.visible = false; g.add(even);
+    const evenTag = textSprite([['EVEN LINE', '600 30px "IBM Plex Mono", monospace', '#f1e6cf'], ['EVERY NUMBER 1 IN 37', '600 24px "IBM Plex Mono", monospace', '#8e99b0']], 420, 110, 0.5); evenTag.visible = false; g.add(evenTag);
+    const counts = new Array(37).fill(0), byCol = { red: 0, black: 0, green: 0 }; let spins = 0, last = null, streak = 0;
+    const tally = () => {
+      const top = Math.max(...counts, spins / 37) || 1, h = Math.min(0.09, BMAX / top);
+      counts.forEach((c, n) => { const y = Math.max(0.0001, c * h); bars[n].scale.y = y; bars[n].position.y = SHELF + y / 2; });
+      even.visible = evenTag.visible = spins > 0; even.position.y = SHELF + spins / 37 * h; evenTag.position.set(X + 37 * BW / 2 + 0.35, even.position.y, WZ + 0.1);
+    };
+    const cap = caption(X - 1.4, Z + 1.25, 0.675, 'A roulette wheel',   // beside the table (your left), turned to you, so it doesn't hide the wheel
+     
+      'Every number has the same 1-in-37 chance on every spin, and the wheel has no memory. Five reds in a row happens about 3% of the time, so you will see it, and black is still not due. The green zero is why red wins 18 spins in 37, not half.');
+    const refresh = () => {
+      const odds = last && last !== 'green' ? (18 / 37) ** streak : 0;
+      const line = !spins ? 'RED 18 IN 37 · BLACK 18 IN 37 · GREEN 1 IN 37 · PLAY ONLY, NO BETS'
+        : `LAST: ${counts.lastN} ${last.toUpperCase()} · ${last === 'green' ? 'ZERO' : `${streak} ${last.toUpperCase()} IN A ROW (${odds >= 0.1 ? Math.round(odds * 100) + '%' : '1 IN ' + Math.round(1 / odds)})`} · NEXT RED OR BLACK: STILL 18 IN 37`;
+      cap.redraw(line, `${TAP} TO SPIN · SPINS: ${spins} · RED ${byCol.red} · BLACK ${byCol.black} · GREEN ${byCol.green}`);
+    };
+    const pocket = () => { for (;;) { let v = 0; for (let k = 0; k < 6; k++) v = (v << 1) | qrngBit(); if (v < 37) return v; } };   // a pocket index round the wheel, each exactly 1 in 37
+    let spinning = false, u = 1, T = 5.5, th0 = 0, thSpan = 0, target = 0, idle = 4, psi0 = 0;
+    const spin = () => {
+      if (spinning) return; spinning = true; idle = 0; u = 0;
+      target = pocket(); th0 = wheel.rotation.y; thSpan = Math.PI * 2 * (2 + Math.random() * 1.5);   // the wheel turns 2 to 3½ times as it slows
+      psi0 = -Math.PI * 2 * (4 + Math.random());   // and the ball laps the other way, relative to the wheel
+    };
+    putBall(Math.PI / 2, R_POCKET, TOP + 0.075);
+    tally(); refresh();
+    exhibit('roulette', 'A roulette wheel', 'Spin', X, TOP + 0.2, Z, 0, 1, [1.5, 0.5, 1.5], spin, 3.0).pitch = -0.02;
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      idle += dt; if (!spinning && idle > 10) spin();   // it spins on its own now and then
+      if (!spinning) { putBall(wheel.rotation.y + target * STEP, R_POCKET, TOP + 0.075); return; }
+      u = Math.min(1, u + dt / (reduceMotion ? 0.05 : T));
+      const e = 1 - (1 - u) * (1 - u);
+      wheel.rotation.y = th0 + thSpan * e;   // three.js turns +y counterclockwise seen from above: the same sense as the texture's angles
+      const rel = target * STEP + psi0 * (1 - u) ** 3;   // the ball's angle on the wheel: racing round early, settling on its pocket
+      const drop = Math.min(1, Math.max(0, (u - 0.55) / 0.3)), hop = drop > 0 && drop < 1 ? Math.abs(Math.sin(drop * Math.PI * 4)) * 0.03 * (1 - drop) : 0;
+      putBall(wheel.rotation.y + rel, R_TRACK + (R_POCKET - R_TRACK) * ease(drop), TOP + 0.075 + 0.035 * (1 - drop) + hop);
+      if (u >= 1) {
+        spinning = false; const n = ORDER[target], c = colOf(n);
+        counts[n]++; counts.lastN = n; spins++; byCol[c]++;
+        streak = c === last ? streak + 1 : 1; last = c; tally(); refresh();
+      }
+    });
+  }
+
+  /* 9 · Blackjack: the shoe remembers (right, across from the roulette wheel, added 2026-11-25). The wheel has no
+     memory; a shoe does: a dealt card is gone until the shuffle. A two-deck shoe, shuffled with rbyte() (Fisher–Yates,
+     each pick by rejection, so every order is equally likely), deals a round of eight cards (three seats and the
+     dealer, two each). Each card shows its Hi-Lo tag (+1 for 2–6, 0 for 7–9, −1 for tens and aces). On the wall
+     behind: what's left of each rank (bars that fall as it's dealt), the running and true count, the chance the next
+     card is a ten or an ace, and the next card's uncertainty in bits (the Shannon entropy of the ranks left). At 26
+     cards left the shoe is reshuffled. Play only: nothing to bet. */
+  {
+    const X = 25.6, Z = A.z1 - 2.3, TOP = 1.0, DECKS = 2, CW = 0.13, CH = 0.18;
+    const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SUITS = [['♠', '#14202e'], ['♥', '#c0262a'], ['♦', '#c0262a'], ['♣', '#14202e']];
+    const tagOf = r => r >= 1 && r <= 5 ? 1 : r >= 6 && r <= 8 ? 0 : -1;   // r is the index into RANKS
+    // the table: a half-round of felt, the dealer's straight edge against the wall side, and the shoe at the dealer's right
+    { const felt = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.06, 48, 1, false, Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: 0x0e3a3a, roughness: 0.95 })); felt.position.set(X, TOP - 0.03, Z + 0.25); g.add(felt);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.03, 8, 48, Math.PI), new THREE.MeshStandardMaterial({ color: 0x3a2416, roughness: 0.5 })); rim.rotation.x = Math.PI / 2; rim.rotation.z = Math.PI; rim.position.set(X, TOP, Z + 0.25); g.add(rim);
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, TOP - 0.06, 0.8), colMat); base.position.set(X, (TOP - 0.06) / 2, Z + 0.05); g.add(base);
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.04, 0.04), lineMat); edge.position.set(X, TOP, Z + 0.25); g.add(edge);
+      F.blocks.push({ x0: X - 1.25, x1: X + 1.2, z0: Z - 1.05, z1: A.z1 }); }
+    const SHOE = new THREE.Vector3(X - 0.6, TOP + 0.06, Z + 0.1);
+    { const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.3), new THREE.MeshStandardMaterial({ color: 0x1b1f27, roughness: 0.4, metalness: 0.3 })); shoe.position.copy(SHOE); shoe.rotation.y = 0.3; g.add(shoe); }
+    // card faces: one texture per rank and suit, drawn once
+    const faceTex = {};
+    const cardTex = (r, s) => {
+      const key = r + '-' + s; if (faceTex[key]) return faceTex[key];
+      const c = mk(130, 180), p = c.getContext('2d'), [sym, col] = SUITS[s], tag = tagOf(r);
+      p.fillStyle = '#f4efe4'; rr(p, 2, 2, 126, 176, 12); p.fill();
+      p.strokeStyle = tag > 0 ? '#2fbf71' : tag < 0 ? '#d9a441' : '#8e99b0'; p.lineWidth = 7; rr(p, 6, 6, 118, 168, 10); p.stroke();   // its count, as the border
+      p.fillStyle = col; p.textAlign = 'center'; p.font = '700 46px "IBM Plex Sans", sans-serif'; p.fillText(RANKS[r], 65, 76); p.font = '64px serif'; p.fillText(sym, 65, 146);
+      return (faceTex[key] = new THREE.CanvasTexture(c));
+    };
+    const tagMat = t => { const c = mk(128, 96), p = c.getContext('2d'); p.font = '700 64px "IBM Plex Mono", monospace'; p.textAlign = 'center'; p.textBaseline = 'middle'; p.fillStyle = t > 0 ? '#6dffa8' : t < 0 ? '#ffc24a' : '#c9d2e3'; p.fillText(t > 0 ? '+1' : t < 0 ? '−1' : '0', 64, 50); return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }); };
+    const TAGS = { 1: tagMat(1), 0: tagMat(0), '-1': tagMat(-1) };
+    // eight places for a round: three seats round the curve (you face the dealer, so seat 1 is on your left, +x) and the dealer
+    const SPOTS = [[0.55, -0.45], [0.0, -0.68], [-0.55, -0.45], [0.0, -0.15]].flatMap(([dx, dz]) => [[dx - 0.075, dz], [dx + 0.075, dz]]);
+    const cards = SPOTS.map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(CW, CH), new THREE.MeshStandardMaterial({ roughness: 0.6 })); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI; m.visible = false; g.add(m);
+      const s = new THREE.Sprite(TAGS[0]); s.scale.set(0.16, 0.12, 1); s.visible = false; g.add(s); return { m, s, t: 1, from: new THREE.Vector3(), to: new THREE.Vector3(), delay: 0 }; });
+    // the shoe's state
+    let shoe = [], left = new Array(13).fill(0), running = 0, rounds = 0, shuffledLive = false, justShuffled = false;
+    const randBelow = n => { const lim = 256 - (256 % n); for (;;) { const r = rbyte(); if (r < lim) return r % n; } };
+    const shuffle = () => {
+      shoe = []; for (let d = 0; d < DECKS; d++) for (let s = 0; s < 4; s++) for (let r = 0; r < 13; r++) shoe.push([r, s]);
+      for (let i = shoe.length - 1; i > 0; i--) { const j = randBelow(i + 1); [shoe[i], shoe[j]] = [shoe[j], shoe[i]]; }
+      shuffledLive = !QRNG.fallback && qrngLive(); left = new Array(13).fill(4 * DECKS); running = 0; justShuffled = true;
+    };
+    // the wall behind: a stats board, and ten bars over the ranks (2 … 9, tens, aces), left to right as you face it
+    const GROUPS = [[1], [2], [3], [4], [5], [6], [7], [8], [9, 10, 11, 12], [0]], GNAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10s', 'A'];
+    const BW = 0.3, SHELF = 1.5, BMAX = 0.85, WZ = A.z1 - 0.12, bx = k => X + (4.5 - k) * BW;
+    { const shelf = new THREE.Mesh(new THREE.BoxGeometry(10 * BW + 0.2, 0.04, 0.2), colMat); shelf.position.set(X, SHELF - 0.02, WZ - 0.04); g.add(shelf);
+      const c = mk(2048, 150), p = c.getContext('2d'), SW = 10 * BW + 0.2, ppm = 2048 / SW;
+      p.fillStyle = '#0b1220'; p.fillRect(0, 0, 2048, 150); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(3, 3, 2042, 144);
+      GNAMES.forEach((nm, k) => { const t = tagOf(GROUPS[k][0]), x = (X + SW / 2 - bx(k)) * ppm; p.textAlign = 'center'; p.fillStyle = '#f1e6cf'; p.font = '600 56px "IBM Plex Mono", monospace'; p.fillText(nm, x, 70);
+        p.fillStyle = t > 0 ? '#6dffa8' : t < 0 ? '#ffc24a' : '#8e99b0'; p.font = '600 34px "IBM Plex Mono", monospace'; p.fillText(t > 0 ? '+1' : t < 0 ? '−1' : '0', x, 124); });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * 150 / 2048), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); m.position.set(X, SHELF - 0.17, WZ - 0.145); m.rotation.y = Math.PI; g.add(m); }
+    const bars = GROUPS.map((gr, k) => { const t = tagOf(gr[0]), col = t > 0 ? 0x2fbf71 : t < 0 ? 0xd9a441 : 0x8e99b0;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(BW * 0.7, 1, 0.1), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.25 })); b.position.set(bx(k), SHELF + BMAX / 2, WZ - 0.04); b.scale.y = BMAX; g.add(b); return b; });
+    const sc = mk(2048, 520), sp = sc.getContext('2d'), stex = new THREE.CanvasTexture(sc); stex.anisotropy = 8;
+    { const SW = 10 * BW + 0.2, m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * 520 / 2048), new THREE.MeshBasicMaterial({ map: stex })); m.position.set(X, SHELF + BMAX + 0.12 + SW * 520 / 2048 / 2, WZ - 0.06); m.rotation.y = Math.PI; g.add(m); }
+    const stats = () => {
+      const n = shoe.length, hi = left[0] + left[9] + left[10] + left[11] + left[12], decksLeft = n / 52, tc = running / Math.max(0.25, decksLeft);
+      let H = 0; for (const c of left) if (c) { const q = c / n; H -= q * Math.log2(q); }
+      const p = sp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 2048, 520); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(4, 4, 2040, 512);
+      const cell = (label, value, x, col) => { p.textAlign = 'left'; p.fillStyle = '#8e99b0'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillText(label, x, 92); p.fillStyle = col; p.font = '600 92px "IBM Plex Mono", monospace'; p.fillText(value, x, 200); };
+      cell('RUNNING COUNT', (running > 0 ? '+' : running < 0 ? '−' : '') + Math.abs(running), 60, running > 0 ? '#6dffa8' : running < 0 ? '#ffc24a' : '#f1e6cf');
+      cell('TRUE COUNT', (tc > 0 ? '+' : tc < 0 ? '−' : '') + Math.abs(tc).toFixed(1), 560, '#f1e6cf');
+      cell('NEXT CARD 10 OR A', `${(100 * hi / n).toFixed(0)}%`, 1040, '#ffc24a');
+      cell('UNCERTAINTY', `${H.toFixed(2)} bits`, 1500, '#5ff0ff');
+      p.fillStyle = '#c9d2e3'; p.font = '30px "IBM Plex Sans", sans-serif';
+      p.fillText(`${n} cards left of ${52 * DECKS} · a full shoe: 38% tens and aces, 3.70 bits${justShuffled ? ' · just shuffled, count back to 0' : ''}`, 60, 300);
+      p.fillStyle = '#5b6680'; p.font = '600 26px "IBM Plex Mono", monospace';
+      p.fillText(`BARS: SHARE OF EACH RANK STILL IN THE SHOE · SHUFFLED WITH ${shuffledLive ? 'THE QUANTUM V^ QRNG' : 'YOUR BROWSER\'S RANDOMNESS'}`, 60, 380);
+      p.fillText('UNCERTAINTY: THE SHANNON ENTROPY OF THE NEXT CARD\'S RANK, FROM WHAT IS LEFT', 60, 430);
+      stex.needsUpdate = true;
+      GROUPS.forEach((gr, k) => { const full = gr.length * 4 * DECKS, now = gr.reduce((a, r) => a + left[r], 0), h = Math.max(0.0001, BMAX * now / full); bars[k].scale.y = h; bars[k].position.y = SHELF + h / 2; });
+    };
+    const cap = caption(X - 1.45, Z - 0.85, Math.PI - 0.58, 'Blackjack: the shoe remembers',
+      'The wheel forgets every spin; a shoe of cards does not. Once a card is dealt it is gone until the shuffle. Count them: +1 for 2 to 6, −1 for tens and aces. A high count means tens and aces are left, and the odds shift.');
+    const refresh = () => cap.redraw(`ROUNDS: ${rounds} · RUNNING COUNT: ${running > 0 ? '+' : ''}${running} · ${shoe.length} CARDS LEFT`, `${TAP} TO DEAL A ROUND · PLAY ONLY, NOTHING TO BET`);
+    let dealing = false;
+    const deal = () => {
+      if (dealing) return;
+      if (shoe.length < 26) shuffle(); else justShuffled = false;
+      dealing = true; rounds++; idle = 0;
+      cards.forEach((cd, i) => {
+        const [r, s] = shoe.pop(); cd.r = r; cd.m.material.map = cardTex(r, s); cd.m.material.needsUpdate = true;
+        cd.from.copy(SHOE); cd.to.set(X + SPOTS[i][0], TOP + 0.004 + i * 0.0005, Z + 0.25 + SPOTS[i][1]); cd.t = 0; cd.delay = i * 0.16; cd.counted = false;
+        cd.m.visible = false; cd.s.visible = false; cd.s.material = TAGS[tagOf(r)];
+      });
+      stats(); refresh();
+    };
+    shuffle(); justShuffled = false; stats(); refresh();
+    exhibit('blackjack', 'Blackjack: the shoe remembers', 'Deal', X, TOP + 0.15, Z + 0.05, 0, -1, [1.9, 0.4, 1.0], deal, 3.0).pitch = 0.1;
+    let idle = 6;
+    buildingUpdates.push(dt => {
+      if (!inRoom()) return;
+      if (!rounds && !shuffledLive && qrngLive() && QRNG.hex.length >= 240) { shuffle(); justShuffled = false; stats(); }   // the first shoe of a visit is shuffled before the QRNG answers: once it's live (and before a deal), shuffle it again from the QRNG
+      idle += dt; if (!dealing && idle > 12) { idle = 0; deal(); }   // the dealer deals on their own now and then
+      if (!dealing) return;
+      let done = true;
+      cards.forEach(cd => {
+        if (cd.t >= 1) return; done = false;
+        cd.delay -= dt; if (cd.delay > 0) return;
+        cd.t = Math.min(1, cd.t + dt / (reduceMotion ? 0.02 : 0.32)); cd.m.visible = true;
+        cd.m.position.lerpVectors(cd.from, cd.to, ease(cd.t)); cd.m.position.y += Math.sin(Math.PI * cd.t) * 0.08;
+        if (cd.t >= 1 && !cd.counted) {   // it lands face up: count it
+          cd.counted = true; running += tagOf(cd.r); left[cd.r]--;
+          cd.s.position.set(cd.to.x, TOP + 0.2, cd.to.z); cd.s.visible = true; stats(); refresh();
+        }
+      });
+      if (done) dealing = false;
     });
   }
 }
@@ -6969,6 +7175,8 @@ function veeDestination(id) {
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'loot-chest': return ENTROPY_ROOM.stops.loot;
     case 'dice': return ENTROPY_ROOM.stops.dice;
+    case 'roulette': return ENTROPY_ROOM.stops.roulette;
+    case 'blackjack': return ENTROPY_ROOM.stops.blackjack;
     case 'story': return { run: startStoryTour };
     case 'data-wall': return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(FLOORS[FI.b1].x0, FLOORS[FI.b1].y + 3.3, DATA_WALL_CZ), normal: new THREE.Vector3(1, 0, 0), standOff: 6.6, pitch: 0.14 };
     case 'pools': return wingStop;
@@ -7471,7 +7679,7 @@ Promise.all([
   document.getElementById('loading').remove();
   const hash = location.hash.slice(1); const floorHash = FLOORS.findIndex(F => F.id === hash);   // #b1, #l1 … #l4: land on that floor, at its lift door
   if (floorHash >= 0) placeOnFloor(floorHash);
-  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, dice: ENTROPY_ROOM.stops.dice, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
+  const deep = paintings.find(p => p.p.id === hash) || ({ 'platform-wing': wingStop, 'double-slit': SLIT_STOP, 'cryostat-lab': CRYO_STOP, 'entropy-room': ENTROPY_ROOM.stops.coins, 'loot-chest': ENTROPY_ROOM.stops.loot, dice: ENTROPY_ROOM.stops.dice, roulette: ENTROPY_ROOM.stops.roulette, blackjack: ENTROPY_ROOM.stops.blackjack, reception: hallActs.find(x => x.id === 'veeworld') })[hash] || null;
   if (deep) { placeOnFloor(deep.floor ?? FI.l1); const pos = nearestWalkable(FLOORS[player.floor], deep.center.clone().addScaledVector(deep.normal, deep.standOff || 3.4)); player.pos.set(pos.x, FLOORS[player.floor].y + 1.7, pos.z); const d = deep.center.clone().sub(pos); player.yaw = Math.atan2(-d.x, -d.z); if (deep.pitch !== undefined) player.pitch = deep.pitch; }
   const wm = hash.match(/^(.+)-world$/);
   if (wm) { const pf = paintings.find(p => p.p.id === wm[1]) || (wm[1] === 'vee' ? veeWorldPt : null); if (pf) openWorld(pf); }
