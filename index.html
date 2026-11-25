@@ -3156,22 +3156,59 @@ function buildEntropyRoom() {
     });
   }
 
+  /* Provably fair draws through the live API (since 2026-11-25): api.quantumv.dev's /qrng/commit and /qrng/draw, algorithm
+     qv-fair-v1, the same as quantumv.dev/fair and its js/qv-fair.js. The loot chest and the lottery drum ask for a
+     commitment only once you're in the room (so a lobby visit costs the API nothing), and your browser picks the client
+     seed after the commitment is shown. Each draw is then a real public record, checkable by its id on quantumv.dev/fair.
+     If the API can't be reached, the commitment is made here in the browser instead, with the same algorithm, and the
+     screens say so; a commitment the API took but couldn't draw is never swapped for a local one. */
+  const FAIR = (() => {
+    const API = 'https://api.quantumv.dev', enc = new TextEncoder();
+    const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join(''), unhex = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
+    const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
+    const post = async (path, body) => {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
+      try { const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; }
+      finally { clearTimeout(to); }
+    };
+    const compute = async (seed, client, draw) => {   // qv-fair-v1: an HMAC-SHA256 stream, exact rejection sampling
+      const key = await crypto.subtle.importKey('raw', seed, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      let block = 0, buf = new Uint8Array(0);
+      const read = async n => { while (buf.length < n) { const b = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(`qv-fair-v1:${client}:${block++}`))); const nb = new Uint8Array(buf.length + b.length); nb.set(buf); nb.set(b, buf.length); buf = nb; } const out = buf.slice(0, n); buf = buf.slice(n); return out; };
+      const uniform = async n => { if (n === 1) return 0; const lim = 2 ** 32 - (2 ** 32 % n); for (;;) { const b = await read(4), w = ((b[0] << 24) >>> 0) + (b[1] << 16) + (b[2] << 8) + b[3]; if (w < lim) return w % n; } };
+      if (draw.type === 'pick') { const pool = Array.from({ length: draw.n }, (_, i) => i + 1), out = []; for (let k = 0; k < draw.k; k++) out.push(pool.splice(await uniform(pool.length), 1)[0]); return out; }
+      if (draw.type === 'weighted') { const w = draw.weights, total = w.reduce((a, b) => a + b, 0), out = []; for (let c = 0; c < draw.count; c++) { const r = await uniform(total); let run = 0; for (let i = 0; i < w.length; i++) { run += w[i]; if (r < run) { out.push(i); break; } } } return out; }
+      throw new Error('draw type not used in the hall');
+    };
+    return {
+      async commit(label) {
+        try { const j = await post('/qrng/commit', { label }); if (!/^drw_[0-9a-f]{24}$/.test(j.id || '') || !/^[0-9a-f]{64}$/.test(j.commitment || '')) throw new Error('unexpected'); return { api: true, id: j.id, commitment: j.commitment }; }
+        catch (e) { const seed = crypto.getRandomValues(new Uint8Array(32)); return { api: false, seed, commitment: await sha(seed) }; }
+      },
+      async draw(c, draw) {   // null when the API took the commitment but couldn't draw it
+        const client = hex(crypto.getRandomValues(new Uint8Array(8)));
+        if (!c.api) return { ...c, server_seed: hex(c.seed), client_seed: client, result: await compute(c.seed, client, draw) };
+        try { const r = await post('/qrng/draw', { id: c.id, client_seed: client, draw }); return { ...c, server_seed: r.server_seed, client_seed: client, result: r.result }; }
+        catch (e) { return null; }
+      },
+      async verify(rec, draw) { const seed = unhex(rec.server_seed); return (await sha(seed)) === rec.commitment && JSON.stringify(await compute(seed, rec.client_seed, draw)) === JSON.stringify(rec.result); },
+    };
+  })();
+
   /* 6 · Loot drops (the middle row, left, added 2026-11-25): a chest with a published drop table, and on the wall right
-     behind it a screen that shows each drop is checkable, so the drop and its proof are in one view. Before each open the room draws a 16-byte seed (QRNG bits while
-     live, else the browser's) and shows its SHA-256 as a commitment; opening reveals the seed, and the roll is its first
-     4 bytes (big-endian) mod 10,000: 0–199 legendary, 200–799 epic, 800–2,999 rare, 3,000–9,999 common. Tapping the
-     terminal re-hashes the revealed seed in your browser and checks it against the commitment. Free, nothing to buy. */
+     behind it a screen that shows each drop is checkable, so the drop and its proof are in one view. Each open is a real
+     provably fair draw (FAIR, above): the screen shows the commitment from api.quantumv.dev before you open; opening
+     draws qv-fair-v1 weighted 70 · 22 · 6 · 2 (common, rare, epic, legendary) with a client seed your browser picks,
+     and reveals the server seed. Tapping the screen checks it in your browser; the draw id checks on quantumv.dev/fair.
+     Free, nothing to buy. */
   {
     const TIERS = [   // [name, share, colour, shape]
       ['COMMON', 0.70, '#c9d2e3', new THREE.BoxGeometry(0.16, 0.16, 0.16)],
       ['RARE', 0.22, '#4aa3ff', new THREE.OctahedronGeometry(0.13)],
       ['EPIC', 0.06, '#b36bff', new THREE.IcosahedronGeometry(0.13)],
       ['LEGENDARY', 0.02, '#ffc24a', new THREE.DodecahedronGeometry(0.14)]];
-    const tierOf = roll => roll < 200 ? 3 : roll < 800 ? 2 : roll < 3000 ? 1 : 0;
     const mono = (p, text, x, y, color = '#8e99b0', px = 22) => { p.fillStyle = color; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(text, x, y); };
     const serif = (p, text, x, y, px) => { p.fillStyle = '#f1e6cf'; p.font = `${px}px "Young Serif", Georgia, serif`; p.fillText(text, x, y); };
-    const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
-    const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
     const X = ROWS[3], Z = A.z0 + 1.5, TOP = 0.85;
     plinth(X, Z, 2.4, TOP, 0.9);
     // the chest: a wooden-dark body with gold bands, and a rounded lid hinged at the back
@@ -3182,7 +3219,7 @@ function buildEntropyRoom() {
     const glowIn = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.38), new THREE.MeshBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
     glowIn.rotation.x = -Math.PI / 2; glowIn.position.y = 0.41; chest.add(glowIn);
     const hinge = new THREE.Group(); hinge.position.set(0, 0.4, -0.23); chest.add(hinge);
-    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.7, 24, 1, false, 0, Math.PI), wood); lid.rotation.z = Math.PI / 2;   // a half cylinder along x, dome up lid.position.set(0, 0, 0.23); hinge.add(lid);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.7, 24, 1, false, 0, Math.PI), wood); lid.rotation.z = Math.PI / 2; lid.position.set(0, 0, 0.23); hinge.add(lid);   // a half cylinder along x, dome up
     const lock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.03), band); lock.position.set(0, 0.36, 0.245); chest.add(lock);
     const items = TIERS.map(([, , c, geo]) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, metalness: 0.4, roughness: 0.25 })); m.visible = false; m.position.set(CX, TOP + 0.3, Z); g.add(m); return m; });
     const itemLight = new THREE.PointLight(0xffffff, 0, 3, 2); itemLight.position.set(CX, TOP + 0.9, Z + 0.3); g.add(itemLight);
@@ -3201,13 +3238,10 @@ function buildEntropyRoom() {
       'Games publish their drop odds, but players can\'t check them. Here a legendary drops 2% of the time, so 50 opens still leave a 36% chance of none: a dry streak is normal, not rigged. Over many opens the bars settle on the odds.');
     const refresh = () => cap.redraw(opens ? `OPENS: ${opens} · NO LEGENDARY FOR ${dry} · ODDS OF THAT: ${Math.round(100 * 0.98 ** dry)}%` : 'PUBLISHED ODDS: COMMON 70% · RARE 22% · EPIC 6% · LEGENDARY 2%',
       `${TAP} TO OPEN · FREE, NOTHING TO BUY`);
-    // the commitment for the next drop, made before you open
-    let next = null, last = null;
-    const commit = async () => {
-      const seed = new Uint8Array(16); for (let i = 0; i < 16; i++) seed[i] = rbyte();
-      const live = !QRNG.fallback && qrngLive();
-      next = { seed, live, hash: await sha(seed) }; drawTerm();
-    };
+    // the commitment for the next drop, locked in before you open (asked for once you're in the room)
+    const DRAW = { type: 'weighted', weights: [70, 22, 6, 2], count: 1 };   // common, rare, epic, legendary
+    let next = null, last = null, asking = false, pending = false, note = '';
+    const commit = () => { if (asking || next) return; asking = true; drawTerm(); FAIR.commit('Quantum Hall · loot chest').then(c => { next = c; asking = false; drawTerm(); }); };
     // the screen on the wall behind the chest, above it and its bars, facing the aisle
     const KX = X, KZ = A.z0 + 0.08, KY = 2.95, KW = 2.4,   // its bottom clears the bars' labels
       tc = mk(1280, 800), tp = tc.getContext('2d'), ttex = new THREE.CanvasTexture(tc); ttex.anisotropy = 8;
@@ -3217,44 +3251,54 @@ function buildEntropyRoom() {
     const drawTerm = () => {
       const p = tp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1280, 800); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1260, 780);
       p.textAlign = 'left'; mono(p, 'CHECK THE DROP', 50, 70, '#5ff0ff', 26); serif(p, 'Locked in before you open', 50, 140, 56);
-      mono(p, '1 · BEFORE THE NEXT OPEN: THE SEED\'S FINGERPRINT (SHA-256)', 50, 210, '#8e99b0', 21);
-      mono(p, next ? next.hash.slice(0, 32) : '…', 50, 254, '#f1e6cf', 30); mono(p, next ? next.hash.slice(32) : '', 50, 292, '#f1e6cf', 30);
-      mono(p, '2 · AFTER THE LAST OPEN: ITS SEED, REVEALED', 50, 360, '#8e99b0', 21);
-      if (last) {
-        mono(p, hex(last.seed), 50, 404, '#f1e6cf', 30);
-        mono(p, `SEED FROM: ${last.live ? 'THE QUANTUM V^ QRNG, LIVE' : 'YOUR BROWSER (THE QRNG WASN\'T ANSWERING)'}`, 50, 442, '#5b6680', 18);
-        mono(p, '3 · THE ROLL: FIRST 4 BYTES MOD 10,000', 50, 500, '#8e99b0', 21);
-        const [name, , c] = TIERS[last.tier]; mono(p, `${String(last.roll).padStart(4, '0')}  →  ${name}`, 50, 548, c, 40);
-        mono(p, '0–199 LEGENDARY · 200–799 EPIC · 800–2,999 RARE · 3,000–9,999 COMMON', 50, 590, '#5b6680', 18);
+      mono(p, '1 · BEFORE THE NEXT OPEN: SHA-256 OF THE SERVER SEED', 50, 200, '#8e99b0', 21);
+      mono(p, next ? next.commitment.slice(0, 32) : asking ? 'LOCKING IN…' : '…', 50, 240, '#f1e6cf', 30); mono(p, next ? next.commitment.slice(32) : '', 50, 276, '#f1e6cf', 30);
+      if (next) mono(p, next.api ? `LOCKED IN AT API.QUANTUMV.DEV · ${next.id}` : 'LOCKED IN HERE IN YOUR BROWSER: THE DRAW API ISN\'T ANSWERING', 50, 306, '#5b6680', 17);
+      mono(p, '2 · AFTER THE LAST OPEN: THE SERVER SEED, REVEALED', 50, 356, '#8e99b0', 21);
+      if (pending) mono(p, 'DRAWING…', 50, 396, '#5b6680', 24);
+      else if (note) mono(p, note, 50, 396, '#ff5a4e', 20);
+      else if (last) {
+        mono(p, last.server_seed, 50, 394, '#f1e6cf', 24);
+        mono(p, `CLIENT SEED ${last.client_seed} · PICKED BY YOUR BROWSER AFTER THE LOCK-IN`, 50, 426, '#5b6680', 17);
+        mono(p, '3 · THE DRAW: QV-FAIR-V1, WEIGHTED 70 · 22 · 6 · 2', 50, 482, '#8e99b0', 21);
+        const [name, , c] = TIERS[last.tier]; mono(p, name, 50, 530, c, 40);
+        mono(p, last.api ? `CHECK IT ANYWHERE: QUANTUMV.DEV/FAIR · DRAW ${last.id}` : 'THIS ONE WAS LOCKED IN BY YOUR BROWSER: CHECK IT HERE', 50, 574, '#5b6680', 17);
         const ok = verified === true, bad = verified === false;
-        p.fillStyle = ok ? `rgba(109,255,168,${0.12 + 0.25 * flash})` : 'rgba(63,224,224,0.08)'; p.fillRect(50, 640, 1180, 100);
-        mono(p, ok ? '✓ SHA-256(SEED) MATCHES THE FINGERPRINT SHOWN BEFORE THE OPEN' : bad ? '✗ NO MATCH' : `${TAP} HERE TO RE-HASH THE SEED AND CHECK IT`, 76, 700, ok ? '#6dffa8' : bad ? '#ff5a4e' : '#ffc24a', 24);
-      } else mono(p, 'OPEN THE CHEST BELOW, THEN CHECK IT HERE', 50, 404, '#5b6680', 22);
+        p.fillStyle = ok ? `rgba(109,255,168,${0.12 + 0.25 * flash})` : 'rgba(63,224,224,0.08)'; p.fillRect(50, 620, 1180, 100);
+        mono(p, ok ? '✓ THE SEED MATCHES ITS FINGERPRINT, AND QV-FAIR-V1 GIVES THE SAME DROP' : bad ? '✗ NO MATCH' : `${TAP} HERE TO CHECK IT IN YOUR BROWSER`, 76, 680, ok ? '#6dffa8' : bad ? '#ff5a4e' : '#ffc24a', 24);
+      } else mono(p, 'OPEN THE CHEST BELOW, THEN CHECK IT HERE', 50, 396, '#5b6680', 22);
       ttex.needsUpdate = true;
     };
-    const check = async () => { if (!last) return; verified = (await sha(last.seed)) === last.hash; flash = 1; drawTerm(); };
+    const check = async () => { if (!last || pending) return; verified = await FAIR.verify(last, DRAW); flash = 1; drawTerm(); };
     // opening: close the lid if it's open, open it, and lift the drop out
     let phase = 'idle', t = 0, shownTier = -1;
-    const open = () => {
+    const open = () => {   // the lid starts moving at once; the drop rises when the draw comes back
       if (phase !== 'idle' || !next) return;
-      const d = next; next = null;
-      const roll = ((d.seed[0] << 24) >>> 0 | d.seed[1] << 16 | d.seed[2] << 8 | d.seed[3]) >>> 0;
-      last = { ...d, roll: roll % 10000, tier: tierOf(roll % 10000) }; verified = null;
-      counts[last.tier]++; opens++; if (last.tier === 3) { best = Math.max(best, dry); dry = 0; } else dry++;
-      phase = 'close'; t = 0; drawTerm(); commit();
+      const c = next; next = null; last = null; pending = true; note = ''; verified = null;
+      phase = 'close'; t = 0; drawTerm();
+      FAIR.draw(c, DRAW).then(r => {
+        pending = false;
+        if (!r) note = 'THE DRAW API DIDN\'T ANSWER, SO NOTHING DROPPED. TRY AGAIN';
+        else { last = { ...r, tier: r.result[0] }; counts[last.tier]++; opens++; if (last.tier === 3) { best = Math.max(best, dry); dry = 0; } else dry++; }
+        drawTerm(); commit();
+      });
     };
     const lst = exhibit('loot', 'The loot chest', 'Open', CX, TOP + 0.4, Z, 0, 1, [0.9, 0.9, 0.7], open, 3.4);
     lst.center.x = X; lst.pitch = 0.15;   // stand back far enough, and look up a little, to have the chest, its bars and the screen in one view
     const kst = exhibit('verify', 'Check the drop', 'Check', KX, KY, KZ + 0.1, 0, 1, [KW, KW * 800 / 1280, 0.2], check, 3.6);
     kst.pitch = 0.16;
-    refresh(); drawTerm(); commit();
+    refresh(); drawTerm();
     buildingUpdates.push(dt => {
       if (!inRoom()) return;
       if (flash > 0) { flash = Math.max(0, flash - dt); drawTerm(); }
-      if (next && !next.live && !next.busy && phase === 'idle' && qrngLive() && QRNG.hex.length >= 32) { next.busy = true; commit(); }   // the first seed of a visit is drawn before the QRNG answers: once it's live (and before an open), draw it again from the QRNG
+      if (!next && !asking && !pending && phase === 'idle') commit();   // ask for a commitment once you're in the room, and again after each open
       const sp = reduceMotion ? 20 : 1;
       if (phase === 'close') { t += dt * sp / 0.3; hinge.rotation.x = Math.max(hinge.rotation.x, -1.9 * (1 - Math.min(1, t))); items.forEach(m => { m.position.y = Math.max(TOP + 0.3, m.position.y - dt * 3); }); if (t >= 1) { items.forEach(m => { m.visible = false; }); phase = 'open'; t = 0; } }
-      else if (phase === 'open') { t += dt * sp / 0.5; hinge.rotation.x = -1.9 * ease(Math.min(1, t)); glowIn.material.opacity = 0.6 * Math.min(1, t); if (t >= 1) { phase = 'rise'; t = 0; shownTier = last.tier; const m = items[shownTier]; m.visible = true; m.position.y = TOP + 0.3; itemLight.color.set(TIERS[shownTier][2]); } }
+      else if (phase === 'open') {   // open, then wait with the lid up until the draw is back
+        t = Math.min(1, t + dt * sp / 0.5); hinge.rotation.x = -1.9 * ease(t); glowIn.material.opacity = 0.6 * t;
+        if (t >= 1 && !pending) { if (last) { phase = 'rise'; t = 0; shownTier = last.tier; const m = items[shownTier]; m.visible = true; m.position.y = TOP + 0.3; itemLight.color.set(TIERS[shownTier][2]); } else { phase = 'shut'; t = 0; } }
+      }
+      else if (phase === 'shut') { t += dt * sp / 0.4; hinge.rotation.x = -1.9 * (1 - ease(Math.min(1, t))); glowIn.material.opacity = 0.6 * (1 - Math.min(1, t)); if (t >= 1) phase = 'idle'; }   // no draw: close empty
       else if (phase === 'rise') {
         t += dt * sp / 0.9; const u = ease(Math.min(1, t)), m = items[shownTier];
         m.position.y = TOP + 0.3 + u * 0.75; itemLight.intensity = u * (shownTier === 3 ? 2.2 : 0.9);
@@ -3667,21 +3711,13 @@ function buildEntropyRoom() {
   }
 
   /* 11 · A giant lottery drum (row three, right, across from the slot machine, added 2026-11-25): a glass air-mix globe
-     with 49 numbered balls. Tap to draw six. The draw is checkable, like the loot chest: before it, the board beside the
-     drum shows the SHA-256 of a 16-byte seed (QRNG bits while live); after, it reveals the seed. The balls come from
-     SHA-256(seed ‖ 0x01), read byte by byte (hashed again if it runs out), each byte picking byte mod balls-left from
-     the balls left, bytes at or above the last full multiple skipped. The fingerprint is the hash of the seed alone,
-     so it gives nothing away. The lesson: 1-2-3-4-5-6 is exactly as likely as any ticket. Play only. */
+     with 49 numbered balls. Tap to draw six. Each draw is a real provably fair draw (FAIR, above), like the loot chest:
+     the board beside the drum shows the commitment from api.quantumv.dev before the draw, the balls are qv-fair-v1
+     pick 6 of 49 with a client seed your browser picks, and the server seed is revealed after; tap the board to check it,
+     or check the draw id on quantumv.dev/fair. The lesson: 1-2-3-4-5-6 is exactly as likely as any ticket. Play only. */
   {
     const X = ROWS[2], Z = A.z1 - 2.2, CY = 2.3, R = 1.0, BR = 0.075, N = 49;
-    const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('');
-    const sha = async b => new Uint8Array(await crypto.subtle.digest('SHA-256', b));
-    const derive = async seed => {   // the six balls, from SHA-256(seed ‖ 01)
-      const msg = new Uint8Array(17); msg.set(seed); msg[16] = 1;
-      let h = await sha(msg), i = 0; const left = Array.from({ length: N }, (_, k) => k + 1), out = [];
-      while (out.length < 6) { if (i >= h.length) { h = await sha(h); i = 0; } const b = h[i++], m = left.length; if (b < 256 - (256 % m)) out.push(left.splice(b % m, 1)[0]); }
-      return out;
-    };
+    const DRAWL = { type: 'pick', n: N, k: 6 };
     // the stand, the globe and the tube out of its top
     { const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.7, CY - R + 0.05, 32), colMat); ped.position.set(X, (CY - R + 0.05) / 2, Z); g.add(ped);
       const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.03, 10, 40), steel); ring.rotation.x = Math.PI / 2; ring.position.set(X, CY - R + 0.06, Z); g.add(ring);
@@ -3712,28 +3748,31 @@ function buildEntropyRoom() {
     const BX = X - 2.3, BW = 2.2, bc = mk(1280, 900), bp = bc.getContext('2d'), btex = new THREE.CanvasTexture(bc); btex.anisotropy = 8;
     { const m = new THREE.Mesh(new THREE.PlaneGeometry(BW, BW * 900 / 1280), new THREE.MeshBasicMaterial({ map: btex })); m.position.set(BX, 2.4, A.z1 - 0.08); m.rotation.y = Math.PI; g.add(m);
       glassFrame(g, BW, BW * 900 / 1280, BX, 2.4, A.z1 - 0.08, Math.PI, 0.06, 0.06); }
-    let next = null, last = null, verified = null, flash = 0, draws = 0;
+    let next = null, last = null, verified = null, flash = 0, draws = 0, asking = false, note = '';
     const mono = (text, x, y, color = '#8e99b0', px = 22) => { bp.fillStyle = color; bp.font = `600 ${px}px "IBM Plex Mono", monospace`; bp.fillText(text, x, y); };
     const drawBoard = () => {
       const p = bp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1280, 900); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(10, 10, 1260, 880);
       p.textAlign = 'left'; mono('A DRAW YOU CAN CHECK', 50, 70, '#5ff0ff', 26); p.fillStyle = '#f1e6cf'; p.font = '56px "Young Serif", Georgia, serif'; p.fillText('Locked in before the draw', 50, 140);
-      mono('1 · BEFORE THE NEXT DRAW: SHA-256 OF ITS SEED', 50, 210, '#8e99b0', 21);
-      mono(next ? next.hash.slice(0, 32) : '…', 50, 252, '#f1e6cf', 30); mono(next ? next.hash.slice(32) : '', 50, 290, '#f1e6cf', 30);
-      mono('2 · AFTER THE LAST DRAW: ITS SEED, REVEALED', 50, 356, '#8e99b0', 21);
-      if (last) {
-        mono(hex(last.seed), 50, 398, '#f1e6cf', 30);
-        mono(`SEED FROM: ${last.live ? 'THE QUANTUM V^ QRNG, LIVE' : 'YOUR BROWSER (THE QRNG WASN\'T ANSWERING)'}`, 50, 434, '#5b6680', 18);
-        mono('3 · THE BALLS: SHA-256(SEED ‖ 01), BYTE BY BYTE, EACH BYTE MOD THE BALLS LEFT', 50, 490, '#8e99b0', 19);
-        mono('(BYTES TOO HIGH TO SPLIT EVENLY ARE SKIPPED; HASHED AGAIN IF IT RUNS OUT)', 50, 520, '#5b6680', 17);
-        p.font = '600 54px "IBM Plex Mono", monospace'; last.picks.forEach((n, i) => { p.fillStyle = COLS[Math.floor((n - 1) / 10)]; p.fillText(String(n).padStart(2, '0'), 50 + i * 120, 600); });
+      mono('1 · BEFORE THE NEXT DRAW: SHA-256 OF THE SERVER SEED', 50, 205, '#8e99b0', 21);
+      mono(next ? next.commitment.slice(0, 32) : asking ? 'LOCKING IN…' : '…', 50, 246, '#f1e6cf', 30); mono(next ? next.commitment.slice(32) : '', 50, 284, '#f1e6cf', 30);
+      if (next) mono(next.api ? `LOCKED IN AT API.QUANTUMV.DEV · ${next.id}` : 'LOCKED IN HERE IN YOUR BROWSER: THE DRAW API ISN\'T ANSWERING', 50, 316, '#5b6680', 17);
+      mono('2 · AFTER THE LAST DRAW: THE SERVER SEED, REVEALED', 50, 370, '#8e99b0', 21);
+      if (phase === 'busy') mono('DRAWING…', 50, 410, '#5b6680', 24);
+      else if (note) mono(note, 50, 410, '#ff5a4e', 20);
+      else if (last) {
+        mono(last.server_seed, 50, 408, '#f1e6cf', 24);
+        mono(`CLIENT SEED ${last.client_seed} · PICKED BY YOUR BROWSER AFTER THE LOCK-IN`, 50, 440, '#5b6680', 17);
+        mono('3 · THE BALLS: QV-FAIR-V1, PICK 6 OF 49', 50, 494, '#8e99b0', 21);
+        p.font = '600 54px "IBM Plex Mono", monospace'; last.picks.forEach((n, i) => { p.fillStyle = COLS[Math.floor((n - 1) / 10)]; p.fillText(String(n).padStart(2, '0'), 50 + i * 120, 560); });
+        mono(last.api ? `CHECK IT ANYWHERE: QUANTUMV.DEV/FAIR · DRAW ${last.id}` : 'THIS ONE WAS LOCKED IN BY YOUR BROWSER: CHECK IT HERE', 50, 600, '#5b6680', 17);
         const ok = verified === true; p.fillStyle = ok ? `rgba(109,255,168,${0.12 + 0.25 * flash})` : 'rgba(63,224,224,0.08)'; p.fillRect(50, 640, 1180, 84);
-        mono(ok ? '✓ SHA-256(SEED) MATCHES THE FINGERPRINT SHOWN BEFORE THE DRAW' : verified === false ? '✗ NO MATCH' : `${TAP} HERE TO RE-HASH THE SEED AND CHECK IT`, 76, 692, ok ? '#6dffa8' : verified === false ? '#ff5a4e' : '#ffc24a', 23);
-      } else mono('DRAW SIX AT THE DRUM, THEN CHECK IT HERE', 50, 398, '#5b6680', 22);
+        mono(ok ? '✓ THE SEED MATCHES ITS FINGERPRINT, AND QV-FAIR-V1 GIVES THE SAME BALLS' : verified === false ? '✗ NO MATCH' : `${TAP} HERE TO CHECK IT IN YOUR BROWSER`, 76, 692, ok ? '#6dffa8' : verified === false ? '#ff5a4e' : '#ffc24a', 23);
+      } else mono('DRAW SIX AT THE DRUM, THEN CHECK IT HERE', 50, 410, '#5b6680', 22);
       mono('1 · 2 · 3 · 4 · 5 · 6 WOULD HAVE HAD THE SAME CHANCE: 1 IN 13,983,816', 50, 800, '#ffc24a', 23);
       btex.needsUpdate = true;
     };
-    const commit = async () => { const seed = new Uint8Array(16); for (let i = 0; i < 16; i++) seed[i] = rbyte(); const live = !QRNG.fallback && qrngLive(); next = { seed, live, hash: hex(await sha(seed)) }; drawBoard(); };
-    const check = async () => { if (!last) return; verified = hex(await sha(last.seed)) === last.hash; flash = 1; drawBoard(); };
+    const commit = () => { if (asking || next) return; asking = true; drawBoard(); FAIR.commit('Quantum Hall · lottery drum').then(c => { next = c; asking = false; drawBoard(); }); };
+    const check = async () => { if (!last || phase === 'busy') return; verified = await FAIR.verify(last, DRAWL); flash = 1; drawBoard(); };
     const cap = caption(X + 1.6, Z - 2.0, Math.PI + 0.55, 'A lottery drum',
       'Six balls from 49 can come out 13,983,816 ways. 1-2-3-4-5-6 is one of them, exactly as likely as the numbers you would pick, yet hardly anyone plays it: it looks too orderly to be random. Order is in the eye, not the odds.');
     const refresh = () => cap.redraw(draws ? `DRAWS: ${draws} · LAST: ${last.picks.map(n => String(n).padStart(2, '0')).join(' ')}` : 'ANY SIX NUMBERS: 1 IN 13,983,816', `${TAP} TO DRAW SIX · PLAY ONLY`);
@@ -3741,13 +3780,15 @@ function buildEntropyRoom() {
     let phase = 'mix', q = [], cur = null, t = 0;
     const draw = async () => {
       if (phase !== 'mix' || !next) return;
-      const d = next; next = null; phase = 'busy';
-      const picks = await derive(d.seed);
+      const c = next; next = null; phase = 'busy'; note = ''; drawBoard();
+      const r = await FAIR.draw(c, DRAWL);
+      if (!r) { note = 'THE DRAW API DIDN\'T ANSWER, SO NOTHING WAS DRAWN. TRY AGAIN'; phase = 'mix'; drawBoard(); commit(); return; }
+      const picks = r.result;
       balls.forEach(b => { if (b.out) { b.out = false; b.k = -1; b.p.set((Math.random() - 0.5) * 0.4, R * 0.6, (Math.random() - 0.5) * 0.4); b.v.set(0, -1, 0); } });
-      last = { ...d, picks }; verified = null; draws++; drawBoard(); refresh(); commit();
+      last = { ...r, picks }; verified = null; draws++; drawBoard(); refresh(); commit();
       q = picks.map((n, k) => ({ b: balls[n - 1], k })); cur = null; phase = 'draw';
     };
-    commit(); drawBoard(); refresh();
+    drawBoard(); refresh();
     exhibit('lottery', 'A lottery drum', 'Draw', X, CY, Z, 0, -1, [2.2, 2.6, 2.2], draw, 4.6).pitch = 0.15;
     exhibit('lottery-check', 'Check the draw', 'Check', BX, 2.4, A.z1 - 0.12, 0, -1, [BW, BW * 900 / 1280, 0.2], check, 3.4).pitch = 0.1;
     const C = new THREE.Vector3(X, CY, Z), top = new THREE.Vector3(X, CY + R + 0.62, Z), tmp = new THREE.Vector3();
@@ -3755,7 +3796,7 @@ function buildEntropyRoom() {
     buildingUpdates.push(dt => {
       if (!inRoom()) return;
       if (flash > 0) { flash = Math.max(0, flash - dt); drawBoard(); }
-      if (next && !next.live && !next.busy && phase === 'mix' && qrngLive() && QRNG.hex.length >= 32) { next.busy = true; commit(); }   // the visit's first seed came before the QRNG answered: draw it again from the QRNG
+      if (!next && !asking && phase === 'mix') commit();   // ask for a commitment once you're in the room, and again after each draw
       // the air mix: gravity, jets from below, a gust now and then, bounces off the glass
       acc = Math.min(acc + dt, 0.05);
       while (acc >= 1 / 60) {
