@@ -559,10 +559,10 @@ const PROJECTS = [
     floor: 'l2', pos: [-7.92, 3.2, 1.5], rotY: Math.PI / 2, size: [3.2, 3.2]
   },
   {
-    id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
-    desc: 'Randomness you can verify, as a service. Provably fair draws lock in loot drops, shuffles, raffles and lotteries before the player acts, and anyone can check them after. The QRNG API serves bytes from a generator seeded on IBM Quantum hardware, each run listed by job ID, with fresh system randomness mixed into every draw; QES-256 turns them into 32-byte keys.',
-    modules: [['FAIR DRAWS','Provably fair draws: commit, draw, check. Loot drops, shuffles, raffles, lotteries'],['Q-RNG','Quantum-seeded random number API (IBM Quantum hardware seed)'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Raspberry Pi · Cloudflare']],
-    stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · Cloudflare · Raspberry Pi',
+    id: 'platform', name: 'Quantum V^ EaaS', tagline: 'Entropy as a Service: randomness you can prove', wing: 'Platform',
+    desc: 'Randomness you can prove, as a service. Provably fair draws lock in loot drops, shuffles, raffles and lotteries before the player acts, and anyone can check them after. The QRNG API serves bytes, numbers, UUIDs and 32-byte QES-256 keys from a generator seeded on IBM Quantum hardware, each run listed by job ID, with fresh system randomness mixed into every draw. Free to use, no account.',
+    modules: [['FAIR DRAWS','Provably fair draws: commit, draw, check. Loot drops, shuffles, raffles, lotteries'],['QRNG API','Quantum-seeded bytes, integers, floats, UUIDs and QES-256 keys; free, no account'],['THE PROOF','The seed\'s IBM Quantum job IDs and fingerprints, public in the attestation'],['THE STACK','IBM Quantum · Raspberry Pi · Cloudflare']],
+    stack: 'IBM Quantum · SHA-256 · HKDF · Cloudflare · Raspberry Pi',
     links: [['Quantum V^','https://quantumv.dev/'],['Fair draws','https://quantumv.dev/fair'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status'],['Support','mailto:support@quantumv.dev']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/quantumv-logo.png',
     floor: 'l1', stand: true, pos: [0, 3.4, -0.2], rotY: 0, size: [6.4, 4.4]   // freestanding, front and centre in the lobby
@@ -665,13 +665,13 @@ function drawPlatform(c, img) {
   // shrink the title until it fits the right column (560 → 984, inside the frame)
   let ts = 50; do { g.font = `${ts}px "Young Serif", Georgia, serif`; } while (g.measureText('Quantum V^').width > 424 && --ts > 20);
   g.fillText('Quantum V^', 560, 150);
-  g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('PLATFORM · EaaS', 562, 194);
+  g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('ENTROPY AS A SERVICE', 562, 194);
   g.font = '600 20px "IBM Plex Mono", monospace'; g.fillStyle = '#e6e6ff';
-  ['FAIR DRAWS', 'Q-RNG', 'QES-256', 'QES-KX', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
+  ['PROVABLY FAIR DRAWS', 'THE QRNG API', 'QES-256 KEYS', 'THE PROOF: IBM JOB IDS'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
   g.fillStyle = '#8ea2ff'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('32-byte key (illustration)', 562, 470);
   g.fillStyle = '#e6e6ff'; g.font = '20px "IBM Plex Mono", monospace';
   for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
-  g.fillStyle = '#5b6bc9'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('X25519 + ML-KEM-768 → HKDF', 562, 660);
+  g.fillStyle = '#5b6bc9'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('Randomness you can prove', 562, 660);
 }
 // Wrap text to a width on a canvas; returns the y after the last line
 function wrapText(g, text, x, y, maxW, lh) {
@@ -2164,8 +2164,61 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
 [
   { eyebrow: '1 · COLD', title: 'Colder than deep space', body: 'A dilution refrigerator cools a quantum chip to about 10 mK, a hundredth of a degree above absolute zero, so its qubits can hold quantum states.' },
   { eyebrow: '2 · MEASURE', title: 'Random by physics', body: 'Qubits on IBM Quantum hardware are measured, and each outcome, 0 or 1, is random. Each batch of bits is tied to a verifiable IBM Quantum job ID.' },
-  { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'The Quantum V^ Platform turns those bits into 32-byte QES-256 keys, each linked back to its IBM Quantum job ID.' }
-].forEach((d, i) => infoPanel(B1.g, d, -4.4 + i * 4.4, 2.5, B1.z0 + 0.06, 0));
+  { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'Those bits seed the Quantum V^ generator, which makes 32-byte QES-256 keys. The job IDs show where the seed came from.' }
+].forEach((d, i) => infoPanel(B1.g, d, -5.0 + i * 3.6, 2.5, B1.z0 + 0.06, 0));   // shifted left (2026-11-26) to leave the north-east corner to QES-KX
+
+/* QES-KX, by the lift on the east wall (moved from the Platform world 2026-11-26): two devices agree a key through a
+   relay that only ever sees public values. X25519 and ML-KEM-768 secrets are combined with HKDF; the X25519 keys come
+   from the quantum-seeded generator (ML-KEM-768's keygen uses its library's own randomness). */
+const KX_STOP = (() => {
+  const S = 0.85, X = 2.2, KXX = 6.5, KXZ = -8.05, mat = colMat;
+  const inner = new THREE.Group(); inner.position.set(KXX, 0, KXZ); inner.rotation.y = -Math.PI / 2; inner.scale.setScalar(S); B1.g.add(inner);   // faces west, into the room
+  const keyBytes = new Uint8Array(4); crypto.getRandomValues(keyBytes);
+  const dev = (x, label) => {
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.35, 32), mat); ped.position.set(x, 0.175, 0); inner.add(ped);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.3, 0.07), new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.3 }));
+    body.position.set(x, 1.25, 0); inner.add(body);
+    const dc = mk(256, 448), dg2 = dc.getContext('2d');
+    dg2.fillStyle = '#05070b'; dg2.fillRect(0, 0, 256, 448);
+    dg2.strokeStyle = '#3fe0e0'; dg2.lineWidth = 8; dg2.beginPath(); dg2.arc(128, 170, 34, Math.PI, 0); dg2.stroke();   // padlock
+    dg2.fillStyle = '#3fe0e0'; rr(dg2, 78, 170, 100, 76, 10); dg2.fill();
+    dg2.fillStyle = '#c9d2e3'; dg2.font = '600 40px "IBM Plex Mono", monospace'; dg2.textAlign = 'center'; dg2.fillText(label.slice(-1), 128, 330);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc) }));
+    scr.position.set(x, 1.25, 0.037); inner.add(scr);
+    const t = textSprite([[label, '600 34px "IBM Plex Mono", monospace', '#c9d2e3']], 512, 80, 1.2); t.position.set(x, 0.62, 0.3); inner.add(t);
+  };
+  dev(-X, 'DEVICE A'); dev(X, 'DEVICE B');
+  const sl = new THREE.PointLight(0x8ea2ff, 0.9, 7, 2); sl.position.set(0, 3, 2); inner.add(sl);
+  const relay = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.7), new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 }));
+  relay.position.set(0, 1.0, 0); inner.add(relay);
+  const rl = textSprite([['RELAY', '600 34px "IBM Plex Mono", monospace', '#c9d2e3'], ['public values only', '28px "IBM Plex Mono", monospace', '#8e99b0']], 512, 150, 1.5);
+  rl.position.set(0, 0.35, 0.5); inner.add(rl);
+  const fp = [...keyBytes].map(b => b.toString(16).padStart(2, '0')).join(' ');
+  for (const x of [-X, X]) {
+    const k = textSprite([['HKDF(X25519 ‖ ML-KEM) →', '26px "IBM Plex Mono", monospace', '#8e99b0'], ['shared key ' + fp + ' …', '600 30px "IBM Plex Mono", monospace', '#3fe0e0']], 768, 150, 2.4);
+    k.position.set(x, 2.4, 0); inner.add(k);
+  }
+  const arcA = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-X, 1.5, 0), new THREE.Vector3(-X / 2, 2.1, 0.25), new THREE.Vector3(0, 1.35, 0));
+  const arcB = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 1.35, 0), new THREE.Vector3(X / 2, 2.1, 0.25), new THREE.Vector3(X, 1.5, 0));
+  for (const c of [arcA, arcB]) inner.add(new THREE.Mesh(new THREE.TubeGeometry(c, 40, 0.012, 5, false), new THREE.MeshBasicMaterial({ color: 0x8ea2ff, transparent: true, opacity: 0.45 })));
+  const upL = textSprite([['→  X25519 public key · ML-KEM-768 encapsulation key', '26px "IBM Plex Mono", monospace', '#c9d2e3']], 1536, 60, 4.2); upL.position.set(0, 2.45, 0.3); inner.add(upL);
+  const dnL = textSprite([['X25519 public key · ML-KEM-768 ciphertext  ←', '26px "IBM Plex Mono", monospace', '#c9d2e3']], 1536, 60, 3.8); dnL.position.set(0, 1.95, 0.3); inner.add(dnL);
+  const pkt = color => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14), new THREE.MeshBasicMaterial({ color })); inner.add(m); return m; };
+  const p1 = pkt(0x3fe0e0), p2 = pkt(0xffd36b);
+  const along = u => u < 0.5 ? arcA.getPoint(u * 2) : arcB.getPoint((u - 0.5) * 2);
+  let t = 0;
+  buildingUpdates.push(dt => {
+    if (!B1.g.visible) return; t += dt;
+    const sp = reduceMotion ? 0.05 : 0.22;
+    p1.position.copy(along((t * sp) % 1));                // A → relay → B
+    p2.position.copy(along(1 - ((t * sp + 0.5) % 1)));    // B → relay → A
+    p2.position.y -= 0.12;
+  });
+  infoPanel(B1.g, { eyebrow: 'KEY EXCHANGE', title: 'QES-KX', body: 'Two devices agree a key through a relay that only sees public values. X25519 and ML-KEM-768 (NIST FIPS 203) are combined with HKDF; the X25519 keys come from the quantum-seeded generator.' },
+    B1.x1 - 0.06, 4.6, KXZ, -Math.PI / 2, 3.0);
+  B1.blocks.push({ x0: KXX - 0.75, x1: B1.x1, z0: KXZ - X * S - 0.75, z1: KXZ + X * S + 0.75 });
+  return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(KXX, B1.y + 1.7, KXZ), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.8, pitch: 0.1 };
+})();
 /* ---------- The data wall ----------
    Six screens on the west wall (with the measurement record's two in a fourth column), behind the cryostat as you step out of the lift: what the live
    QRNG service is producing, where its entropy comes from (the attestation, the three hives and
@@ -5677,19 +5730,20 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   let lines, stops;
   if (kind === 'platform') {
     lines = [
-      [`Welcome to ${p.name}.`, 'Follow the bits left to right, steps 1 to 5: from qubits to draws and keys.', 'quantum'],
-      ['Try a draw at step 5.', 'Tap the screen on the right: a loot drop through the live API.', 'fair'],
-      ['Each station has details.', 'Walk up to one and press E, or tap it.', null],
+      [`Welcome to ${p.name}.`, 'Entropy as a Service: follow the key, from the qubits to the lock.', 'quantum'],
+      ['The key opens two doors.', 'Draw a loot drop, or call the API for real.', 'lock'],
+      ['Want the proof?', 'The seed\'s IBM Quantum job IDs are on the left wall.', 'proof'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
-      ['quantum', '1 · IBM Quantum', 'The seed starts here, measured on quantum hardware.'],
-      ['pool', '2 · The seed', '912 seeds from 19 jobs, hashed into one fingerprint.'],
-      ['pi', '3 · The generator', 'The seed, plus fresh system randomness, on a Raspberry Pi.'],
-      ['cloudflare', '4 · The edge', 'Every request and answer passes through Cloudflare.'],
-      ['fair', '5 · Draws you can check', 'Locked in before, checkable after. Tap it to draw.'],
-      ['key', '5 · QES-256 keys', 'The same generator, as 32-byte keys.'],
-      ['qes-kx', '5 · QES-KX', 'Key exchange: its X25519 keys come from the same generator.'],
+      ['quantum', 'The source', 'The key\'s bow: qubits measured on IBM Quantum hardware.'],
+      ['pool', 'The seed', '912 seeds from 19 jobs, hashed into one fingerprint.'],
+      ['pi', 'The generator', 'The seed, plus fresh system randomness, on a Raspberry Pi.'],
+      ['cloudflare', 'The edge', 'Every request and answer passes through Cloudflare.'],
+      ['lock', 'The lock', 'The key turns, and two doors open.'],
+      ['fair', 'Provably fair draws', 'Locked in before you play, checkable after. Tap to draw.'],
+      ['api', 'The QRNG API', 'Bytes, keys and UUIDs. Tap for a real call.'],
+      ['proof', 'The proof', 'The IBM Quantum job IDs behind the seed.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
     lines = [
@@ -6144,7 +6198,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
-  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP]);
+  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP], ['QES-KX', KX_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]], ['Entropy Room', ENTROPY_ROOM.stops.coins]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
@@ -6217,26 +6271,27 @@ function showIndicator(target, verb, name, lift) {
 }
 promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near); } });
 
-/* ---------- Platform world (inside the Quantum V^ Platform painting) ----------
-   The platform as a place to walk around (rebuilt 2026-11-25 to tell the true pipeline). Bits measured on the IBM
-   Quantum cryostat loop round it (a key's bow), run along a shaft and dip into the seed pool (VAULT, VIPER, LOTUS
-   hashed into one fingerprint), the generator on the Raspberry Pi and the edge (Cloudflare): the key's teeth, numbered
-   1 to 4. From the edge it fans out to step 5, what you get: a branch to the provably fair draws station (a loot drop
-   through the live API when tapped), the shaft's end in a QES-256 key, and a branch to QES-KX, the key exchange, at
-   the front right. A title over the line says which way to read it. (2026-11-26: one connected line; the Secure
-   Enclave, Recluda's, left this world.) Built when you step in, freed when you leave.
-*/
+/* ---------- The EaaS world (inside the lobby's Quantum V^ EaaS display; #platform-world) ----------
+   Entropy as a Service as one gallery (redesigned 2026-11-26): 'Randomness you can prove' lettered on the back wall.
+   Along it floats a key drawn by a stream of bits: the bow loops round the IBM Quantum cryostat (the source), the
+   shaft runs right, and three equal teeth dip onto three matching glass cases, the seed pool, the generator (a
+   Raspberry Pi) and the edge (Cloudflare). The tip goes into a lock in a wall block on the right; the key turns by
+   itself as you arrive (tap the lock to turn it again) and two doors rise: provably fair draws (a loot drop through
+   the live draw API) and the QRNG API (a real call: 32 bytes, as a QES-256 key is made, and a UUID). The proof
+   wall on the left lists the seed's IBM Quantum job IDs, live from the attestation. QES-KX moved to the Lab (B1).
+   Built when you step in, freed when you leave. */
 let world = null;
 let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
 const worldPanel = document.getElementById('worldPanel');
 const PLATFORM_STATIONS = [
-  { id: 'quantum', title: 'IBM Quantum', text: 'The QRNG\'s seed comes from measuring qubits on IBM Quantum hardware. Every run is listed by its IBM Quantum job ID, so anyone can check where the seed came from.' },
-  { id: 'pool', title: 'Seed pool', text: 'VAULT™, VIPER™ and LOTUS™: 912 seeds from 19 IBM Quantum jobs, hashed with SHA-256 into one 256-bit pool. Its fingerprint and every job ID are public in the attestation.' },
-  { id: 'pi', title: 'Raspberry Pi', text: 'Step 3, the generator: an HKDF stream over the seed pool, with fresh system randomness mixed into every draw. It serves the QRNG API and the draw API.' },
-  { id: 'fair', title: 'Provably fair draws', text: 'Locked in before you play: the fingerprint of a secret seed is shown first, your browser adds its own seed, and the result comes back with the seed so anyone can check it. Tap the station to draw a loot drop through the live API.' },
-  { id: 'key', title: 'QES-256 keys', text: 'QES-256 keys are 32 bytes from the same generator, with fresh system randomness mixed in. The job IDs document the seed, not any single key. The bytes shown here are an illustration.' },
-  { id: 'cloudflare', title: 'Cloudflare', text: 'Step 4, the edge: every request to the QRNG and draw APIs, and every answer, passes through Cloudflare\'s network in front of the Raspberry Pi.' },
-  { id: 'qes-kx', title: 'QES-KX', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF, and its ephemeral X25519 keys come from the same quantum-seeded generator. The relay only passes public values along and never sees the derived key.' }
+  { id: 'quantum', title: 'IBM Quantum', text: 'The source, the key\'s bow: the seed comes from measuring qubits on IBM Quantum hardware. Every run has an IBM Quantum job ID, so anyone can check where the seed came from.' },
+  { id: 'pool', title: 'Seed pool', text: 'The first tooth: VAULT™, VIPER™ and LOTUS™, 912 seeds from 19 IBM Quantum jobs, hashed with SHA-256 into one 256-bit pool with a public fingerprint.' },
+  { id: 'pi', title: 'The generator', text: 'The second tooth, on a Raspberry Pi: an HKDF stream over the seed pool, with fresh system randomness mixed into every draw. It serves the QRNG API and the draw API.' },
+  { id: 'cloudflare', title: 'The edge', text: 'The third tooth: every request to the QRNG and draw APIs, and every answer, passes through Cloudflare\'s network in front of the Raspberry Pi.' },
+  { id: 'lock', title: 'The lock', text: 'The key\'s tip goes into the lock, and turning it opens two doors: what the service gives you. One seed and one generator are behind both. Tap it to turn the key again.' },
+  { id: 'fair', title: 'Provably fair draws', text: 'Door 1. Locked in before you play: the fingerprint of a secret seed is shown first, your browser adds its own seed, and the result comes back with the seed so anyone can check it. Tap the screen to draw a loot drop through the live API.' },
+  { id: 'api', title: 'The QRNG API', text: 'Door 2. Random bytes, integers, floats and UUIDs from the quantum-seeded generator, free and with no account. Tap the screen for a real call: 32 bytes, the way a QES-256 key is made, and a UUID.' },
+  { id: 'proof', title: 'The proof', text: 'On the left wall: the IBM Quantum job IDs behind the seed and the pools\' fingerprints, live from the attestation. They document where the seed came from, not each byte.' }
 ];
 
 function textSprite(lines, w, h, scaleW) {
@@ -6303,88 +6358,108 @@ function makeExitPainting(ws, { R, angleDeg, pedMat, hit, stations, updates }) {
 const SHARED_MATS = new Set([gold, colMat, silver, copper, crystalFrameMat, amberMat, glassSteel]);   // also used by the hall
 function buildPlatformWorld() {
   const ws = new THREE.Scene();
-  ws.background = new THREE.Color(0x05060c); ws.fog = new THREE.Fog(0x05060c, 22, 60);
-  ws.add(new THREE.HemisphereLight(0xb8c8ff, 0x05060c, 0.65));
-  const key = new THREE.DirectionalLight(0xcfdcff, 0.3); key.position.set(4, 12, 8); ws.add(key);
+  ws.background = new THREE.Color(0x05060c); ws.fog = new THREE.Fog(0x05060c, 28, 60);
+  ws.add(new THREE.HemisphereLight(0xb8c8ff, 0x05060c, 0.55));
+  const sun = new THREE.DirectionalLight(0xcfdcff, 0.25); sun.position.set(4, 12, 8); ws.add(sun);
   const updates = [], hit = [], stations = [];
-  const R = 9, RADIUS = 13;
+  const R = 9, X0 = -14, X1 = 14, Z0 = -10, Z1 = 10, H = 9;   // the gallery: 28 m wide, 20 m deep, 9 m high
 
-  // ground: dark disc with a faint grid, the station ring, the edge
+  // the room: a dark polished floor with a faint grid, four walls with a cyan line at floor and ceiling, a ceiling
   const gc = mk(512, 512), gg = gc.getContext('2d');
   gg.fillStyle = '#0c0f17'; gg.fillRect(0, 0, 512, 512);
-  gg.strokeStyle = '#1d2433'; gg.lineWidth = 2;
+  gg.strokeStyle = '#1a2130'; gg.lineWidth = 2;
   for (let i = 0; i <= 512; i += 64) { gg.beginPath(); gg.moveTo(i, 0); gg.lineTo(i, 512); gg.stroke(); gg.beginPath(); gg.moveTo(0, i); gg.lineTo(512, i); gg.stroke(); }
-  const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(7, 7); gt.anisotropy = 8;
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(RADIUS + 1.5, 96), new THREE.MeshStandardMaterial({ map: gt, roughness: 0.35, metalness: 0.3 }));
-  ground.rotation.x = -Math.PI / 2; ws.add(ground);
-  const ringLine = (r, w, op) => { const m = new THREE.Mesh(new THREE.RingGeometry(r - w, r + w, 128), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: op, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.position.y = 0.01; ws.add(m); };
-  ringLine(R, 0.025, 0.55); ringLine(RADIUS + 1.4, 0.04, 0.8);
-
-  // stars
-  const sp = new Float32Array(900 * 3);
-  for (let i = 0; i < 900; i++) {
-    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, rr = 70;
-    const k = Math.sqrt(1 - u * u); sp[i * 3] = Math.cos(a) * k * rr; sp[i * 3 + 1] = Math.abs(u) * rr * 0.9 + 2; sp[i * 3 + 2] = Math.sin(a) * k * rr;
+  const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(7, 5); gt.anisotropy = 8;
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0, Z1 - Z0), new THREE.MeshStandardMaterial({ map: gt, roughness: 0.35, metalness: 0.3 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set((X0 + X1) / 2, 0, (Z0 + Z1) / 2); ws.add(ground);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x0b0e16, roughness: 0.85, metalness: 0.1 });
+  const trimMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.45 });
+  const wall = (w, x, z, ry) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, H), wallMat); m.position.set(x, H / 2, z); m.rotation.y = ry; ws.add(m);
+    for (const y of [0.025, H - 0.025]) { const t = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.05), trimMat); t.position.set(x, y, z); t.rotation.y = ry; t.translateZ(0.01); ws.add(t); }
+  };
+  wall(X1 - X0, 0, Z0, 0); wall(X1 - X0, 0, Z1, Math.PI); wall(Z1 - Z0, X0, 0, Math.PI / 2); wall(Z1 - Z0, X1, 0, -Math.PI / 2);
+  { const c = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0, Z1 - Z0), wallMat); c.rotation.x = Math.PI / 2; c.position.set(0, H, 0); ws.add(c); }
+  for (const z of [-6.5, 0, 6.5]) {   // light strips across the ceiling
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(X1 - X0 - 2, 0.12), new THREE.MeshBasicMaterial({ color: 0xbfe9ff, transparent: true, opacity: 0.35 }));
+    s.rotation.x = Math.PI / 2; s.position.set(0, H - 0.02, z); ws.add(s);
   }
-  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  ws.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xc8d4ff, size: 0.25, map: dotTex(), transparent: true, depthWrite: false })));
 
-  const pedMat = new THREE.MeshStandardMaterial({ color: 0x1c2130, metalness: 0.6, roughness: 0.4 });
-  function station(id, angleDeg, build, opts = {}) {
-    const a = THREE.MathUtils.degToRad(angleDeg), r = opts.r ?? R;
-    const g = new THREE.Group(); g.position.set(Math.sin(a) * r, 0, -Math.cos(a) * r);
-    if (opts.at) g.position.set(opts.at[0], 0, opts.at[1]);   // a spot along the key (see the bit stream below)
-    g.lookAt(0, 0, 0);   // local +z faces the middle of the world
-    ws.add(g); g.updateMatrixWorld(true);   // so builders can read world positions
-    if (!opts.noPedestal) {
-      const ped = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.55, 0.4, 48), pedMat); ped.position.y = 0.2; g.add(ped);
-      const edge = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.025, 8, 96), new THREE.MeshBasicMaterial({ color: 0x3fe0e0 })); edge.rotation.x = Math.PI / 2; edge.position.y = 0.4; g.add(edge);
-    }
+  // the name on the back wall, lettered on it like a gallery's
+  {
+    const c = mk(2048, 400), p = c.getContext('2d'); p.textAlign = 'center';
+    p.fillStyle = '#5ff0ff'; p.font = '600 60px "IBM Plex Mono", monospace'; p.fillText('ENTROPY AS A SERVICE', 1024, 110);
+    p.fillStyle = '#f1e6cf'; p.font = '150px "Young Serif", Georgia, serif'; p.fillText('Randomness you can prove', 1024, 300);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(10, 10 * 400 / 2048), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+    m.position.set(1.8, 7.85, Z0 + 0.03); ws.add(m);   // right of centre, clear of Vee as you arrive
+  }
+
+  // every exhibit in the same case: a plinth, a glass case, a lamp, and a plaque on the plinth's face
+  const plinthMat = new THREE.MeshStandardMaterial({ color: 0x141926, metalness: 0.5, roughness: 0.45 });
+  const pedMat = plinthMat;   // the exit painting's easel matches
+  const caseMat = new THREE.MeshStandardMaterial({ color: 0xbfeaff, transparent: true, opacity: 0.07, roughness: 0.05, metalness: 0.1, depthWrite: false, side: THREE.DoubleSide });
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.6 });
+  const PW = 1.9, PH = 0.9, CH = 2.1, CASE_TOP = PH + CH;
+  const plaque = (eyebrow, title, sub, w = 1.8) => {
+    const c = mk(900, 330), p = c.getContext('2d');
+    p.fillStyle = '#0a0e18'; p.fillRect(0, 0, 900, 330); p.fillStyle = '#3fe0e0'; p.fillRect(0, 0, 900, 6);
+    p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 32px "IBM Plex Mono", monospace'; p.fillText(eyebrow, 40, 68);
+    p.fillStyle = '#f1e6cf'; let px = 66; do { p.font = `${px}px "Young Serif", Georgia, serif`; } while (p.measureText(title).width > 820 && --px > 36); p.fillText(title, 40, 150);
+    if (sub) { p.fillStyle = '#aab4c8'; p.font = '30px "IBM Plex Sans", sans-serif'; wrapText(p, sub, 40, 210, 820, 40); }
+    const tex = new THREE.CanvasTexture(c); tex.anisotropy = 8;
+    return new THREE.Mesh(new THREE.PlaneGeometry(w, w * 330 / 900), new THREE.MeshBasicMaterial({ map: tex }));
+  };
+  function station(id, x, z, build, opts = {}) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); ws.add(g); g.updateMatrixWorld(true);   // faces +z, toward the entrance; placed first so builders can read world positions
     const info = PLATFORM_STATIONS.find(s => s.id === id);
-    const label = stationLabel(opts.eyebrow || 'QCAP STACK', info.title); label.position.set(0, opts.labelY ?? 4.6, (opts.labelY ?? 4.6) < 2 ? 1.15 : 0); g.add(label);   // a low label stands in front of its model
+    if (!opts.bare) {
+      const ped = new THREE.Mesh(new THREE.BoxGeometry(PW, PH, PW), plinthMat); ped.position.y = PH / 2; g.add(ped);
+      const cs = new THREE.Mesh(new THREE.BoxGeometry(PW - 0.1, CH, PW - 0.1), caseMat); cs.position.y = PH + CH / 2; g.add(cs);
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(cs.geometry), edgeMat); e.position.copy(cs.position); g.add(e);
+      const lamp = new THREE.PointLight(0xdfe9ff, 0.55, 4, 2); lamp.position.set(0, CASE_TOP - 0.15, 0.7); g.add(lamp);
+      const pq = plaque(opts.eyebrow, info.title, opts.sub); pq.position.set(0, PH / 2, PW / 2 + 0.006); g.add(pq);
+    }
     const inner = new THREE.Group(); g.add(inner); build(inner, g);
-    const center = g.position.clone(); center.y = 1.6;
-    const normal = new THREE.Vector3(-g.position.x, 0, -g.position.z).normalize();
-    if (opts.normal) normal.copy(opts.normal);
-    const st = { id, info, exhibit: true, standOff: opts.standOff ?? 4.2, pitch: 0.12, center, normal, group: g };
+    g.updateMatrixWorld(true);
+    const st = { id, info, exhibit: true, standOff: opts.standOff ?? 3.6, pitch: opts.pitch ?? 0.1, center: new THREE.Vector3(x, opts.cy ?? 1.9, z),
+      normal: opts.normal || new THREE.Vector3(0, 0, 1), group: g };
     g.traverse(o => { if (o.isMesh) { o.userData.station = st; hit.push(o); } });
     stations.push(st); return st;
   }
 
-  // 1. IBM Quantum: the cryostat hanging from a gantry
+  // THE KEY, along the back: the bow loops round the cryostat, the shaft runs right, three equal teeth dip to the
+  // seed, the generator and the edge, and the tip goes into the lock
+  const KZ = -6.5, SHAFT_Y = 4.6, BOW_X = -9.5, BOW_R = 1.9, TEETH = [-4.6, -0.9, 2.8], LX = 8.3;
+  const NOTCH_Y = CASE_TOP + 0.12, NOTCH_W = 0.7;
+
+  // the bow: IBM Quantum, the cryostat hanging from a gantry, its plaque on a low plinth in front
   let chipWorld = new THREE.Vector3();
-  // The stations line up along the back so the bit stream draws a key, seen from the entrance: a bow looped round
-  // the cryostat, a shaft running right, teeth dipping down to the seed pool and the Pi, and the QES-256 key at its
-  // tip; past the Pi a branch leaves the shaft and drops to the draw station. SHAFT_Y is the shaft's height; KEY_Z how far back it runs. Labels on the teeth sit low, out of its outline.
-  const SHAFT_Y = 4.6, KEY_Z = -5;
-  const qs = station('quantum', -55, inner => {
-    for (const x of [-1.7, 1.7]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 5.6, 0.16), pedMat); post.position.set(x, 3.2, 0); inner.add(post); }
+  station('quantum', BOW_X, KZ, inner => {
+    for (const x of [-1.7, 1.7]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 5.6, 0.16), plinthMat); post.position.set(x, 3.2, 0); inner.add(post); }
     const beam = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.18, 0.18), gold); beam.position.set(0, 6.0, 0); inner.add(beam);
     const c = makeCryostat(); c.group.position.y = 5.9; c.group.scale.setScalar(0.92); inner.add(c.group);
     updates.push((dt, t) => pulseStages(c.pulses, t));
+    const low = new THREE.Mesh(new THREE.BoxGeometry(PW, PH, 0.4), plinthMat); low.position.set(0, PH / 2, 1.5); inner.add(low);
+    const pq = plaque('1 · THE SOURCE', 'IBM Quantum', 'Qubits measured on IBM Quantum hardware: where the seed comes from.'); pq.position.set(0, PH / 2, 1.706); inner.add(pq);
     inner.updateMatrixWorld(true); chipWorld = c.group.localToWorld(new THREE.Vector3(0, c.chipY, 0));
-  }, { labelY: 7.3, eyebrow: '1 · THE SOURCE', at: [-9.0, KEY_Z] });
+  }, { bare: true, cy: 3.4, standOff: 6.0, pitch: 0.14 });
 
-  // 2. The seed pool: VAULT, VIPER and LOTUS as three glowing pools, their streams merging into one fingerprint
-  let poolWorld;
-  station('pool', -19, inner => {
+  // tooth 1: the seed pool, VAULT, VIPER and LOTUS circling one fingerprint
+  station('pool', TEETH[0], KZ, inner => {
+    const S = 0.6; inner.scale.setScalar(S); inner.position.y = 1.95 - 2.2 * S;
     const core = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
     core.position.y = 2.6; inner.add(core);
     const halo = new THREE.Mesh(new THREE.SphereGeometry(0.62, 32, 20), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
     halo.position.y = 2.6; inner.add(halo);
     const orbs = POOLS.map((P, i) => {
       const g = new THREE.Group(); inner.add(g);
-      const o = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 1), new THREE.MeshStandardMaterial({ color: P.color, emissive: P.color, emissiveIntensity: 0.6, roughness: 0.3 }));
-      g.add(o);
+      g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 1), new THREE.MeshStandardMaterial({ color: P.color, emissive: P.color, emissiveIntensity: 0.6, roughness: 0.3 })));
       const tag = textSprite([[P.name, '600 34px "IBM Plex Mono", monospace', P.color], [`${[144, 336, 432][i]} seeds`, '28px "IBM Plex Mono", monospace', '#c9d2e3']], 512, 120, 1.0);
       tag.position.y = -0.45; g.add(tag);
       const line = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), new THREE.MeshBasicMaterial({ color: P.color, transparent: true, opacity: 0.6 }));
       inner.add(line);
       return { g, line, a0: i * Math.PI * 2 / 3 };
     });
-    const fp = (QRNG.att && QRNG.att.master_fingerprint) ? QRNG.att.master_fingerprint.slice(0, 16) + '…' : 'in the attestation';
-    const fpTag = textSprite([['SHA-256 OF ALL 912 SEEDS', '600 26px "IBM Plex Mono", monospace', '#8e99b0'], [fp, '600 32px "IBM Plex Mono", monospace', '#e8fdff']], 768, 120, 1.9);
-    fpTag.position.set(0, 3.45, 0); inner.add(fpTag);
     const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
     updates.push((dt, t) => {
       orbs.forEach(o => {   // each pool circles the core, a line feeding it
@@ -6395,12 +6470,11 @@ function buildPlatformWorld() {
       });
       halo.scale.setScalar(1 + 0.08 * Math.sin(t * 2));
     });
-    inner.updateMatrixWorld(true); poolWorld = inner.localToWorld(new THREE.Vector3(0, 2.6, 0));
-  }, { eyebrow: '2 · THE SEED', at: [-5.0, KEY_Z - 1], labelY: 0.95 });
+  }, { eyebrow: '2 · THE SEED', sub: '912 seeds from 19 IBM Quantum jobs, hashed with SHA-256 into one public fingerprint.' });
 
-  // 3. Raspberry Pi: the board, tilted toward the visitor
-  let piWorld;
-  station('pi', 19, inner => {
+  // tooth 2: the generator, a Raspberry Pi
+  station('pi', TEETH[1], KZ, inner => {
+    const S = 0.62; inner.scale.setScalar(S); inner.position.y = 1.95 - 1.75 * S;
     const board = new THREE.Group(); board.position.y = 1.75; board.rotation.x = 0.95; inner.add(board);
     board.add(new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.07, 1.6), new THREE.MeshStandardMaterial({ color: 0x1f7a42, roughness: 0.6 })));
     const part = (w, h, d, color, x, z, metal = 0.2) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: 0.4 })); m.position.set(x, 0.035 + h / 2, z); board.add(m); return m; };
@@ -6416,15 +6490,13 @@ function buildPlatformWorld() {
     const ledG = new THREE.MeshBasicMaterial({ color: 0x3dff7a }), ledR = new THREE.MeshBasicMaterial({ color: 0xff3b3b });
     const l1 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), ledR); l1.position.set(-1.05, 0.07, 0.68); board.add(l1);
     const l2 = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), ledG); l2.position.set(-0.95, 0.07, 0.68); board.add(l2);
-    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.3, 12), pedMat); stand.position.y = 1.05; inner.add(stand);
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.4, 12), plinthMat); stand.position.y = 1.04; inner.add(stand);   // down to the plinth
     updates.push((dt, t) => { l2.visible = Math.sin(t * 9) + Math.sin(t * 13.7) > 0.4; });
-    inner.updateMatrixWorld(true); piWorld = board.localToWorld(new THREE.Vector3(-0.35, 0.3, 0.1));
-  }, { eyebrow: '3 · THE GENERATOR', at: [-1.2, KEY_Z - 1], labelY: 0.95 });
+  }, { eyebrow: '3 · THE GENERATOR', sub: 'The seed, expanded with HKDF, with fresh system randomness mixed into every draw.' });
 
-
-  // 4. Cloudflare, the edge: on the stream after the generator, since every request and response passes through it
-  let cfWorld;
-  station('cloudflare', 0, inner => {
+  // tooth 3: the edge, Cloudflare's network
+  station('cloudflare', TEETH[2], KZ, inner => {
+    const S = 0.5; inner.scale.setScalar(S); inner.position.y = 1.95 - 2.5 * S;
     const geo = new THREE.IcosahedronGeometry(1.15, 2);
     const globe = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xf38020, transparent: true, opacity: 0.55 }));
     const nodes = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffc58a, size: 0.12, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -6432,20 +6504,61 @@ function buildPlatformWorld() {
     const spin = new THREE.Group(); spin.add(globe, nodes, core); spin.position.y = 2.5; inner.add(spin);
     const orbit = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.012, 6, 96), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.6 }));
     orbit.position.y = 2.5; orbit.rotation.x = 1.2; inner.add(orbit);
-    const l = new THREE.PointLight(0xf38020, 0.8, 6, 2); l.position.y = 2.5; inner.add(l);
     updates.push(dt => { spin.rotation.y += dt * 0.35; orbit.rotation.z += dt * 0.5; });
-    inner.updateMatrixWorld(true); cfWorld = inner.localToWorld(new THREE.Vector3(0, 2.5, 0));
-  }, { eyebrow: '4 · THE EDGE', at: [2.6, KEY_Z - 1], labelY: 0.95 });
+  }, { eyebrow: '4 · THE EDGE', sub: 'Every request to the API, and every answer, passes through Cloudflare\'s network.' });
 
-  // 4. Provably fair draws: a gem over the pedestal and a screen with the lock-in, the draw and the check, live
-  let fairWorld;
+  // THE LOCK: a wall block on the right. The key's tip goes into the keyhole on its side; its front has two doors
+  const LZF = -4.6, DH = 3.2, DW = 2.3, DXS = [9.9, 12.55], ALC = 2.4;   // front face, door height and width, door centres, alcove depth
+  const blockMat = new THREE.MeshStandardMaterial({ color: 0x121724, metalness: 0.35, roughness: 0.6 });
+  const box = (w, h, d, x, y, z, mat = blockMat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); ws.add(m); return m; };
+  box(0.3, H, LZF - Z0, LX + 0.15, H / 2, (Z0 + LZF) / 2);                              // the side, with the keyhole
+  box(X1 - LX, H - DH, 0.3, (LX + X1) / 2, DH + (H - DH) / 2, LZF - 0.15);              // the front, over the doors
+  const edges = [LX, DXS[0] - DW / 2, DXS[0] + DW / 2, DXS[1] - DW / 2, DXS[1] + DW / 2, X1];
+  for (let k = 0; k < 6; k += 2) box(edges[k + 1] - edges[k], DH, 0.3, (edges[k] + edges[k + 1]) / 2, DH / 2, LZF - 0.15);   // the piers between
+  { const t = new THREE.Mesh(new THREE.PlaneGeometry(X1 - LX, 0.05), trimMat); t.position.set((LX + X1) / 2, DH + 0.02, LZF + 0.01); ws.add(t); }
+  // the keyhole: a brass escutcheon and a plug that turns
+  const esc = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.1, 48), gold); esc.rotation.z = Math.PI / 2; esc.position.set(LX - 0.04, SHAFT_Y, KZ); ws.add(esc);
+  const plug = new THREE.Group(); plug.position.set(LX - 0.1, SHAFT_Y, KZ); ws.add(plug);
+  { const pm = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 40), new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.9, roughness: 0.35 })); pm.rotation.z = Math.PI / 2; plug.add(pm);
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.46, 0.09), new THREE.MeshBasicMaterial({ color: 0x05060c })); slot.position.x = -0.035; plug.add(slot); }
+  const lockGlow = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.03, 8, 64), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.25 }));
+  lockGlow.rotation.y = Math.PI / 2; lockGlow.position.set(LX - 0.1, SHAFT_Y, KZ); ws.add(lockGlow);
+  { const pq = plaque('THE LOCK', 'What the key opens', 'One seed and one generator behind both doors. Tap to turn the key again.', 2.0); pq.rotation.y = -Math.PI / 2; pq.position.set(LX - 0.01, 2.4, KZ); ws.add(pq); }
+  // the doors: an alcove behind each, a leaf that slides up into the wall, a plaque over it
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x1b2232, metalness: 0.6, roughness: 0.35 });
+  const leaves = DXS.map((dx, i) => {
+    const alc = new THREE.Mesh(new THREE.BoxGeometry(DW, DH, ALC), new THREE.MeshStandardMaterial({ color: 0x0d1220, roughness: 0.8, side: THREE.BackSide }));
+    alc.position.set(dx, DH / 2 + 0.004, LZF - 0.3 - ALC / 2); ws.add(alc);
+    const lamp = new THREE.PointLight(i ? 0x8ea2ff : 0xffc24a, 0.9, 4.5, 2); lamp.position.set(dx, DH - 0.4, LZF - 1.2); ws.add(lamp);
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(DW - 0.04, DH, 0.08), leafMat); leaf.position.set(dx, DH / 2, LZF - 0.12); ws.add(leaf);
+    const seam = new THREE.Mesh(new THREE.PlaneGeometry(0.03, DH - 0.4), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.6 })); seam.position.set(0, 0, 0.045); leaf.add(seam);
+    return leaf;
+  });
+  const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  let doorK = 0, doorTo = 0, autoT = 2.2;   // 0 shut, 1 open; the key turns by itself a moment after you step in
+  const lockSt = { id: 'lock', info: PLATFORM_STATIONS.find(s => s.id === 'lock'), exhibit: true, standOff: 6.2, pitch: 0.1,
+    center: new THREE.Vector3(LX, SHAFT_Y - 1.2, KZ), normal: new THREE.Vector3(-0.75, 0, 0.66).normalize() };   // from the front left: the keyhole and the doors
+  [esc, lockGlow, ...plug.children].forEach(o => { o.userData.station = lockSt; hit.push(o); }); stations.push(lockSt);
+  lockSt.act = () => { if (doorTo) { doorTo = 0; autoT = 2.9; } else { doorTo = 1; autoT = 0; } };   // open: shut and turn it again, so you can watch; shut: turn it
+  lockSt.actVerb = () => 'Turn'; lockSt.actLift = -0.4;
+  updates.push(dt => {
+    if (autoT > 0) { autoT -= dt; if (autoT <= 0) doorTo = 1; }
+    doorK += Math.sign(doorTo - doorK) * Math.min(Math.abs(doorTo - doorK), dt / (reduceMotion ? 0.05 : 2.6));
+    const turn = Math.min(1, doorK / 0.4), open = Math.max(0, (doorK - 0.4) / 0.6);   // the key turns first, then the doors rise
+    plug.rotation.x = -ease(turn) * Math.PI / 2;
+    lockGlow.material.opacity = 0.25 + 0.6 * turn;
+    leaves.forEach(l => { l.position.y = DH / 2 + ease(open) * (DH - 0.02); });
+  });
+
+  // door 1: provably fair draws, a loot drop through the live draw API
   const FD = { type: 'weighted', weights: [70, 22, 6, 2], count: 1 }, TIER = [['COMMON', '#c9d2e3'], ['RARE', '#4aa3ff'], ['EPIC', '#b36bff'], ['LEGENDARY', '#ffc24a']];
   const fc = mk(1024, 820), fg = fc.getContext('2d'), ftex = new THREE.CanvasTexture(fc); ftex.anisotropy = 8;
   let fNext = null, fLast = null, fBusy = false, fOk = null, fNote = '', fAsking = false;
+  const TAPW = () => matchMedia('(pointer: coarse)').matches ? 'TAP' : 'CLICK OR PRESS E';
   const fDraw = () => {
     const p = fg, mono = (t, x, y, c = '#8e99b0', px = 26) => { p.fillStyle = c; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(t, x, y); };
-    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 820); p.strokeStyle = 'rgba(63,224,224,0.7)'; p.lineWidth = 4; p.strokeRect(8, 8, 1008, 804); p.textAlign = 'left';
-    mono('A LOOT DROP · 70 · 22 · 6 · 2', 44, 70, '#5ff0ff', 28);
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 820); p.strokeStyle = 'rgba(255,194,74,0.7)'; p.lineWidth = 4; p.strokeRect(8, 8, 1008, 804); p.textAlign = 'left';
+    mono('A LOOT DROP · ODDS 70 · 22 · 6 · 2', 44, 70, '#ffc24a', 28);
     mono('1 · LOCKED IN BEFORE YOU DRAW', 44, 140, '#8e99b0', 24);
     mono(fNext ? fNext.commitment.slice(0, 32) : fAsking ? 'LOCKING IN…' : '…', 44, 184, '#f1e6cf', 32); mono(fNext ? fNext.commitment.slice(32) : '', 44, 224, '#f1e6cf', 32);
     if (fNext) mono(fNext.api ? `AT API.QUANTUMV.DEV · ${fNext.id}` : 'IN YOUR BROWSER: THE DRAW API ISN\'T ANSWERING', 44, 258, '#5b6680', 20);
@@ -6460,22 +6573,30 @@ function buildPlatformWorld() {
       mono(fOk === true ? '✓ SEED MATCHES ITS FINGERPRINT · SAME RESULT' : fOk === false ? '✗ NO MATCH' : 'CHECKING…', 44, 676, fOk === true ? '#6dffa8' : fOk === false ? '#ff5a4e' : '#5b6680', 28);
       mono(fLast.api ? `CHECK IT ANYWHERE: QUANTUMV.DEV/FAIR · ${fLast.id}` : 'LOCKED IN BY YOUR BROWSER: CHECKED HERE', 44, 716, '#5b6680', 20);
     } else mono('NOTHING DRAWN YET', 44, 390, '#5b6680', 28);
-    mono(`${matchMedia('(pointer: coarse)').matches ? 'TAP' : 'CLICK OR PRESS E'} TO DRAW`, 44, 780, '#ffc24a', 26);
+    mono(`${TAPW()} TO DRAW`, 44, 780, '#ffc24a', 26);
     ftex.needsUpdate = true;
   };
-  const fCommit = () => { if (fNext || fAsking) return; fAsking = true; fDraw(); FAIR.commit('Quantum Hall · Platform world').then(c => { fNext = c; fAsking = false; fDraw(); }); };
+  const fCommit = () => { if (fNext || fAsking) return; fAsking = true; fDraw(); FAIR.commit('Quantum Hall · EaaS world').then(c => { fNext = c; fAsking = false; fDraw(); }); };
+  const SW = 1.95, SH = SW * 820 / 1024, BACKZ = LZF - 0.3 - ALC + 0.02;
   let gems = [], shownGem = -1;
-  const fairSt = station('fair', 55, inner => {
-    const scr = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3 * 820 / 1024), new THREE.MeshBasicMaterial({ map: ftex })); scr.position.set(0, 2.55, 0); inner.add(scr);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.3 * 820 / 1024 + 0.1, 0.06), pedMat); back.position.set(0, 2.55, -0.04); inner.add(back);
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 1.0, 10), pedMat); post.position.set(0, 0.9, -0.05); inner.add(post);
-    const shapes = [new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.OctahedronGeometry(0.28), new THREE.IcosahedronGeometry(0.28), new THREE.DodecahedronGeometry(0.3)];
-    gems = shapes.map((geo, i) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: TIER[i][1], emissive: TIER[i][1], emissiveIntensity: 0.6, metalness: 0.3, roughness: 0.25 })); m.position.set(1.55, 1.35, 0.5); m.visible = false; inner.add(m); return m; });
-    const gl = new THREE.PointLight(0xffffff, 0.6, 3, 2); gl.position.set(1.55, 1.6, 1.0); inner.add(gl); gems.light = gl;
-    updates.push((dt, t) => { const m = gems[shownGem]; if (m) { m.rotation.y += dt * (reduceMotion ? 0 : 1.2); m.rotation.x += dt * (reduceMotion ? 0 : 0.5); m.position.y = 1.35 + 0.08 * Math.sin(t * 1.8); } });
-    inner.updateMatrixWorld(true); fairWorld = inner.localToWorld(new THREE.Vector3(0, 2.55 + 2.3 * 820 / 1024 / 2, 0));
-  }, { eyebrow: '5 · DRAWS YOU CAN CHECK', at: [6.2, KEY_Z - 1], labelY: 0.95, standOff: 4.4 });
+  const doorStation = (id, i, tex, eyebrow, sub) => {
+    const dx = DXS[i];
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex })); scr.position.set(dx, 1.75, BACKZ); ws.add(scr);
+    const info = PLATFORM_STATIONS.find(s => s.id === id);
+    const pq = plaque(eyebrow, info.title, sub, 2.3); pq.position.set(dx, DH + 0.55, LZF + 0.008); ws.add(pq);
+    const st = { id, info, exhibit: true, standOff: 3.4, pitch: 0.06, center: new THREE.Vector3(dx, 1.75, LZF - 1.2), normal: new THREE.Vector3(0, 0, 1) };
+    for (const o of [scr, pq, leaves[i]]) { o.userData.station = st; hit.push(o); }
+    stations.push(st); return st;
+  };
+  const fairSt = doorStation('fair', 0, ftex, 'DOOR 1', 'Locked in before you play. Anyone can check it after.');
+  {
+    const shapes = [new THREE.BoxGeometry(0.26, 0.26, 0.26), new THREE.OctahedronGeometry(0.22), new THREE.IcosahedronGeometry(0.22), new THREE.DodecahedronGeometry(0.23)];
+    gems = shapes.map((geo, i) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: TIER[i][1], emissive: TIER[i][1], emissiveIntensity: 0.6, metalness: 0.3, roughness: 0.25 })); m.position.set(DXS[0] + 0.75, 0.55, LZF - 1.0); m.visible = false; ws.add(m); return m; });
+    const gl = new THREE.PointLight(0xffffff, 0.6, 2.5, 2); gl.position.set(DXS[0] + 0.75, 0.9, LZF - 0.6); ws.add(gl); gems.light = gl;
+    updates.push((dt, t) => { const m = gems[shownGem]; if (m) { m.rotation.y += dt * (reduceMotion ? 0 : 1.2); m.rotation.x += dt * (reduceMotion ? 0 : 0.5); m.position.y = 0.55 + 0.06 * Math.sin(t * 1.8); } });
+  }
   fairSt.act = async () => {
+    if (doorK < 0.95) { doorTo = 1; autoT = 0; return; }   // shut: the key turns first
     if (fBusy || !fNext) return;
     const c = fNext; fNext = null; fBusy = true; fLast = null; fOk = null; fNote = ''; fDraw();
     const r = await FAIR.draw(c, FD); fBusy = false;
@@ -6486,119 +6607,121 @@ function buildPlatformWorld() {
     }
     fDraw(); fCommit();
   };
-  fairSt.actVerb = () => 'Draw'; fairSt.actLift = -0.6;
+  fairSt.actVerb = () => doorK < 0.95 ? 'Open' : 'Draw'; fairSt.actLift = -0.6;
   fDraw(); fCommit();   // one commitment per visit to the world, asked for as you step in
 
-  // 5. The key, floating over the middle: 32 bytes around a slowly turning band
-  const keyBytes = new Uint8Array(32); crypto.getRandomValues(keyBytes);
-  const kc = mk(2048, 128), kg = kc.getContext('2d');
-  kg.font = '600 64px "IBM Plex Mono", monospace'; kg.textAlign = 'center'; kg.textBaseline = 'middle';
-  keyBytes.forEach((b, i) => { kg.fillStyle = i % 2 ? '#c8fbff' : '#3fe0e0'; kg.fillText(b.toString(16).padStart(2, '0'), (i + 0.5) * 64, 66); });
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.42, 96, 1, true), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(kc), transparent: true, side: THREE.FrontSide, depthWrite: false }));
-  const keySt = station('key', 0, inner => {
-    band.position.y = 3.9; inner.add(band);
-    for (const y of [3.66, 4.14]) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.012, 6, 128), gold); r.rotation.x = Math.PI / 2; r.position.y = y; inner.add(r); }
-    const sub = textSprite([['QES-256 · 32 BYTES · ILLUSTRATION', '600 30px "IBM Plex Mono", monospace', '#8e99b0']], 1024, 70, 3.2); sub.position.y = 3.3; inner.add(sub);
-    updates.push(dt => { band.rotation.y += dt * 0.25; });
-  }, { at: [10.0, KEY_Z], noPedestal: true, labelY: 6.25, eyebrow: '5 · KEYS', standOff: 5.5 });
-  keySt.group.children.forEach(o => { if (o !== keySt.group.children[0]) o.position.y += SHAFT_Y - 3.9; });   // up to the shaft's height (the label stays put)
-  keySt.center.set(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
-  const keyWorld = new THREE.Vector3(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
+  // door 2: the QRNG API, a real call each time you tap: 32 bytes (one 256-bit key, as QES-256 makes them) and a UUID
+  const ac = mk(1024, 820), ag = ac.getContext('2d'), atex = new THREE.CanvasTexture(ac); atex.anisotropy = 8;
+  let aRes = null, aBusy = false, aNote = '';
+  const aDraw = () => {
+    const p = ag, mono = (t, x, y, c = '#8e99b0', px = 26) => { p.fillStyle = c; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(t, x, y); };
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 820); p.strokeStyle = 'rgba(142,162,255,0.75)'; p.lineWidth = 4; p.strokeRect(8, 8, 1008, 804); p.textAlign = 'left';
+    mono('THE QRNG API · LIVE', 44, 70, '#8ea2ff', 28);
+    mono('GET api.quantumv.dev/qrng/bytes?n=32', 44, 140, '#c9d2e3', 26);
+    if (aBusy) mono('CALLING…', 44, 200, '#5b6680', 30);
+    else if (aNote) mono(aNote, 44, 200, '#ff5a4e', 24);
+    else if (aRes) {
+      mono(aRes.hex.slice(0, 32), 44, 196, '#f1e6cf', 34); mono(aRes.hex.slice(32), 44, 240, '#f1e6cf', 34);
+      mono('32 BYTES: ONE 256-BIT KEY, AS QES-256 MAKES THEM', 44, 280, '#5b6680', 20);
+      mono('GET api.quantumv.dev/qrng/uuid', 44, 360, '#c9d2e3', 26);
+      mono(aRes.uuid || '—', 44, 412, '#f1e6cf', 34);
+      mono('ALSO: INTEGERS, FLOATS, BATCHES · NO ACCOUNT NEEDED', 44, 490, '#5b6680', 20);
+      mono(`SEED FINGERPRINT ${aRes.fp} · CALL ${aRes.counter}`, 44, 560, '#8e99b0', 20);
+      mono('A QUANTUM-SEEDED GENERATOR, NEW SYSTEM RANDOMNESS IN EVERY CALL', 44, 596, '#8e99b0', 20);
+      mono('THE SEED\'S JOB IDS: ON THE PROOF WALL BEHIND YOU', 44, 632, '#8e99b0', 20);
+    } else mono('NO CALL YET', 44, 200, '#5b6680', 28);
+    mono(`${TAPW()} TO CALL IT`, 44, 780, '#8ea2ff', 26);
+    atex.needsUpdate = true;
+  };
+  const aCall = async () => {
+    if (aBusy) return; aBusy = true; aNote = ''; aDraw();
+    const get = async u => { const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000); try { const r = await fetch(u, { signal: ctl.signal, cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return await r.json(); } finally { clearTimeout(to); } };
+    try {
+      const [b, u] = await Promise.all([get('https://api.quantumv.dev/qrng/bytes?n=32'), get('https://api.quantumv.dev/qrng/uuid')]);
+      if (!/^[0-9a-f]{64}$/.test(String(b.hex)) || b.seeded_from !== 'ibm-quantum-hardware') throw new Error('unexpected');
+      aRes = { hex: b.hex, uuid: /^[0-9a-f-]{36}$/.test(String(u.uuid)) ? u.uuid : null, fp: String(b.fingerprint || '').slice(0, 16), counter: b.counter };
+    } catch (e) { aRes = null; aNote = 'THE API ISN\'T ANSWERING RIGHT NOW. TRY AGAIN'; }
+    aBusy = false; aDraw();
+  };
+  const apiSt = doorStation('api', 1, atex, 'DOOR 2', 'Random bytes, numbers and keys, from a quantum-seeded generator.');
+  apiSt.act = () => { if (doorK < 0.95) { doorTo = 1; autoT = 0; return; } aCall(); };
+  apiSt.actVerb = () => doorK < 0.95 ? 'Open' : 'Call'; apiSt.actLift = -0.6;
+  aDraw();
 
-  // 5. QES-KX, at the end of the line (front right): two devices and a relay that only sees public values; its own
-  // branch of the stream, since its ephemeral X25519 keys come from the same generator (ML-KEM uses its library's own)
-  let kxWorld;
-  station('qes-kx', 180, inner => {
-    const X = 2.2;
-    const dev = (x, label) => {
-      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.35, 32), pedMat); ped.position.set(x, 0.175, 0); inner.add(ped);
-      const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.3, 0.07), new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.3 }));
-      body.position.set(x, 1.25, 0); inner.add(body);
-      const dc = mk(256, 448), dg2 = dc.getContext('2d');
-      dg2.fillStyle = '#05070b'; dg2.fillRect(0, 0, 256, 448);
-      dg2.strokeStyle = '#3fe0e0'; dg2.lineWidth = 8; dg2.beginPath(); dg2.arc(128, 170, 34, Math.PI, 0); dg2.stroke();   // padlock
-      dg2.fillStyle = '#3fe0e0'; rr(dg2, 78, 170, 100, 76, 10); dg2.fill();
-      dg2.fillStyle = '#c9d2e3'; dg2.font = '600 40px "IBM Plex Mono", monospace'; dg2.textAlign = 'center'; dg2.fillText(label.slice(-1), 128, 330);
-      const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 1.2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(dc) }));
-      scr.position.set(x, 1.25, 0.037); inner.add(scr);
-      const t = textSprite([[label, '600 34px "IBM Plex Mono", monospace', '#c9d2e3']], 512, 80, 1.2); t.position.set(x, 0.62, 0.3); inner.add(t);
-    };
-    dev(-X, 'DEVICE A'); dev(X, 'DEVICE B');
-    const sl = new THREE.PointLight(0x8ea2ff, 0.9, 9, 2); sl.position.set(0, 3, 2); inner.add(sl);
-    const relay = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 0.7), new THREE.MeshStandardMaterial({ color: 0x2b3142, metalness: 0.6, roughness: 0.4 }));
-    relay.position.set(0, 1.0, 0); inner.add(relay); inner.updateMatrixWorld(true); kxWorld = relay.localToWorld(new THREE.Vector3(0, 0.3, 0));
-    const rl = textSprite([['RELAY', '600 34px "IBM Plex Mono", monospace', '#c9d2e3'], ['public values only', '28px "IBM Plex Mono", monospace', '#8e99b0']], 512, 150, 1.5);
-    rl.position.set(0, 0.35, 0.5); inner.add(rl);
-    const fp = [...keyBytes.slice(0, 4)].map(b => b.toString(16).padStart(2, '0')).join(' ');
-    for (const x of [-X, X]) {
-      const k = textSprite([['HKDF(X25519 ‖ ML-KEM) →', '26px "IBM Plex Mono", monospace', '#8e99b0'], ['shared key ' + fp + ' …', '600 30px "IBM Plex Mono", monospace', '#3fe0e0']], 768, 150, 2.4);
-      k.position.set(x, 2.4, 0); inner.add(k);
+  // THE PROOF, on the left wall: the IBM Quantum jobs behind the seed, the pools' fingerprints and the one they make
+  const pc = mk(1400, 1000), pg = pc.getContext('2d'), ptex = new THREE.CanvasTexture(pc); ptex.anisotropy = 8;
+  const pDraw = () => {
+    const p = pg, mono = (t, x, y, c = '#8e99b0', px = 24) => { p.fillStyle = c; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(t, x, y); };
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1400, 1000); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 4; p.strokeRect(8, 8, 1384, 984); p.textAlign = 'left';
+    mono('THE PROOF', 56, 84, '#5ff0ff', 30);
+    p.fillStyle = '#f1e6cf'; p.font = '64px "Young Serif", Georgia, serif'; p.fillText('Where the seed came from', 56, 170);
+    const A = QRNG.att;
+    if (!A) { mono('LOADING THE ATTESTATION FROM API.QUANTUMV.DEV…', 56, 260, '#5b6680', 26); ptex.needsUpdate = true; return; }
+    let y = 250, shown = 0, total = 0;
+    for (const name of ['VAULT', 'VIPER', 'LOTUS']) {
+      const h = A.hives[name]; if (!h) continue; const P = POOLS.find(q => q.name.startsWith(name)) || { color: '#c9d2e3' };
+      const ids = h.job_ids || []; shown += ids.length; total += h.total_jobs || ids.length;
+      mono(`${name} · ${h.satellites} SEEDS · ${h.backend}`, 56, y, P.color, 26);
+      mono(`SHA-256 ${String(h.hive_fingerprint).slice(0, 24)}…`, 760, y, '#8e99b0', 22);
+      y += 44;
+      for (let k = 0; k < ids.length; k += 3) { mono(ids.slice(k, k + 3).join('   '), 86, y, '#9fdcb8', 24); y += 36; }
+      y += 22;
     }
-    const arcA = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-X, 1.5, 0), new THREE.Vector3(-X / 2, 2.1, 0.25), new THREE.Vector3(0, 1.35, 0));
-    const arcB = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 1.35, 0), new THREE.Vector3(X / 2, 2.1, 0.25), new THREE.Vector3(X, 1.5, 0));
-    for (const c of [arcA, arcB]) inner.add(new THREE.Mesh(new THREE.TubeGeometry(c, 40, 0.012, 5, false), new THREE.MeshBasicMaterial({ color: 0x8ea2ff, transparent: true, opacity: 0.45 })));
-    const up = textSprite([['→  X25519 public key · ML-KEM-768 encapsulation key', '26px "IBM Plex Mono", monospace', '#c9d2e3']], 1536, 60, 4.2); up.position.set(0, 2.45, 0.3); inner.add(up);
-    const dn = textSprite([['X25519 public key · ML-KEM-768 ciphertext  ←', '26px "IBM Plex Mono", monospace', '#c9d2e3']], 1536, 60, 3.8); dn.position.set(0, 1.95, 0.3); inner.add(dn);
-    const pkt = (color) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14), new THREE.MeshBasicMaterial({ color })); inner.add(m); return m; };
-    const p1 = pkt(0x3fe0e0), p2 = pkt(0xffd36b);
-    const along = (u) => u < 0.5 ? arcA.getPoint(u * 2) : arcB.getPoint((u - 0.5) * 2);
-    updates.push((dt, t) => {
-      const sp = reduceMotion ? 0.05 : 0.22;
-      p1.position.copy(along((t * sp) % 1));                // A → relay → B
-      p2.position.copy(along(1 - ((t * sp + 0.5) % 1)));    // B → relay → A
-      p2.position.y -= 0.12;
-    });
-  }, { at: [9.6, 1.2], labelY: 2.9, eyebrow: '5 · KEY EXCHANGE', standOff: 5.6, noPedestal: true });
+    mono(`ALL ${A.total_satellites} SEEDS, HASHED INTO ONE FINGERPRINT`, 56, y + 10, '#8e99b0', 22);
+    mono(String(A.master_fingerprint).slice(0, 32), 56, y + 54, '#f1e6cf', 32); mono(String(A.master_fingerprint).slice(32), 56, y + 94, '#f1e6cf', 32);
+    p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif';
+    p.fillText(`${shown} of ${total} job IDs listed, live from the attestation. Check any job at quantum.ibm.com/jobs/{id}.`, 56, 930);
+    p.fillText('They document the seed, not each byte: the generator mixes in fresh system randomness every call.', 56, 966);
+    ptex.needsUpdate = true;
+  };
+  const PZ = -2.6, PWW = 5.2;
+  const proofMesh = new THREE.Mesh(new THREE.PlaneGeometry(PWW, PWW * 1000 / 1400), new THREE.MeshBasicMaterial({ map: ptex }));
+  proofMesh.rotation.y = Math.PI / 2; proofMesh.position.set(X0 + 0.03, 3.3, PZ); ws.add(proofMesh);
+  const proofSt = { id: 'proof', info: PLATFORM_STATIONS.find(s => s.id === 'proof'), exhibit: true, standOff: 4.6, pitch: 0.08,
+    center: new THREE.Vector3(X0 + 0.05, 3.3, PZ), normal: new THREE.Vector3(1, 0, 0) };
+  proofMesh.userData.station = proofSt; hit.push(proofMesh); stations.push(proofSt);
+  qrngAttest(); pDraw();
+  { let wait = 0; updates.push(dt => { if (proofSt.drawn) return; wait += dt; if (QRNG.att) { pDraw(); proofSt.drawn = true; } else if (wait > 3) { wait = 0; qrngAttest(); } }); }
 
-  // the bit stream draws a key: it leaves the cryostat's chip, loops once round the cryostat (the bow), runs right
-  // along the shaft, drops in square notches to the seed pool, the Pi and the edge (the teeth), and ends in the key;
-  // after the edge it fans out: one branch drops to the draw station, another runs forward to the key exchange
-  const qp = qs.group.position, BOW_R = 1.9, bowC = new THREE.Vector3(qp.x, SHAFT_Y, qp.z);
-  const along = new THREE.Vector3().subVectors(keyWorld, bowC).setY(0).normalize(), up = new THREE.Vector3(0, 1, 0);
+  // the bit stream that draws the key: from the cryostat's chip, once round the bow, along the shaft, down and up each
+  // tooth (all the same depth and width), and into the keyhole
+  const along = new THREE.Vector3(1, 0, 0), up = new THREE.Vector3(0, 1, 0), bowC = new THREE.Vector3(BOW_X, SHAFT_Y, KZ);
   const pts = [chipWorld.clone()];
   for (let deg = -90; deg <= 360; deg += 15) { const t = THREE.MathUtils.degToRad(deg); pts.push(bowC.clone().addScaledVector(along, Math.cos(t) * BOW_R).addScaledVector(up, Math.sin(t) * BOW_R)); }
-  const shaftAt = p => { const k = new THREE.Vector3().subVectors(p, bowC).dot(along); return bowC.clone().addScaledVector(along, k).setY(SHAFT_Y); };
-  for (const A of [poolWorld, piWorld, cfWorld]) {   // a notch: along the shaft, straight down to the station, across, and back up
-    const W = 0.65, top = shaftAt(A), low = new THREE.Vector3(top.x, A.y, top.z).lerp(A, 0.85);
-    pts.push(top.clone().addScaledVector(along, -W - 0.5), top.clone().addScaledVector(along, -W), low.clone().addScaledVector(along, -W),
-      low.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W + 0.5));
+  for (const tx of TEETH) {
+    const W = NOTCH_W;
+    pts.push(new THREE.Vector3(tx - W - 0.5, SHAFT_Y, KZ), new THREE.Vector3(tx - W, SHAFT_Y, KZ), new THREE.Vector3(tx - W, NOTCH_Y, KZ),
+      new THREE.Vector3(tx + W, NOTCH_Y, KZ), new THREE.Vector3(tx + W, SHAFT_Y, KZ), new THREE.Vector3(tx + W + 0.5, SHAFT_Y, KZ));
   }
-  pts.push(keyWorld.clone().addScaledVector(along, -1.6), keyWorld);
-  const path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-  ws.add(new THREE.Mesh(new THREE.TubeGeometry(path, 900, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
+  pts.push(new THREE.Vector3(LX - 1.2, SHAFT_Y, KZ), new THREE.Vector3(LX - 0.12, SHAFT_Y, KZ));
+  const path = new THREE.CatmullRomCurve3(pts, false, 'centripetal', 0.5);
+  const tubeMat = new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 });
+  ws.add(new THREE.Mesh(new THREE.TubeGeometry(path, 1000, 0.02, 6, false), tubeMat));
   const bitMats = [0, 1].map(b => new THREE.SpriteMaterial({ map: bitTex(String(b)), transparent: true, depthWrite: false }));
-  // the branches: from the end of the edge's notch along the shaft, then down to the draw screen, and on to the key exchange
-  const fTop = shaftAt(fairWorld), bStart = shaftAt(cfWorld).addScaledVector(along, 0.65 + 0.5);
-  const branch = new THREE.CatmullRomCurve3([bStart, fTop.clone().addScaledVector(along, -0.9), fTop.clone().addScaledVector(along, -0.15),
-    new THREE.Vector3(fTop.x, (fTop.y + fairWorld.y) / 2, fTop.z).lerp(fairWorld, 0.5), fairWorld.clone()], false, 'centripetal');
-  ws.add(new THREE.Mesh(new THREE.TubeGeometry(branch, 200, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
-  const bits = [], spawn = (curve, n, len) => { for (let i = 0; i < n; i++) { const b = new THREE.Sprite(bitMats[Math.random() < 0.5 ? 0 : 1]); b.scale.setScalar(0.24); b.userData = { u: i / n, curve, speed: 0.02 * path.getLength() / len }; ws.add(b); bits.push(b); } };
-  const kTop = shaftAt(kxWorld);
-  const branchKX = new THREE.CatmullRomCurve3([bStart, kTop.clone().addScaledVector(along, -0.9), kTop.clone().addScaledVector(along, -0.15),
-    new THREE.Vector3(kTop.x, SHAFT_Y - 0.6, kTop.z + 1.6), new THREE.Vector3(kxWorld.x, kxWorld.y + 1.4, kxWorld.z - 0.8), kxWorld.clone()], false, 'centripetal');
-  ws.add(new THREE.Mesh(new THREE.TubeGeometry(branchKX, 200, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
-  spawn(path, 150, path.getLength()); spawn(branch, 26, branch.getLength()); spawn(branchKX, 30, branchKX.getLength());   // the path is long: more bits, so the key reads as a line of them
+  const bits = [];
+  for (let i = 0; i < 180; i++) { const b = new THREE.Sprite(bitMats[Math.random() < 0.5 ? 0 : 1]); b.scale.setScalar(0.24); b.userData = { u: i / 180 }; ws.add(b); bits.push(b); }
   updates.push(dt => {
+    const sp = 0.02 * (reduceMotion ? 0.3 : 1) * (1 + 1.5 * Math.max(0, Math.min(1, doorK / 0.4)) * (doorK < 0.99 && doorTo ? 1 : 0));   // they hurry while the key turns
     for (const b of bits) {
-      b.userData.u = (b.userData.u + dt * (reduceMotion ? 0.3 : 1) * b.userData.speed) % 1;
-      b.position.copy(b.userData.curve.getPointAt(b.userData.u));
+      b.userData.u = (b.userData.u + dt * sp) % 1;
+      b.position.copy(path.getPointAt(b.userData.u));
       if (b.userData.u < 0.004) b.material = bitMats[Math.random() < 0.5 ? 0 : 1];   // a fresh measurement
     }
   });
 
-
-  // the title over the line: what it is, and which way to read it
-  { const t = textSprite([['THE QUANTUM V^ PLATFORM', '600 44px "IBM Plex Mono", monospace', '#5ff0ff'], ['From qubits to draws and keys', '92px "Young Serif", Georgia, serif', '#f1e6cf'],
-      ['FOLLOW THE BITS LEFT TO RIGHT · 1 → 5', '600 38px "IBM Plex Mono", monospace', '#8e99b0']], 1600, 330, 8.4); t.position.set(0.5, 8.6, -7.5); ws.add(t); }
-
-  // 7. Exit painting back to the hall
-  const exit = makeExitPainting(ws, { R, angleDeg: -100, pedMat, hit, stations, updates });
+  // the exit painting back to the hall, front left; Vee by the entrance
+  const exit = makeExitPainting(ws, { R, angleDeg: -128, pedMat, hit, stations, updates });
   const worldVee = addWorldVee(ws, PROJECTS.find(q => q.id === 'platform'), 'platform', hit, stations, updates, new THREE.Vector3(0, 1.7, 7.6));
   const portal = exit.portal, hallShot = exit.hallShot;
 
   return {
     kind: 'platform', accent: '#3fe0e0', accent2: '#8ea2ff', vee: worldVee,
-    scene: ws, stations, hit, radius: RADIUS, portal,
+    scene: ws, stations, hit, radius: 13, portal,
+    clamp: p => {   // the walls, and the lock's block on the right: pushed out the short way
+      p.x = Math.min(X1 - 0.6, Math.max(X0 + 0.6, p.x)); p.z = Math.min(Z1 - 0.6, Math.max(Z0 + 0.6, p.z));
+      const dx = p.x - (LX - 0.4), dz = (LZF + 0.4) - p.z;
+      if (dx > 0 && dz > 0) { if (dx < dz) p.x = LX - 0.4; else p.z = LZF + 0.4; }
+    },
     start: { pos: new THREE.Vector3(0, 1.7, 7.6), yaw: 0, pitch: 0.1 },
     update(dt, t) { for (const u of updates) u(dt, t); },
     dispose() {
@@ -7678,6 +7801,7 @@ function veeDestination(id) {
     case 'measurements': return MEAS_STOP;
     case 'ai-guides': return AI_LAB.stops[0];
     case 'dr-z': return AI_LAB.stops[1];
+    case 'qes-kx': return KX_STOP;
     case 'clu': return AI_LAB.stops[2];
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'loot-chest': return ENTROPY_ROOM.stops.loot;
