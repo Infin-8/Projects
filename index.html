@@ -2219,6 +2219,166 @@ const KX_STOP = (() => {
   B1.blocks.push({ x0: KXX - 0.75, x1: B1.x1, z0: KXZ - X * S - 0.75, z1: KXZ + X * S + 0.75 });
   return { exhibit: true, floor: FI.b1, center: new THREE.Vector3(KXX, B1.y + 1.7, KXZ), normal: new THREE.Vector3(-1, 0, 0), standOff: 4.8, pitch: 0.1 };
 })();
+
+/* ---------- The chip atlas (B1, east wall south of the lift; built 2026-11-26) ----------
+   Three real IBM Quantum processors, every working qubit measured at once by Quantum V^ (one job per chip, raw
+   counts, no mitigation): ibm_kingston, ibm_marrakesh and ibm_fez. On the wall, a chip plate carries one bead per
+   qubit in the chip's real lattice (Heron: rows of 16, joined by bridge qubits), coloured by the measurement on view;
+   beside it a panel says what the measurement means and computes, live from the data, the medians, the spread, the
+   temperature and a three-chip comparison. Tap the chip for the next measurement, the panel for the next chip.
+   Data: assets/chip-atlas-2026-11-26.json, made from the atlas runs (SteadyWatch quantum_computing/chip_atlas.py). */
+const ATLAS = (() => {
+  const WX = B1.x1 - 0.06, CY = 3.0, PLATE_Z = 1.6, PANEL_Z = 3.9, RY = -Math.PI / 2;   // on the east wall, facing west, south of the lift's floor guide (which ends at z 0.3)
+  const H_ = 6.62607015e-34, KB_ = 1.380649e-23;
+  const S = { data: null, chip: 0, prop: 0, fade: 1, loading: false };
+  const INF = ['#000004', '#320a5e', '#781c6d', '#bc3754', '#ed6925', '#fbb61a', '#fcffa4'];
+  const VIR = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725'];
+  const DIV = ['#c0392b', '#e8826f', '#f2f2f2', '#7fa7e8', '#2b5fc0'];   // red: falls faster when watched, blue: slower
+  const ramp = (stops, t) => { t = Math.min(1, Math.max(0, t)); const k = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(k)); return new THREE.Color(stops[i]).lerp(new THREE.Color(stops[i + 1]), k - i); };
+  const temp = (p, f) => p > 0 && p < 0.5 ? H_ * f / (KB_ * Math.log((1 - p) / p)) * 1e3 : null;
+  const PROPS = [
+    { i: 2, name: 'How warm it sits', unit: 'share of the time found excited', fmt: v => (v * 100).toFixed(2) + '%', stops: INF,
+      text: 'Left alone, a qubit should sit in 0. Read twice to separate real excitations from misreads: a few tenths of a percent are excited by the heat around them.' },
+    { i: 3, name: 'How long it holds a step up', unit: 'T1, energy decay time', fmt: v => v.toFixed(0) + ' µs', stops: VIR,
+      text: 'Put it in 1 and wait. T1 is how long it holds the step before it gives the energy back. Every bead is its own measurement.' },
+    { i: 4, name: 'Does watching make it fall?', unit: 'T1 watched every 20 µs ÷ T1 left alone', fmt: v => v.toFixed(2) + '×', stops: DIV, fixed: [0.6, 1.4],
+      text: 'Red beads fall faster when watched. At any moment about one qubit in eight does, a different few each time, on every chip.' },
+    { i: 5, name: 'What one look costs', unit: 'prepared in 1, not read 1 twice in a row', fmt: v => (v * 100).toFixed(1) + '%', stops: INF,
+      text: 'Two reads 2.7 µs apart. What is lost is misreads, a little natural decay, and the readout pulse knocking the qubit down.' },
+    { i: 6, name: 'How long its beat lasts', unit: 'T2*, Ramsey coherence time', fmt: v => v.toFixed(0) + ' µs', stops: VIR,
+      text: 'A mix of 0 and 1 beats like a tiny oscillating charge. T2* is how long the beat stays in step before noise smears it out.' },
+    { i: 7, name: 'The beat, rescued', unit: 'T2 with one echo flip', fmt: v => v.toFixed(0) + ' µs', stops: VIR,
+      text: 'Flip the qubit halfway and slow noise undoes itself. On every chip, almost every qubit holds its beat longer this way than without the flip.' },
+  ];
+
+  // the plate: a dark slab with a gold rim; beads and couplers are added when the data arrives
+  const g = new THREE.Group(); g.position.set(WX, CY, PLATE_Z); g.rotation.y = RY; B1.g.add(g);
+  const PW = 2.2, PHh = 2.05, U = 0.125;   // plate size, lattice spacing
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(PW, PHh, 0.06), new THREE.MeshStandardMaterial({ color: 0x0b0f18, metalness: 0.6, roughness: 0.4 }));
+  plate.position.z = 0.03; g.add(plate);
+  const rim = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(PW, PHh, 0.06)), new THREE.LineBasicMaterial({ color: 0xd9a441 })); rim.position.z = 0.03; g.add(rim);
+  let beads = null, lines = null, xs = [];
+  const beadGeo = new THREE.SphereGeometry(0.034, 14, 10), beadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.25 });
+  const capC = mk(1024, 96), capP = capC.getContext('2d'), capT = new THREE.CanvasTexture(capC);
+  const cap = new THREE.Mesh(new THREE.PlaneGeometry(PW, PW * 96 / 1024), new THREE.MeshBasicMaterial({ map: capT, transparent: true }));
+  cap.position.set(0, PHh / 2 + 0.2, 0.01); g.add(cap);
+
+  // the panel beside it
+  const PC = mk(1024, 1200), pp = PC.getContext('2d'), ptex = new THREE.CanvasTexture(PC); ptex.anisotropy = 8;
+  const PNW = 2.0, PNH = PNW * 1200 / 1024;
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(PNW, PNH), new THREE.MeshBasicMaterial({ map: ptex }));
+  panel.position.set(WX, CY, PANEL_Z); panel.rotation.y = RY; B1.g.add(panel);
+  glassFrame(B1.g, PNW, PNH, WX - 0.02, CY, PANEL_Z, RY, 0.06, 0.06);
+
+  const chipVals = (c, P) => c.q.filter(r => r[1] && r[P.i] != null).map(r => r[P.i]).sort((a, b) => a - b);
+  const pct = (v, p) => v.length ? v[Math.min(v.length - 1, Math.max(0, Math.round(p / 100 * (v.length - 1))))] : null;
+
+  function buildChip() {
+    const c = S.data.chips[S.chip];
+    if (beads) { g.remove(beads); beads.geometry !== beadGeo && beads.geometry.dispose(); }
+    if (lines) { g.remove(lines); lines.geometry.dispose(); }
+    const co = c.coords, maxX = 15, maxY = 14;
+    const at = q => { const p = co[q]; return new THREE.Vector3((p[0] - maxX / 2) * U, (maxY / 2 - p[1]) * U, 0.075); };
+    const lp = []; for (const [a, b] of c.edges) { const A = at(a), B = at(b); lp.push(A.x, A.y, 0.065, B.x, B.y, 0.065); }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+    lines = new THREE.LineSegments(lg, lineMat); g.add(lines);
+    beads = new THREE.InstancedMesh(beadGeo, beadMat, c.num_qubits); xs = [];
+    const m = new THREE.Matrix4(), seen = new Set(c.q.map(r => r[0]));
+    for (let q = 0; q < c.num_qubits; q++) {
+      const p = at(q), r = c.q.find(x => x[0] === q), small = !r || !r[1];
+      m.makeScale(small ? 0.55 : 1, small ? 0.55 : 1, small ? 0.55 : 1); m.setPosition(p); beads.setMatrixAt(q, m);
+      beads.setColorAt(q, new THREE.Color(seen.has(q) ? '#59606e' : '#2a2f3a'));
+    }
+    beads.instanceMatrix.needsUpdate = true; g.add(beads);
+  }
+  const target = [], current = [];
+  function colour() {
+    const c = S.data.chips[S.chip], P = PROPS[S.prop], v = chipVals(c, P);
+    const lo = P.fixed ? P.fixed[0] : pct(v, 5), hi = P.fixed ? P.fixed[1] : pct(v, 95);
+    for (let q = 0; q < c.num_qubits; q++) {
+      const r = c.q.find(x => x[0] === q);
+      target[q] = (!r || !r[1] || r[P.i] == null) ? new THREE.Color('#3a404c') : ramp(P.stops, (r[P.i] - lo) / Math.max(1e-9, hi - lo));
+      if (!current[q]) current[q] = target[q].clone();
+    }
+    S.fade = 0; drawPanel(lo, hi, v); drawCap();
+  }
+  function drawCap() {
+    const c = S.data.chips[S.chip], P = PROPS[S.prop], p = capP;
+    p.clearRect(0, 0, 1024, 96); p.textAlign = 'center';
+    p.fillStyle = '#f1e6cf'; p.font = '46px "Young Serif", Georgia, serif'; p.fillText(`${c.backend} · ${P.name}`, 512, 62);
+    capT.needsUpdate = true;
+  }
+  function drawPanel(lo, hi, v) {
+    const c = S.data.chips[S.chip], P = PROPS[S.prop], p = pp;
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 1200); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(6, 6, 1012, 1188);
+    p.textAlign = 'left';
+    p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('CHIP ATLAS · THREE REAL QUANTUM PROCESSORS', 52, 74);
+    p.fillStyle = '#f1e6cf'; p.font = '60px "Young Serif", Georgia, serif'; p.fillText(P.name, 52, 150);
+    p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(P.unit.toUpperCase(), 52, 192);
+    p.fillStyle = '#c9d2e3'; p.font = '30px "IBM Plex Sans", sans-serif'; let y = wrapText(p, P.text, 52, 250, 920, 42);
+    // the colour scale
+    y += 30; const BW = 920;
+    for (let k = 0; k < BW; k++) { p.fillStyle = '#' + ramp(P.stops, k / BW).getHexString(); p.fillRect(52 + k, y, 1, 28); }
+    p.fillStyle = '#c9d2e3'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(P.fmt(lo), 52, y + 62); p.textAlign = 'right'; p.fillText(P.fmt(hi), 52 + BW, y + 62); p.textAlign = 'left';
+    // this chip, computed from the data
+    const med = pct(v, 50); y += 130;
+    p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(`${c.backend.toUpperCase()} · ${v.length} HEALTHY QUBITS OF ${c.num_qubits}`, 52, y);
+    p.fillStyle = '#ffc24a'; p.font = '600 72px "IBM Plex Mono", monospace'; p.fillText(P.fmt(med), 52, y + 84);
+    p.fillStyle = '#c9d2e3'; p.font = '28px "IBM Plex Sans", sans-serif';
+    let note = `the median · most qubits between ${P.fmt(pct(v, 10))} and ${P.fmt(pct(v, 90))}`;
+    if (P.i === 2) { const t0 = temp(med, 4.5e9), t1 = temp(med, 5.2e9); if (t0 && t1) note = `the median: a bath of about ${t0.toFixed(0)}–${t1.toFixed(0)} mK, several times warmer than the ~10 mK coldest plate of a dilution fridge`; }
+    if (P.i === 4) { const n = v.filter(x => x < 0.8).length; note = `${n} of ${v.length} fall clearly faster when watched (below 0.8×)`; }
+    y = wrapText(p, note, 52, y + 132, 920, 38);
+    // the three chips side by side
+    y += 34; p.fillStyle = '#8e99b0'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText('THE SAME MEASUREMENT, ALL THREE CHIPS (MEDIAN)', 52, y);
+    S.data.chips.forEach((ch, k) => {
+      const vv = chipVals(ch, P), yy = y + 52 + k * 46;
+      p.fillStyle = k === S.chip ? '#5ff0ff' : '#c9d2e3'; p.font = `${k === S.chip ? 600 : 400} 28px "IBM Plex Mono", monospace`;
+      p.fillText(ch.backend, 52, yy); p.textAlign = 'right'; p.fillText(P.fmt(pct(vv, 50)), 972, yy); p.textAlign = 'left';
+    });
+    y += 52 + 3 * 46 + 20;
+    p.fillStyle = '#5b6680'; p.font = '600 20px "IBM Plex Mono", monospace';
+    p.fillText(`JOB ${c.job_id} · ${c.run_at.replace('T', ' ').replace('+00:00', ' UTC')}`, 52, y);
+    p.fillText('RAW COUNTS, NO MITIGATION · GREY: FILTERED OUT AS UNHEALTHY', 52, y + 32);
+    p.fillText('EACH QUBIT DRIFTS BY TENS OF PERCENT WITHIN HOURS', 52, y + 64);
+    p.fillStyle = '#ffc24a'; p.font = '600 24px "IBM Plex Mono", monospace';
+    p.fillText(`${coarseTap()} THE CHIP: NEXT MEASUREMENT · THIS PANEL: NEXT CHIP`, 52, 1160);
+    ptex.needsUpdate = true;
+  }
+  const coarseTap = () => matchMedia('(pointer: coarse)').matches ? 'TAP' : 'CLICK';
+  function idle(msg) {
+    const p = pp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 1200); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(6, 6, 1012, 1188);
+    p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 26px "IBM Plex Mono", monospace'; p.fillText('CHIP ATLAS', 52, 74);
+    p.fillStyle = '#8e99b0'; p.font = '28px "IBM Plex Sans", sans-serif'; p.fillText(msg, 52, 150); ptex.needsUpdate = true;
+  }
+  idle('Loading the measurements…');
+  function load() {
+    if (S.data || S.loading) return; S.loading = true;
+    fetch('assets/chip-atlas-2026-11-26.json').then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(d => { S.data = d; buildChip(); colour(); })
+      .catch(() => { S.loading = false; idle('The measurements did not load. Step back in to try again.'); });
+  }
+  buildingUpdates.push(dt => {
+    if (!B1.g.visible) return;
+    load();
+    if (!beads || S.fade >= 1) return;
+    S.fade = Math.min(1, S.fade + dt / (reduceMotion ? 0.01 : 0.7));
+    const c = S.data.chips[S.chip];
+    for (let q = 0; q < c.num_qubits; q++) { if (!target[q]) continue; current[q].lerp(target[q], Math.min(1, S.fade * 1.6)); beads.setColorAt(q, current[q]); }
+    beads.instanceColor.needsUpdate = true;
+  });
+  const N_ = new THREE.Vector3(-1, 0, 0);
+  const act = (id, title, verb, mesh, z, fn) => {
+    const st = { id, tap: true, mesh, floor: FI.b1, info: { title }, center: new THREE.Vector3(WX, B1.y + CY, z), normal: N_, standOff: 4.4, pitch: 0.08,
+      actVerb: () => verb, act: () => { if (S.data) fn(); }, actLift: -1.3 };
+    setTimeout(() => hallActs.push(st), 0);   // hallActs is declared further down the script
+    return st;
+  };
+  const chipSt = act('atlas-chip', 'Chip atlas', 'Next measurement', plate, PLATE_Z, () => { S.prop = (S.prop + 1) % PROPS.length; colour(); });
+  act('atlas-panel', 'Chip atlas', 'Next chip', panel, PANEL_Z, () => { S.chip = (S.chip + 1) % S.data.chips.length; current.length = 0; buildChip(); colour(); });
+  return { stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + CY, (PLATE_Z + PANEL_Z) / 2), normal: N_, standOff: 4.8, pitch: 0.06 }, S };
+})();
 /* ---------- The data wall ----------
    Six screens on the west wall (with the measurement record's two in a fourth column), behind the cryostat as you step out of the lift: what the live
    QRNG service is producing, where its entropy comes from (the attestation, the three hives and
@@ -6198,7 +6358,7 @@ const wingStop = { exhibit: true, floor: FI.l3, center: new THREE.Vector3(ATRIUM
 function floorStops(i) {
   const out = [];
   if (i === FI.b2) { if (RECLUDA_WALL.stop) out.push(['About Recluda', RECLUDA_WALL.stop]); out.push(['Server rack', RACK_STOP], ['A VPN sign-in', SIGNIN_STOP], ['Install', INSTALL.stop]); }
-  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP], ['QES-KX', KX_STOP]);
+  if (i === FI.b1) out.push(['▶ The source', { run: startStoryTour }], ['Cryostat', CRYO_STOP], ['Pool storage', POOL_STOP], ['Measurements', MEAS_STOP], ['Chip atlas', ATLAS.stop], ['QES-KX', KX_STOP]);
   if (i === FI.l1) out.push(['Double slit', SLIT_STOP], ['Vee', AI_LAB.stops[0]], ['Dr. Z', AI_LAB.stops[1]], ['Clu', AI_LAB.stops[2]], ['Entropy Room', ENTROPY_ROOM.stops.coins]);
   if (i === FI.l3) out.push(['Entropy pools', wingStop]); if (i === FI.l3 && PLATFORM_WALL.stop) out.push(['The platform', PLATFORM_WALL.stop]);
   for (const pt of paintings) if (pt.floor === i && !pt.mascot) out.push([pt.kiosk ? ABOUT.promptName : pt.p.name, pt]);
@@ -7802,6 +7962,7 @@ function veeDestination(id) {
     case 'ai-guides': return AI_LAB.stops[0];
     case 'dr-z': return AI_LAB.stops[1];
     case 'qes-kx': return KX_STOP;
+    case 'chip-atlas': return ATLAS.stop;
     case 'clu': return AI_LAB.stops[2];
     case 'entropy-room': return ENTROPY_ROOM.stops.coins;
     case 'loot-chest': return ENTROPY_ROOM.stops.loot;
