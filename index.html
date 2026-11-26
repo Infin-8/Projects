@@ -560,7 +560,7 @@ const PROJECTS = [
   },
   {
     id: 'platform', name: 'Quantum V^ EaaS', tagline: 'Entropy as a Service: randomness you can prove', wing: 'Platform',
-    desc: 'Randomness you can prove, as a service. Provably fair draws lock in loot drops, shuffles, raffles and lotteries before the player acts, and anyone can check them after. The QRNG API serves bytes, numbers, UUIDs and 32-byte QES-256 keys from a generator seeded on IBM Quantum hardware, each run listed by job ID, with fresh system randomness mixed into every draw. Free to use, no account.',
+    desc: 'Randomness you can prove, as a service. Provably fair draws lock in loot drops, shuffles, raffles and lotteries before the player acts, and anyone can check them after. The QRNG API serves bytes, numbers, UUIDs and 32-byte QES-256 keys from a quantum-seeded generator: its seed was measured in runs on IBM Quantum hardware, whose job IDs are public (they document the seed, not each draw), and fresh system randomness is mixed into every draw. Free to use, no account.',
     modules: [['FAIR DRAWS','Provably fair draws: commit, draw, check. Loot drops, shuffles, raffles, lotteries'],['QRNG API','Quantum-seeded bytes, integers, floats, UUIDs and QES-256 keys; free, no account'],['THE PROOF','The seed\'s IBM Quantum job IDs and fingerprints, public in the attestation'],['THE STACK','IBM Quantum · Raspberry Pi · Cloudflare']],
     stack: 'IBM Quantum · SHA-256 · HKDF · Cloudflare · Raspberry Pi',
     links: [['Quantum V^','https://quantumv.dev/'],['Fair draws','https://quantumv.dev/fair'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status'],['Support','mailto:support@quantumv.dev']],
