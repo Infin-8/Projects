@@ -560,10 +560,10 @@ const PROJECTS = [
   },
   {
     id: 'platform', name: 'Quantum V^ Platform', tagline: 'Entropy as a Service', wing: 'Platform',
-    desc: 'Quantum-derived randomness as a service, from the Quantum V^ research. Its QRNG API serves bytes from an entropy pool seeded on IBM Quantum hardware, and QES-256 turns them into 32-byte keys. It is a quantum-seeded generator: each hardware run behind the seed is listed by IBM Quantum job ID, and fresh system randomness is mixed into every draw.',
-    modules: [['Q-RNG','Quantum-seeded random number API (IBM Quantum hardware seed)'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
+    desc: 'Randomness you can verify, as a service. Provably fair draws lock in loot drops, shuffles, raffles and lotteries before the player acts, and anyone can check them after. The QRNG API serves bytes from a generator seeded on IBM Quantum hardware, each run listed by job ID, with fresh system randomness mixed into every draw; QES-256 turns them into 32-byte keys.',
+    modules: [['FAIR DRAWS','Provably fair draws: commit, draw, check. Loot drops, shuffles, raffles, lotteries'],['Q-RNG','Quantum-seeded random number API (IBM Quantum hardware seed)'],['QES-KX','Hybrid X25519 + ML-KEM-768 (FIPS 203) key exchange via HKDF; the relay never sees the derived key'],['QCAP STACK','IBM Quantum · Cloudflare · Secure Enclave · Raspberry Pi']],
     stack: 'IBM Quantum · X25519 · ML-KEM-768 · HKDF · Cloudflare · Raspberry Pi',
-    links: [['Quantum V^','https://quantumv.dev/'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status'],['Support','mailto:support@quantumv.dev']],
+    links: [['Quantum V^','https://quantumv.dev/'],['Fair draws','https://quantumv.dev/fair'],['Q-RNG demo','https://quantumv.dev/qrng'],['QES-256','https://quantumv.dev/qes-rng'],['Live status','https://quantumv.dev/status'],['Support','mailto:support@quantumv.dev']],
     theme: { bg: '#0a0a1f', fg: '#e6e6ff', accent: '#8ea2ff' }, logo: 'assets/quantumv-logo.png',
     floor: 'l1', stand: true, pos: [0, 3.4, -0.2], rotY: 0, size: [6.4, 4.4]   // freestanding, front and centre in the lobby
   }
@@ -667,7 +667,7 @@ function drawPlatform(c, img) {
   g.fillText('Quantum V^', 560, 150);
   g.font = '28px "IBM Plex Mono", monospace'; g.fillStyle = '#8ea2ff'; g.fillText('PLATFORM · EaaS', 562, 194);
   g.font = '600 20px "IBM Plex Mono", monospace'; g.fillStyle = '#e6e6ff';
-  ['Q-RNG', 'QES-256', 'QES-KX', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
+  ['FAIR DRAWS', 'Q-RNG', 'QES-256', 'QES-KX', 'QCAP STACK'].forEach((t, i) => { g.fillStyle = '#ffd36b'; g.fillText('▸', 562, 270 + i * 40); g.fillStyle = '#e6e6ff'; g.fillText(t, 590, 270 + i * 40); });
   g.fillStyle = '#8ea2ff'; g.font = '16px "IBM Plex Mono", monospace'; g.fillText('32-byte key (illustration)', 562, 470);
   g.fillStyle = '#e6e6ff'; g.font = '20px "IBM Plex Mono", monospace';
   for (let i = 0; i < 4; i++) g.fillText(keyHex.slice(i * 16, i * 16 + 16).replace(/(..)/g, '$1 ').trim(), 562, 505 + i * 30);
@@ -5638,11 +5638,11 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
-      ['quantum', 'IBM Quantum', 'Random bits start here, measured on quantum hardware.'],
+      ['quantum', 'IBM Quantum', 'The seed starts here, measured on quantum hardware.'],
       ['cloudflare', 'Cloudflare', 'The edge network in front of the platform.'],
       ['pi', 'Raspberry Pi', 'Runs the Q-RNG API and the OIDC identity provider.'],
-      ['enclave', 'Apple Secure Enclave', 'On iPhone, keys stay bound to the Secure Enclave.'],
-      ['key', 'QES-256', 'A 32-byte key, linked to an IBM Quantum job ID.'],
+      ['enclave', 'Apple Secure Enclave', 'Recluda\'s sign-in key stays here, separate from QES-256.'],
+      ['key', 'QES-256', 'A 32-byte key from the generator the seed started.'],
       ['qes-kx', 'QES-KX', 'X25519 and ML-KEM-768, combined with HKDF.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
@@ -6175,16 +6175,18 @@ promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (wo
    The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
    cryostat flow through Cloudflare and the Raspberry Pi to the Secure Enclave
    and end in a 32-byte key; the QES-KX exchange stands behind the entrance.
+   (2026-11-25: the stations say what's true of the pivot: job IDs document the seed, not each key, and Recluda's
+   Secure Enclave key is separate from QES-256; the display and its modules lead with provably fair draws.)
    Built when you step in, freed when you leave. */
 let world = null;
 let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
 const worldPanel = document.getElementById('worldPanel');
 const PLATFORM_STATIONS = [
-  { id: 'quantum', title: 'IBM Quantum', text: 'Random bits come from measuring qubits on IBM Quantum hardware. Each batch is tied to a verifiable IBM Quantum job ID.' },
+  { id: 'quantum', title: 'IBM Quantum', text: 'The QRNG\'s seed comes from measuring qubits on IBM Quantum hardware. Every run is listed by its IBM Quantum job ID, so anyone can check where the seed came from.' },
   { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform, serving the API and the live demos.' },
   { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
-  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, iPad or Mac, Recluda keeps its approval key in the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID).' },
-  { id: 'key', title: 'QES-256 key', text: 'QES-256 turns the entropy into 32-byte keys, each linked to a verifiable IBM Quantum job ID. The bytes shown here are an illustration.' },
+  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, iPad or Mac, Recluda keeps its approval key in the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID). That key is made on the device, separate from QES-256.' },
+  { id: 'key', title: 'QES-256 key', text: 'QES-256 keys are 32 bytes from the quantum-seeded generator, with fresh system randomness mixed in. The job IDs document the seed, not any single key. The bytes shown here are an illustration.' },
   { id: 'qes-kx', title: 'QES-KX', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
 
