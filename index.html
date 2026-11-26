@@ -2904,7 +2904,10 @@ function buildEntropyRoom() {
   const dot = (() => { const c = mk(64, 64), p = c.getContext('2d'), gr = p.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); p.fillStyle = gr; p.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();   // round, soft-edged points
 
   /* 1 · A brand-new deck (left, by the door): 52 cards fanned in new-deck order; tap to riffle-shuffle (the
-     Gilbert–Shannon–Reeds model: cut where the bits say, then drop cards from each half in proportion to its size) */
+     Gilbert–Shannon–Reeds model: cut where the bits say, then drop cards from each half in proportion to its size).
+     Since 2026-11-25 each card wears a coloured tab for the rising sequence it's in (a run of consecutive cards, 3 4 5…,
+     that appear in order through the deck): a new deck is one sequence, one colour; a riffle can at most double the
+     count, and a random deck has about 26, which is why it takes about seven shuffles (Bayer and Diaconis, 1992). */
   {
     const X = ROWS[0], Z = A.z0 + 1.4, TOP = 0.95, grp = new THREE.Group(); grp.position.set(X, TOP, Z); g.add(grp);
     plinth(X, Z, 2.0, TOP, 0.7);
@@ -2920,7 +2923,8 @@ function buildEntropyRoom() {
       p.textAlign = 'center'; p.font = '80px serif'; p.fillText(sym, 82, 150);
       const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
       const m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); grp.add(m);
-      cards.push({ m, from: i, to: i });
+      const tab = new THREE.Mesh(new THREE.PlaneGeometry(CW * 0.86, 0.022), new THREE.MeshBasicMaterial({ color: 0x5ff0ff, side: THREE.DoubleSide })); tab.position.set(0, CH / 2 + 0.017, 0.001); m.add(tab);
+      cards.push({ m, tab, from: i, to: i });
     }
     let order = [...Array(52).keys()], shuffles = 0, anim = 1;   // order[slot] = card
     const place = (cd, s, lift) => {
@@ -2928,11 +2932,16 @@ function buildEntropyRoom() {
       cd.m.position.set(Math.sin(a) * r, PIV + Math.cos(a) * r, 0.002 * s + lift * 0.4); cd.m.rotation.z = -a;
     };
     const layout = t => { const e = ease(Math.min(1, t)); cards.forEach(cd => place(cd, cd.from + (cd.to - cd.from) * e, Math.sin(Math.PI * e) * 0.18)); };
-    const inOrder = () => { let n = 0; for (let s = 0; s < 51; s++) if (order[s + 1] === order[s] + 1) n++; return n; };
+    const rising = () => {   // card c+1 earlier in the deck than card c starts a new rising sequence; each card's tab takes its sequence's colour
+      const at = new Array(52); order.forEach((cd, sl) => { at[cd] = sl; });
+      let seq = 0;
+      for (let c = 0; c < 52; c++) { if (c && at[c] < at[c - 1]) seq++; cards[c].tab.material.color.setHSL((0.5 + seq * 0.618034) % 1, 0.75, 0.6); }
+      return seq + 1;
+    };
     const cap = caption(X, Z + 0.95, 0, 'A brand-new deck',
-      'Fresh from the box, every card is in order. Shuffle and that order is gone for good: 52 cards can be ordered 8 × 10⁶⁷ ways, and only one of them is new-deck order. Mixed-up simply has far more ways to happen.');
-    const refresh = () => cap.redraw(shuffles ? `SHUFFLES: ${shuffles} · CARDS STILL BESIDE THEIR NEIGHBOUR: ${inOrder()} OF 51` : 'NEW-DECK ORDER · 51 OF 51 CARDS BESIDE THEIR NEIGHBOUR',
-      shuffles >= 7 ? `${TAP} TO OPEN A NEW DECK (SHUFFLING NEVER GETS BACK THERE)` : `${TAP} TO SHUFFLE`);
+      'Fresh from the box, every card is in order. Shuffle and that order is gone for good: 52 cards can be ordered 8 × 10⁶⁷ ways, only one of them new-deck order. The colours on top mark rising sequences: each riffle can at most double them, and a random deck has about 26, so it takes about seven shuffles.');
+    const refresh = () => { const r = rising(); cap.redraw(shuffles ? `SHUFFLES: ${shuffles} · RISING SEQUENCES: ${r} (AT MOST ${2 ** shuffles}) · RANDOM ≈ 26` : 'NEW-DECK ORDER: ONE RISING SEQUENCE, ONE COLOUR',
+      shuffles >= 7 ? `${TAP} TO OPEN A NEW DECK (SHUFFLING NEVER GETS BACK THERE)` : `${TAP} TO SHUFFLE`); };
     const shuffle = () => {
       if (anim < 1) return;
       let next;
@@ -2955,7 +2964,10 @@ function buildEntropyRoom() {
     });
   }
 
-  /* 2 · Cream in your coffee (left, toward the back): cream poured on top spreads by itself and never gathers again */
+  /* 2 · Cream in your coffee (left, row two): cream poured on top spreads by itself and never gathers again. Since
+     2026-11-25 a panel on the wall behind counts the real ways: the 308 cream drops' places across 8 equal layers of
+     the mug, W = 308! ÷ (n₁!·n₂!·…·n₈!), from the simulation's own particles. Poured into the top layer it's exactly
+     1 way; mixed, about 10^270, and it never comes back (give or take a wobble). */
   {
     const X = ROWS[1], Z = A.z0 + 1.4, TOP = 0.9, MR = 0.4, MH = 0.8, N = 1400;
     plinth(X, Z, 1.2, TOP, 1.2);
@@ -2967,12 +2979,44 @@ function buildEntropyRoom() {
     const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.05, map: dot, vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
     pts.position.set(X, TOP + 0.02, Z); pts.frustumCulled = false; g.add(pts);
     const COFFEE = new THREE.Color('#9a6234'), CREAM = new THREE.Color('#fff1d6');
+    const Y0 = 0.01, YH = MH * 0.98, LAYERS = 8, NC = Math.round(N * 0.22);   // the drops' reach, and 8 equal slices of it (equal volumes: it's a cylinder)
+    const lf = new Float64Array(NC + 1); for (let q = 1; q <= NC; q++) lf[q] = lf[q - 1] + Math.log10(q);   // log10 of q!
+    const MAXW = lf[NC] - (NC % LAYERS) * lf[Math.ceil(NC / LAYERS)] - (LAYERS - NC % LAYERS) * lf[Math.floor(NC / LAYERS)];   // the most ways: as even as it gets
+    const layerCounts = () => { const c = new Array(LAYERS).fill(0); for (let i = 0; i < N; i++) if (cream[i]) c[Math.min(LAYERS - 1, Math.max(0, Math.floor((pos[i * 3 + 1] - Y0) / (YH - Y0) * LAYERS)))]++; return c; };
+    // the panel on the wall behind: the cream's layers as bars, and the count of ways
+    const WC = mk(1024, 900), wp = WC.getContext('2d'), wtex = new THREE.CanvasTexture(WC); wtex.anisotropy = 8;
+    { const PW = 1.8, m = new THREE.Mesh(new THREE.PlaneGeometry(PW, PW * 900 / 1024), new THREE.MeshBasicMaterial({ map: wtex })); m.position.set(X, 2.65, A.z0 + 0.08); g.add(m);
+      glassFrame(g, PW, PW * 900 / 1024, X, 2.65, A.z0 + 0.08, 0, 0.06, 0.06); }
+    const SUPW = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+    const drawWays = c => {
+      const p = wp, lw = lf[NC] - c.reduce((a, n) => a + lf[n], 0), e = Math.round(lw);
+      p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 900); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(6, 6, 1012, 888);
+      p.textAlign = 'left'; p.fillStyle = '#5ff0ff'; p.font = '600 28px "IBM Plex Mono", monospace'; p.fillText('COUNTING THE WAYS', 48, 66);
+      p.fillStyle = '#f1e6cf'; p.font = '40px "Young Serif", Georgia, serif'; p.fillText(`Where the ${NC} cream drops are`, 48, 122);
+      const BX = 220, BW2 = 560, BY = 160, BH = 42, BG = 10;   // the layers, top of the mug first
+      for (let L2 = LAYERS - 1, row = 0; L2 >= 0; L2--, row++) {
+        const y = BY + row * (BH + BG), w = BW2 * c[L2] / NC;
+        p.fillStyle = 'rgba(154,98,52,0.35)'; p.fillRect(BX, y, BW2, BH);
+        p.fillStyle = '#fff1d6'; p.fillRect(BX, y, w, BH);
+        p.fillStyle = '#8e99b0'; p.font = '600 20px "IBM Plex Mono", monospace'; p.textAlign = 'right'; p.fillText(row === 0 ? 'TOP' : row === LAYERS - 1 ? 'BOTTOM' : '', BX - 16, y + 28);
+        p.textAlign = 'left'; p.fillStyle = '#f1e6cf'; p.font = '600 24px "IBM Plex Mono", monospace'; p.fillText(String(c[L2]), BX + BW2 + 18, y + 30);
+      }
+      const ex = BX + BW2 * (NC / LAYERS) / NC; p.strokeStyle = '#5ff0ff'; p.setLineDash([6, 6]); p.lineWidth = 2; p.beginPath(); p.moveTo(ex, BY - 8); p.lineTo(ex, BY + LAYERS * (BH + BG)); p.stroke(); p.setLineDash([]);
+      p.fillStyle = '#5ff0ff'; p.font = '600 18px "IBM Plex Mono", monospace'; p.fillText('EVENLY MIXED', ex + 8, BY - 14);
+      const wy = BY + LAYERS * (BH + BG) + 60;
+      p.fillStyle = '#8e99b0'; p.font = '600 22px "IBM Plex Mono", monospace'; p.fillText('WAYS TO ARRANGE THEM ACROSS THE 8 LAYERS', 48, wy);
+      p.fillStyle = '#ffc24a'; p.font = '600 76px "IBM Plex Mono", monospace'; p.fillText(e < 1 ? '1' : `10${String(e).split('').map(d => SUPW[+d]).join('')}`, 48, wy + 82);
+      p.fillStyle = '#c9d2e3'; p.font = '26px "IBM Plex Sans", sans-serif'; p.fillText(e < 1 ? 'All on top: just one way.' : `Out of at most 10${String(Math.round(MAXW)).split('').map(d => SUPW[+d]).join('')}, when evenly mixed.`, 420, wy + 70);
+      const gy = wy + 116; p.fillStyle = 'rgba(63,224,224,0.15)'; p.fillRect(48, gy, 928, 14); p.fillStyle = '#ffc24a'; p.fillRect(48, gy, 928 * Math.max(0, lw) / MAXW, 14);
+      p.fillStyle = '#5b6680'; p.font = '600 18px "IBM Plex Mono", monospace'; p.fillText(`W = ${NC}! ÷ (n₁! n₂! … n₈!) · BAR: THE EXPONENT, AGAINST ITS MOST`, 48, gy + 46);
+      wtex.needsUpdate = true; return e;
+    };
     const pour = () => {
       for (let i = 0; i < N; i++) {
         const a = Math.random() * Math.PI * 2, r = MR * 0.95 * Math.sqrt(Math.random()), top = i < N * 0.22;
         cream[i] = top ? 1 : 0;
         pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 2] = Math.sin(a) * r;
-        pos[i * 3 + 1] = top ? MH * (0.8 + 0.18 * Math.random()) : MH * 0.78 * Math.random();
+        pos[i * 3 + 1] = top ? Y0 + (YH - Y0) * (7 + Math.random()) / 8 : Y0 + (YH - Y0) * 7 / 8 * Math.random();   // the cream all in the top layer: 1 way
         (top ? CREAM : COFFEE).toArray(col, i * 3);
       }
       geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
@@ -2984,10 +3028,11 @@ function buildEntropyRoom() {
     const cap = caption(X, Z + 0.95, 0, 'Cream in your coffee',
       'Pour in cream and it spreads out by itself. Wait all day and it never gathers back on top. Nothing forbids it; there are just vastly more mixed ways for the drops to be than unmixed ones.');
     let shown = -1;
-    const refresh = m => cap.redraw(`MIXED: ${m}%  ${m >= 95 ? '· AND IT STAYS THAT WAY' : ''}`, `${TAP} TO POUR A FRESH CUP`);
-    pour(); refresh(0);
-    exhibit('coffee', 'Cream in your coffee', 'Pour', X, TOP + 0.5, Z, 0, 1, [1.1, 1.1, 1.1], () => { pour(); shown = -1; }, 3.0);
-    let acc = 0;
+    let wexp = 0;
+    const refresh = m => cap.redraw(`MIXED: ${m}% · WAYS: ${wexp < 1 ? '1' : '10^' + wexp}${m >= 95 ? ' · AND IT STAYS' : ''}`, `${TAP} TO POUR A FRESH CUP`);
+    pour(); wexp = drawWays(layerCounts()); refresh(0);
+    exhibit('coffee', 'Cream in your coffee', 'Pour', X, TOP + 0.5, Z, 0, 1, [1.1, 1.1, 1.1], () => { pour(); wexp = drawWays(layerCounts()); shown = -1; }, 3.4).pitch = 0.16;
+    let acc = 0, wacc = 0;
     buildingUpdates.push(dt => {
       if (!inRoom()) return;
       acc += dt; if (acc < 1 / 30) return; acc = 0;
@@ -3000,6 +3045,7 @@ function buildEntropyRoom() {
         pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
       }
       geo.attributes.position.needsUpdate = true;
+      wacc += 1 / 30; if (wacc > 0.25) { wacc = 0; wexp = drawWays(layerCounts()); shown = -1; }   // the count, 4 times a second
       const m = mixed(); if (m !== shown) { shown = m; refresh(m); }
     });
   }
@@ -3653,12 +3699,12 @@ function buildEntropyRoom() {
     const cards = SPOTS.map(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(CW, CH), new THREE.MeshStandardMaterial({ roughness: 0.6 })); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI; m.visible = false; g.add(m);
       const s = new THREE.Sprite(TAGS[0]); s.scale.set(0.16, 0.12, 1); s.visible = false; g.add(s); return { m, s, t: 1, from: new THREE.Vector3(), to: new THREE.Vector3(), delay: 0 }; });
     // the shoe's state
-    let shoe = [], left = new Array(13).fill(0), running = 0, rounds = 0, shuffledLive = false, justShuffled = false;
+    let shoe = [], left = new Array(13).fill(0), running = 0, rounds = 0, shuffledLive = false, justShuffled = false, oddsHist = [];
     const randBelow = n => { const lim = 256 - (256 % n); for (;;) { const r = rbyte(); if (r < lim) return r % n; } };
     const shuffle = () => {
       shoe = []; for (let d = 0; d < DECKS; d++) for (let s = 0; s < 4; s++) for (let r = 0; r < 13; r++) shoe.push([r, s]);
       for (let i = shoe.length - 1; i > 0; i--) { const j = randBelow(i + 1); [shoe[i], shoe[j]] = [shoe[j], shoe[i]]; }
-      shuffledLive = !QRNG.fallback && qrngLive(); left = new Array(13).fill(4 * DECKS); running = 0; justShuffled = true;
+      shuffledLive = !QRNG.fallback && qrngLive(); left = new Array(13).fill(4 * DECKS); running = 0; justShuffled = true; oddsHist = [20 / 52];   // a fresh shoe: 38% to start
     };
     // the wall behind: a stats board, and ten bars over the ranks (2 … 9, tens, aces), left to right as you face it
     const GROUPS = [[1], [2], [3], [4], [5], [6], [7], [8], [9, 10, 11, 12], [0]], GNAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10s', 'A'];
@@ -3671,22 +3717,33 @@ function buildEntropyRoom() {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * 150 / 2048), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); m.position.set(X, SHELF - 0.17, WZ - 0.145); m.rotation.y = Math.PI; g.add(m); }
     const bars = GROUPS.map((gr, k) => { const t = tagOf(gr[0]), col = t > 0 ? 0x2fbf71 : t < 0 ? 0xd9a441 : 0x8e99b0;
       const b = new THREE.Mesh(new THREE.BoxGeometry(BW * 0.7, 1, 0.1), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.25 })); b.position.set(bx(k), SHELF + BMAX / 2, WZ - 0.04); b.scale.y = BMAX; g.add(b); return b; });
-    const sc = mk(2048, 520), sp = sc.getContext('2d'), stex = new THREE.CanvasTexture(sc); stex.anisotropy = 8;
-    { const SW = 10 * BW + 0.2, m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * 520 / 2048), new THREE.MeshBasicMaterial({ map: stex })); m.position.set(X, SHELF + BMAX + 0.12 + SW * 520 / 2048 / 2, WZ - 0.06); m.rotation.y = Math.PI; g.add(m); }
+    const SCH = 760, sc = mk(2048, SCH), sp = sc.getContext('2d'), stex = new THREE.CanvasTexture(sc); stex.anisotropy = 8;   // taller since 2026-11-25: the odds after every card
+    { const SW = 10 * BW + 0.2, m = new THREE.Mesh(new THREE.PlaneGeometry(SW, SW * SCH / 2048), new THREE.MeshBasicMaterial({ map: stex })); m.position.set(X, SHELF + BMAX + 0.12 + SW * SCH / 2048 / 2, WZ - 0.06); m.rotation.y = Math.PI; g.add(m); }
     const stats = () => {
-      const n = shoe.length, hi = left[0] + left[9] + left[10] + left[11] + left[12], decksLeft = n / 52, tc = running / Math.max(0.25, decksLeft);
+      const n = left.reduce((a, c) => a + c, 0), hi = left[0] + left[9] + left[10] + left[11] + left[12], decksLeft = n / 52, tc = running / Math.max(0.25, decksLeft);   // n: the cards not yet seen (mid-round, dealt cards still in flight count as unseen)
       let H = 0; for (const c of left) if (c) { const q = c / n; H -= q * Math.log2(q); }
-      const p = sp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 2048, 520); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(4, 4, 2040, 512);
+      const p = sp; p.fillStyle = '#060a12'; p.fillRect(0, 0, 2048, SCH); p.strokeStyle = 'rgba(63,224,224,0.6)'; p.lineWidth = 3; p.strokeRect(4, 4, 2040, SCH - 8);
       const cell = (label, value, x, col) => { p.textAlign = 'left'; p.fillStyle = '#8e99b0'; p.font = '600 30px "IBM Plex Mono", monospace'; p.fillText(label, x, 92); p.fillStyle = col; p.font = '600 92px "IBM Plex Mono", monospace'; p.fillText(value, x, 200); };
       cell('RUNNING COUNT', (running > 0 ? '+' : running < 0 ? '−' : '') + Math.abs(running), 60, running > 0 ? '#6dffa8' : running < 0 ? '#ffc24a' : '#f1e6cf');
       cell('TRUE COUNT', (tc > 0 ? '+' : tc < 0 ? '−' : '') + Math.abs(tc).toFixed(1), 560, '#f1e6cf');
       cell('NEXT CARD 10 OR A', `${(100 * hi / n).toFixed(0)}%`, 1040, '#ffc24a');
       cell('UNCERTAINTY', `${H.toFixed(2)} bits`, 1500, '#5ff0ff');
+      // the odds after every card since the shuffle: the shoe's memory, moving them
+      const GX = 60, GW = 1928, GY = 250, GH = 220, lo = 0.2, hiP = 0.6, yOf = v => GY + GH - GH * (Math.min(hiP, Math.max(lo, v)) - lo) / (hiP - lo), MAXD = 52 * DECKS - 26 + 8;
+      p.fillStyle = 'rgba(63,224,224,0.06)'; p.fillRect(GX, GY, GW, GH);
+      const base = 20 * DECKS / (52 * DECKS); p.strokeStyle = '#5b6680'; p.setLineDash([10, 8]); p.lineWidth = 2; p.beginPath(); p.moveTo(GX, yOf(base)); p.lineTo(GX + GW, yOf(base)); p.stroke(); p.setLineDash([]);
+      p.textAlign = 'left'; p.fillStyle = '#8e99b0'; p.font = '600 22px "IBM Plex Mono", monospace'; p.fillText('NEXT CARD 10 OR A, AFTER EACH CARD DEALT SINCE THE SHUFFLE', GX, GY - 14);
+      p.textAlign = 'right'; p.fillStyle = '#5b6680'; p.fillText('A FULL SHOE: 38%', GX + GW - 8, yOf(base) - 10); p.fillText('60%', GX + GW - 8, GY + 26); p.fillText('20%', GX + GW - 8, GY + GH - 8); p.textAlign = 'left';
+      if (oddsHist.length > 1) {
+        p.strokeStyle = '#ffc24a'; p.lineWidth = 4; p.beginPath();
+        oddsHist.forEach((v, i) => { const x = GX + GW * i / MAXD, y = yOf(v); if (i) p.lineTo(x, y); else p.moveTo(x, y); }); p.stroke();
+        const i = oddsHist.length - 1; p.fillStyle = '#ffc24a'; p.beginPath(); p.arc(GX + GW * i / MAXD, yOf(oddsHist[i]), 9, 0, Math.PI * 2); p.fill();
+      }
       p.fillStyle = '#c9d2e3'; p.font = '30px "IBM Plex Sans", sans-serif';
-      p.fillText(`${n} cards left of ${52 * DECKS} · a full shoe: 38% tens and aces, 3.70 bits${justShuffled ? ' · just shuffled, count back to 0' : ''}`, 60, 300);
+      p.fillText(`${n} cards left of ${52 * DECKS} · a full shoe: 38% tens and aces, 3.70 bits${justShuffled ? ' · just shuffled, count back to 0' : ''}`, 60, 540);
       p.fillStyle = '#5b6680'; p.font = '600 26px "IBM Plex Mono", monospace';
-      p.fillText(`BARS: SHARE OF EACH RANK STILL IN THE SHOE · SHUFFLED WITH ${shuffledLive ? 'THE QUANTUM V^ QRNG' : 'YOUR BROWSER\'S RANDOMNESS'}`, 60, 380);
-      p.fillText('UNCERTAINTY: THE SHANNON ENTROPY OF THE NEXT CARD\'S RANK, FROM WHAT IS LEFT', 60, 430);
+      p.fillText(`BARS: SHARE OF EACH RANK STILL IN THE SHOE · SHUFFLED WITH ${shuffledLive ? 'THE QUANTUM V^ QRNG' : 'YOUR BROWSER\'S RANDOMNESS'}`, 60, 620);
+      p.fillText('UNCERTAINTY: THE SHANNON ENTROPY OF THE NEXT CARD\'S RANK, FROM WHAT IS LEFT', 60, 670);
       stex.needsUpdate = true;
       GROUPS.forEach((gr, k) => { const full = gr.length * 4 * DECKS, now = gr.reduce((a, r) => a + left[r], 0), h = Math.max(0.0001, BMAX * now / full); bars[k].scale.y = h; bars[k].position.y = SHELF + h / 2; });
     };
@@ -3720,7 +3777,7 @@ function buildEntropyRoom() {
         cd.t = Math.min(1, cd.t + dt / (reduceMotion ? 0.02 : 0.32)); cd.m.visible = true;
         cd.m.position.lerpVectors(cd.from, cd.to, ease(cd.t)); cd.m.position.y += Math.sin(Math.PI * cd.t) * 0.08;
         if (cd.t >= 1 && !cd.counted) {   // it lands face up: count it
-          cd.counted = true; running += tagOf(cd.r); left[cd.r]--;
+          cd.counted = true; running += tagOf(cd.r); left[cd.r]--; oddsHist.push((left[0] + left[9] + left[10] + left[11] + left[12]) / left.reduce((a, c) => a + c, 0));
           cd.s.position.set(cd.to.x, TOP + 0.2, cd.to.z); cd.s.visible = true; stats(); refresh();
         }
       });
