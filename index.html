@@ -2791,6 +2791,45 @@ function buildAILab() {
     body: 'One Cloudflare Worker, three personas. A question is matched against about 1,000 passages (the sites, the Quantum Library papers, research notes); a model answers from what it finds and links its sources. Vee guides this hall; Dr. Z coaches on kaizendoku.com; Clu answers on recluda.com.',
     foot: 'PROTOTYPES · ANSWERS CAN BE WRONG' }, F.annex.x0 + 0.06, 3.75, F.annex.door.z, Math.PI / 2, 3.0);   // on the room's back wall, high enough that the faces float below it seen from the doorway
 }
+/* Provably fair draws through the live API (since 2026-11-25): api.quantumv.dev's /qrng/commit and /qrng/draw, algorithm
+   qv-fair-v1, the same as quantumv.dev/fair and its js/qv-fair.js. The loot chest and the lottery drum (and the Platform world's
+   draw station) ask for a commitment only once you're in front of them (so a lobby visit costs the API nothing), and your browser picks the client
+   seed after the commitment is shown. Each draw is then a real public record, checkable by its id on quantumv.dev/fair.
+   If the API can't be reached, the commitment is made here in the browser instead, with the same algorithm, and the
+   screens say so; a commitment the API took but couldn't draw is never swapped for a local one. */
+const FAIR = (() => {
+  const API = 'https://api.quantumv.dev', enc = new TextEncoder();
+  const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join(''), unhex = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
+  const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
+  const post = async (path, body) => {
+    const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
+    try { const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; }
+    finally { clearTimeout(to); }
+  };
+  const compute = async (seed, client, draw) => {   // qv-fair-v1: an HMAC-SHA256 stream, exact rejection sampling
+    const key = await crypto.subtle.importKey('raw', seed, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    let block = 0, buf = new Uint8Array(0);
+    const read = async n => { while (buf.length < n) { const b = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(`qv-fair-v1:${client}:${block++}`))); const nb = new Uint8Array(buf.length + b.length); nb.set(buf); nb.set(b, buf.length); buf = nb; } const out = buf.slice(0, n); buf = buf.slice(n); return out; };
+    const uniform = async n => { if (n === 1) return 0; const lim = 2 ** 32 - (2 ** 32 % n); for (;;) { const b = await read(4), w = ((b[0] << 24) >>> 0) + (b[1] << 16) + (b[2] << 8) + b[3]; if (w < lim) return w % n; } };
+    if (draw.type === 'pick') { const pool = Array.from({ length: draw.n }, (_, i) => i + 1), out = []; for (let k = 0; k < draw.k; k++) out.push(pool.splice(await uniform(pool.length), 1)[0]); return out; }
+    if (draw.type === 'weighted') { const w = draw.weights, total = w.reduce((a, b) => a + b, 0), out = []; for (let c = 0; c < draw.count; c++) { const r = await uniform(total); let run = 0; for (let i = 0; i < w.length; i++) { run += w[i]; if (r < run) { out.push(i); break; } } } return out; }
+    throw new Error('draw type not used in the hall');
+  };
+  return {
+    async commit(label) {
+      try { const j = await post('/qrng/commit', { label }); if (!/^drw_[0-9a-f]{24}$/.test(j.id || '') || !/^[0-9a-f]{64}$/.test(j.commitment || '')) throw new Error('unexpected'); return { api: true, id: j.id, commitment: j.commitment }; }
+      catch (e) { const seed = crypto.getRandomValues(new Uint8Array(32)); return { api: false, seed, commitment: await sha(seed) }; }
+    },
+    async draw(c, draw) {   // null when the API took the commitment but couldn't draw it
+      const client = hex(crypto.getRandomValues(new Uint8Array(8)));
+      if (!c.api) return { ...c, server_seed: hex(c.seed), client_seed: client, result: await compute(c.seed, client, draw) };
+      try { const r = await post('/qrng/draw', { id: c.id, client_seed: client, draw }); return { ...c, server_seed: r.server_seed, client_seed: client, result: r.result }; }
+      catch (e) { return null; }
+    },
+    async verify(rec, draw) { const seed = unhex(rec.server_seed); return (await sha(seed)) === rec.commitment && JSON.stringify(await compute(seed, rec.client_seed, draw)) === JSON.stringify(rec.result); },
+  };
+})();
+
 /* ---------- L1 · The Entropy Room (the east annex, through the doorway where 'Entropy, rising' hung) ----------
    Why things mix and never unmix, told with everyday things you can play with (redesigned 2026-11-25: freestanding
    3D exhibits in place of wall panels; a sixth, loot drops, in the middle row, and the room 16 m deep). Down the left as you walk in: a brand-new deck you can
@@ -3155,45 +3194,6 @@ function buildEntropyRoom() {
       if (t0 >= 1) drawRead();
     });
   }
-
-  /* Provably fair draws through the live API (since 2026-11-25): api.quantumv.dev's /qrng/commit and /qrng/draw, algorithm
-     qv-fair-v1, the same as quantumv.dev/fair and its js/qv-fair.js. The loot chest and the lottery drum ask for a
-     commitment only once you're in the room (so a lobby visit costs the API nothing), and your browser picks the client
-     seed after the commitment is shown. Each draw is then a real public record, checkable by its id on quantumv.dev/fair.
-     If the API can't be reached, the commitment is made here in the browser instead, with the same algorithm, and the
-     screens say so; a commitment the API took but couldn't draw is never swapped for a local one. */
-  const FAIR = (() => {
-    const API = 'https://api.quantumv.dev', enc = new TextEncoder();
-    const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join(''), unhex = h => new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
-    const sha = async b => hex(new Uint8Array(await crypto.subtle.digest('SHA-256', b)));
-    const post = async (path, body) => {
-      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 8000);
-      try { const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; }
-      finally { clearTimeout(to); }
-    };
-    const compute = async (seed, client, draw) => {   // qv-fair-v1: an HMAC-SHA256 stream, exact rejection sampling
-      const key = await crypto.subtle.importKey('raw', seed, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      let block = 0, buf = new Uint8Array(0);
-      const read = async n => { while (buf.length < n) { const b = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(`qv-fair-v1:${client}:${block++}`))); const nb = new Uint8Array(buf.length + b.length); nb.set(buf); nb.set(b, buf.length); buf = nb; } const out = buf.slice(0, n); buf = buf.slice(n); return out; };
-      const uniform = async n => { if (n === 1) return 0; const lim = 2 ** 32 - (2 ** 32 % n); for (;;) { const b = await read(4), w = ((b[0] << 24) >>> 0) + (b[1] << 16) + (b[2] << 8) + b[3]; if (w < lim) return w % n; } };
-      if (draw.type === 'pick') { const pool = Array.from({ length: draw.n }, (_, i) => i + 1), out = []; for (let k = 0; k < draw.k; k++) out.push(pool.splice(await uniform(pool.length), 1)[0]); return out; }
-      if (draw.type === 'weighted') { const w = draw.weights, total = w.reduce((a, b) => a + b, 0), out = []; for (let c = 0; c < draw.count; c++) { const r = await uniform(total); let run = 0; for (let i = 0; i < w.length; i++) { run += w[i]; if (r < run) { out.push(i); break; } } } return out; }
-      throw new Error('draw type not used in the hall');
-    };
-    return {
-      async commit(label) {
-        try { const j = await post('/qrng/commit', { label }); if (!/^drw_[0-9a-f]{24}$/.test(j.id || '') || !/^[0-9a-f]{64}$/.test(j.commitment || '')) throw new Error('unexpected'); return { api: true, id: j.id, commitment: j.commitment }; }
-        catch (e) { const seed = crypto.getRandomValues(new Uint8Array(32)); return { api: false, seed, commitment: await sha(seed) }; }
-      },
-      async draw(c, draw) {   // null when the API took the commitment but couldn't draw it
-        const client = hex(crypto.getRandomValues(new Uint8Array(8)));
-        if (!c.api) return { ...c, server_seed: hex(c.seed), client_seed: client, result: await compute(c.seed, client, draw) };
-        try { const r = await post('/qrng/draw', { id: c.id, client_seed: client, draw }); return { ...c, server_seed: r.server_seed, client_seed: client, result: r.result }; }
-        catch (e) { return null; }
-      },
-      async verify(rec, draw) { const seed = unhex(rec.server_seed); return (await sha(seed)) === rec.commitment && JSON.stringify(await compute(seed, rec.client_seed, draw)) === JSON.stringify(rec.result); },
-    };
-  })();
 
   /* 6 · Loot drops (the middle row, left, added 2026-11-25): a chest with a published drop table, and on the wall right
      behind it a screen that shows each drop is checkable, so the drop and its proof are in one view. Each open is a real
@@ -5632,17 +5632,20 @@ function addWorldVee(ws, p, kind, hit, stations, updates, startPos) {
   let lines, stops;
   if (kind === 'platform') {
     lines = [
-      [`Welcome to ${p.name}.`, 'Follow the bits from the cryostat to the key.', 'quantum'],
+      [`Welcome to ${p.name}.`, 'Follow the seed from the cryostat: it ends in draws and keys.', 'quantum'],
+      ['Try a draw at the fork.', 'Tap the station on the right: a loot drop through the live API.', 'fair'],
       ['Each station has details.', 'Walk up to one and press E, or tap it.', null],
       ['Turn around for QES-KX.', 'The hybrid key exchange stands behind you.', 'qes-kx'],
       ['Want a guided tour?', 'Press T, or tap Tour.', null],
       ['Ready to head back?', 'The exit display is on your left.', 'portal']];
     stops = [
       ['quantum', 'IBM Quantum', 'The seed starts here, measured on quantum hardware.'],
-      ['cloudflare', 'Cloudflare', 'The edge network in front of the platform.'],
-      ['pi', 'Raspberry Pi', 'Runs the Q-RNG API and the OIDC identity provider.'],
-      ['enclave', 'Apple Secure Enclave', 'Recluda\'s sign-in key stays here, separate from QES-256.'],
-      ['key', 'QES-256', 'A 32-byte key from the generator the seed started.'],
+      ['pool', 'Seed pool', '912 seeds from 19 jobs, hashed into one fingerprint.'],
+      ['pi', 'The generator', 'The seed, plus fresh system randomness, on a Raspberry Pi.'],
+      ['fair', 'Provably fair draws', 'Locked in before, checkable after. Tap it to draw.'],
+      ['key', 'QES-256 keys', 'The same generator, as 32-byte keys.'],
+      ['cloudflare', 'Cloudflare', 'The edge in front of it all.'],
+      ['enclave', 'Recluda', 'Separate: sign-in keys made on the device.'],
       ['qes-kx', 'QES-KX', 'X25519 and ML-KEM-768, combined with HKDF.'],
       ['portal', "That's the tour.", 'The exit display takes you back to the hall.']];
   } else if (p.id === 'about') {
@@ -6172,21 +6175,24 @@ function showIndicator(target, verb, name, lift) {
 promptEl.addEventListener('click', () => { if (near && mode === 'walk') { if (world || near.vee || near.act) worldAct(near); else enter(near); } });
 
 /* ---------- Platform world (inside the Quantum V^ Platform painting) ----------
-   The QCAP stack as a place to walk around. Bits measured on the IBM Quantum
-   cryostat flow through Cloudflare and the Raspberry Pi to the Secure Enclave
-   and end in a 32-byte key; the QES-KX exchange stands behind the entrance.
-   (2026-11-25: the stations say what's true of the pivot: job IDs document the seed, not each key, and Recluda's
-   Secure Enclave key is separate from QES-256; the display and its modules lead with provably fair draws.)
-   Built when you step in, freed when you leave. */
+   The platform as a place to walk around (rebuilt 2026-11-25 to tell the true pipeline). Bits measured on the IBM
+   Quantum cryostat loop round it (a key's bow), run along a shaft and dip into the seed pool (VAULT, VIPER, LOTUS
+   hashed into one fingerprint) and the generator on the Raspberry Pi (the key's teeth); there the stream forks: a
+   branch drops to the provably fair draws station, which draws a loot drop through the live API when tapped, and
+   the shaft ends in a QES-256 key. Cloudflare (the edge) and the Secure Enclave (Recluda's, separate) stand off the
+   stream, and QES-KX behind the entrance. Built when you step in, freed when you leave.
+*/
 let world = null;
 let baseFov = 65;   // the hall uses 65°; the world widens it so the station arc fits the visible area
 const worldPanel = document.getElementById('worldPanel');
 const PLATFORM_STATIONS = [
   { id: 'quantum', title: 'IBM Quantum', text: 'The QRNG\'s seed comes from measuring qubits on IBM Quantum hardware. Every run is listed by its IBM Quantum job ID, so anyone can check where the seed came from.' },
-  { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform, serving the API and the live demos.' },
-  { id: 'pi', title: 'Raspberry Pi', text: 'Runs the platform services, including the Q-RNG API and the OIDC identity provider (RFC 8628 device flow).' },
-  { id: 'enclave', title: 'Apple Secure Enclave', text: 'On iPhone, iPad or Mac, Recluda keeps its approval key in the Secure Enclave and approves sign-ins with a biometric key (Face ID or Touch ID). That key is made on the device, separate from QES-256.' },
-  { id: 'key', title: 'QES-256 key', text: 'QES-256 keys are 32 bytes from the quantum-seeded generator, with fresh system randomness mixed in. The job IDs document the seed, not any single key. The bytes shown here are an illustration.' },
+  { id: 'pool', title: 'Seed pool', text: 'VAULT™, VIPER™ and LOTUS™: 912 seeds from 19 IBM Quantum jobs, hashed with SHA-256 into one 256-bit pool. Its fingerprint and every job ID are public in the attestation.' },
+  { id: 'pi', title: 'Raspberry Pi', text: 'The generator: an HKDF stream over the seed pool, with fresh system randomness mixed into every draw. It serves the QRNG API and the draw API, and runs the OIDC sign-in service (RFC 8628 device flow).' },
+  { id: 'fair', title: 'Provably fair draws', text: 'Locked in before you play: the fingerprint of a secret seed is shown first, your browser adds its own seed, and the result comes back with the seed so anyone can check it. Tap the station to draw a loot drop through the live API.' },
+  { id: 'key', title: 'QES-256 keys', text: 'QES-256 keys are 32 bytes from the same generator, with fresh system randomness mixed in. The job IDs document the seed, not any single key. The bytes shown here are an illustration.' },
+  { id: 'cloudflare', title: 'Cloudflare', text: 'The edge network in front of the platform: API requests and the live demos reach the generator through it.' },
+  { id: 'enclave', title: 'Apple Secure Enclave', text: 'Separate from the stream: on iPhone, iPad or Mac, Recluda keeps its approval key in the Secure Enclave and approves sign-ins with Face ID or Touch ID. That key is made on the device, not by the QRNG.' },
   { id: 'qes-kx', title: 'QES-KX', text: 'Hybrid key exchange: X25519 and ML-KEM-768 (NIST FIPS 203) secrets are combined with HKDF. The relay only passes public values along and never sees the derived key.' }
 ];
 
@@ -6305,8 +6311,8 @@ function buildPlatformWorld() {
   // 1. IBM Quantum: the cryostat hanging from a gantry
   let chipWorld = new THREE.Vector3();
   // The stations line up along the back so the bit stream draws a key, seen from the entrance: a bow looped round
-  // the cryostat, a shaft running right, teeth dipping down to Cloudflare, the Pi and the Enclave, and the QES-256
-  // key at its tip. SHAFT_Y is the shaft's height; KEY_Z how far back it runs. Labels on the teeth sit low, out of its outline.
+  // the cryostat, a shaft running right, teeth dipping down to the seed pool and the Pi, and the QES-256 key at its
+  // tip; past the Pi a branch leaves the shaft and drops to the draw station. SHAFT_Y is the shaft's height; KEY_Z how far back it runs. Labels on the teeth sit low, out of its outline.
   const SHAFT_Y = 4.6, KEY_Z = -5;
   const qs = station('quantum', -55, inner => {
     for (const x of [-1.7, 1.7]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 5.6, 0.16), pedMat); post.position.set(x, 3.2, 0); inner.add(post); }
@@ -6316,20 +6322,38 @@ function buildPlatformWorld() {
     inner.updateMatrixWorld(true); chipWorld = c.group.localToWorld(new THREE.Vector3(0, c.chipY, 0));
   }, { labelY: 7.3, eyebrow: 'ENTROPY SOURCE', at: [-8.0, KEY_Z] });
 
-  // 2. Cloudflare: a wireframe globe of edge locations
-  let cfWorld;
-  station('cloudflare', -19, inner => {
-    const geo = new THREE.IcosahedronGeometry(1.15, 2);
-    const globe = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xf38020, transparent: true, opacity: 0.55 }));
-    const nodes = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffc58a, size: 0.12, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 16), new THREE.MeshBasicMaterial({ color: 0xf38020, transparent: true, opacity: 0.35 }));
-    const spin = new THREE.Group(); spin.add(globe, nodes, core); spin.position.y = 2.5; inner.add(spin);
-    const orbit = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.012, 6, 96), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.6 }));
-    orbit.position.y = 2.5; orbit.rotation.x = 1.2; inner.add(orbit);
-    const l = new THREE.PointLight(0xf38020, 0.8, 6, 2); l.position.y = 2.5; inner.add(l);
-    updates.push(dt => { spin.rotation.y += dt * 0.35; orbit.rotation.z += dt * 0.5; });
-    inner.updateMatrixWorld(true); cfWorld = inner.localToWorld(new THREE.Vector3(0, 2.5, 0));
-  }, { eyebrow: 'EDGE NETWORK', at: [-3.9, KEY_Z - 1], labelY: 0.95 });
+  // 2. The seed pool: VAULT, VIPER and LOTUS as three glowing pools, their streams merging into one fingerprint
+  let poolWorld;
+  station('pool', -19, inner => {
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
+    core.position.y = 2.6; inner.add(core);
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.62, 32, 20), new THREE.MeshBasicMaterial({ color: 0x9ff8ff, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.position.y = 2.6; inner.add(halo);
+    const orbs = POOLS.map((P, i) => {
+      const g = new THREE.Group(); inner.add(g);
+      const o = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 1), new THREE.MeshStandardMaterial({ color: P.color, emissive: P.color, emissiveIntensity: 0.6, roughness: 0.3 }));
+      g.add(o);
+      const tag = textSprite([[P.name, '600 34px "IBM Plex Mono", monospace', P.color], [`${[144, 336, 432][i]} seeds`, '28px "IBM Plex Mono", monospace', '#c9d2e3']], 512, 120, 1.0);
+      tag.position.y = -0.45; g.add(tag);
+      const line = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), new THREE.MeshBasicMaterial({ color: P.color, transparent: true, opacity: 0.6 }));
+      inner.add(line);
+      return { g, line, a0: i * Math.PI * 2 / 3 };
+    });
+    const fp = (QRNG.att && QRNG.att.master_fingerprint) ? QRNG.att.master_fingerprint.slice(0, 16) + '…' : 'in the attestation';
+    const fpTag = textSprite([['SHA-256 OF ALL 912 SEEDS', '600 26px "IBM Plex Mono", monospace', '#8e99b0'], [fp, '600 32px "IBM Plex Mono", monospace', '#e8fdff']], 768, 120, 1.9);
+    fpTag.position.set(0, 3.45, 0); inner.add(fpTag);
+    const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
+    updates.push((dt, t) => {
+      orbs.forEach(o => {   // each pool circles the core, a line feeding it
+        const a = o.a0 + (reduceMotion ? 0 : t * 0.35), x = Math.cos(a) * 1.25, z = Math.sin(a) * 0.7, y = 1.75 + 0.15 * Math.sin(t + o.a0);
+        o.g.position.set(x, y, z);
+        tmpA.set(x, y, z); tmpB.set(0, 2.6, 0); const mid = tmpA.clone().add(tmpB).multiplyScalar(0.5), len = tmpA.distanceTo(tmpB);
+        o.line.position.copy(mid); o.line.scale.y = len; o.line.lookAt(inner.localToWorld(tmpB.clone())); o.line.rotateX(Math.PI / 2);
+      });
+      halo.scale.setScalar(1 + 0.08 * Math.sin(t * 2));
+    });
+    inner.updateMatrixWorld(true); poolWorld = inner.localToWorld(new THREE.Vector3(0, 2.6, 0));
+  }, { eyebrow: 'THE SEED', at: [-3.9, KEY_Z - 1], labelY: 0.95 });
 
   // 3. Raspberry Pi: the board, tilted toward the visitor
   let piWorld;
@@ -6352,11 +6376,10 @@ function buildPlatformWorld() {
     const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 1.3, 12), pedMat); stand.position.y = 1.05; inner.add(stand);
     updates.push((dt, t) => { l2.visible = Math.sin(t * 9) + Math.sin(t * 13.7) > 0.4; });
     inner.updateMatrixWorld(true); piWorld = board.localToWorld(new THREE.Vector3(-0.35, 0.3, 0.1));
-  }, { eyebrow: 'SERVICES', at: [1.0, KEY_Z - 1], labelY: 0.95 });
+  }, { eyebrow: 'THE GENERATOR', at: [1.0, KEY_Z - 1], labelY: 0.95 });
 
-  // 4. Secure Enclave: a phone asking to approve a sign-in, and the enclave chip
-  let enWorld;
-  station('enclave', 55, inner => {
+  // Secure Enclave, off the stream (right side): Recluda's, made on the device, separate from QES-256
+  station('enclave', 100, inner => {
     const phone = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.05, 0.09), new THREE.MeshStandardMaterial({ color: 0x0d0f14, metalness: 0.6, roughness: 0.3 }));
     phone.position.set(-0.45, 2.0, 0); inner.add(phone);
     const sc = mk(512, 1024), g = sc.getContext('2d');
@@ -6385,8 +6408,72 @@ function buildPlatformWorld() {
       scan.position.y = 2.0 + 0.35 + Math.sin(t * 2.2) * 0.12;   // over the Face ID mark
       chip.rotation.y += dt * 0.6; chip.position.y = 1.55 + Math.sin(t * 1.4) * 0.06; glowM.opacity = 0.35 + 0.3 * Math.sin(t * 2.4);
     });
-    inner.updateMatrixWorld(true); enWorld = chip.localToWorld(new THREE.Vector3(0, 0.1, 0));
-  }, { eyebrow: 'ON DEVICE', at: [5.0, KEY_Z - 1], labelY: 0.95 });
+  }, { eyebrow: 'RECLUDA · SEPARATE', standOff: 4.6 });
+
+  // Cloudflare, off the stream: the edge in front of everything (left, behind you as you arrive)
+  station('cloudflare', -145, inner => {
+    const geo = new THREE.IcosahedronGeometry(1.15, 2);
+    const globe = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0xf38020, transparent: true, opacity: 0.55 }));
+    const nodes = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffc58a, size: 0.12, map: dotTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 16), new THREE.MeshBasicMaterial({ color: 0xf38020, transparent: true, opacity: 0.35 }));
+    const spin = new THREE.Group(); spin.add(globe, nodes, core); spin.position.y = 2.5; inner.add(spin);
+    const orbit = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.012, 6, 96), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.6 }));
+    orbit.position.y = 2.5; orbit.rotation.x = 1.2; inner.add(orbit);
+    const l = new THREE.PointLight(0xf38020, 0.8, 6, 2); l.position.y = 2.5; inner.add(l);
+    updates.push(dt => { spin.rotation.y += dt * 0.35; orbit.rotation.z += dt * 0.5; });
+  }, { eyebrow: 'EDGE NETWORK', standOff: 4.6 });
+
+  // 4. Provably fair draws: a gem over the pedestal and a screen with the lock-in, the draw and the check, live
+  let fairWorld;
+  const FD = { type: 'weighted', weights: [70, 22, 6, 2], count: 1 }, TIER = [['COMMON', '#c9d2e3'], ['RARE', '#4aa3ff'], ['EPIC', '#b36bff'], ['LEGENDARY', '#ffc24a']];
+  const fc = mk(1024, 820), fg = fc.getContext('2d'), ftex = new THREE.CanvasTexture(fc); ftex.anisotropy = 8;
+  let fNext = null, fLast = null, fBusy = false, fOk = null, fNote = '', fAsking = false;
+  const fDraw = () => {
+    const p = fg, mono = (t, x, y, c = '#8e99b0', px = 26) => { p.fillStyle = c; p.font = `600 ${px}px "IBM Plex Mono", monospace`; p.fillText(t, x, y); };
+    p.fillStyle = '#060a12'; p.fillRect(0, 0, 1024, 820); p.strokeStyle = 'rgba(63,224,224,0.7)'; p.lineWidth = 4; p.strokeRect(8, 8, 1008, 804); p.textAlign = 'left';
+    mono('A LOOT DROP · 70 · 22 · 6 · 2', 44, 70, '#5ff0ff', 28);
+    mono('1 · LOCKED IN BEFORE YOU DRAW', 44, 140, '#8e99b0', 24);
+    mono(fNext ? fNext.commitment.slice(0, 32) : fAsking ? 'LOCKING IN…' : '…', 44, 184, '#f1e6cf', 32); mono(fNext ? fNext.commitment.slice(32) : '', 44, 224, '#f1e6cf', 32);
+    if (fNext) mono(fNext.api ? `AT API.QUANTUMV.DEV · ${fNext.id}` : 'IN YOUR BROWSER: THE DRAW API ISN\'T ANSWERING', 44, 258, '#5b6680', 20);
+    mono('2 · THE DRAW', 44, 330, '#8e99b0', 24);
+    if (fBusy) mono('DRAWING…', 44, 390, '#5b6680', 34);
+    else if (fNote) mono(fNote, 44, 390, '#ff5a4e', 24);
+    else if (fLast) {
+      const [name, c] = TIER[fLast.tier]; p.fillStyle = c; p.font = '64px "Young Serif", Georgia, serif'; p.fillText(name.charAt(0) + name.slice(1).toLowerCase(), 44, 400);
+      mono('SERVER SEED, REVEALED', 44, 460, '#8e99b0', 20); mono(fLast.server_seed.slice(0, 32), 44, 496, '#c9d2e3', 28); mono(fLast.server_seed.slice(32), 44, 530, '#c9d2e3', 28);
+      mono(`CLIENT SEED ${fLast.client_seed} · YOUR BROWSER'S`, 44, 568, '#5b6680', 20);
+      mono('3 · THE CHECK', 44, 630, '#8e99b0', 24);
+      mono(fOk === true ? '✓ SEED MATCHES ITS FINGERPRINT · SAME RESULT' : fOk === false ? '✗ NO MATCH' : 'CHECKING…', 44, 676, fOk === true ? '#6dffa8' : fOk === false ? '#ff5a4e' : '#5b6680', 28);
+      mono(fLast.api ? `CHECK IT ANYWHERE: QUANTUMV.DEV/FAIR · ${fLast.id}` : 'LOCKED IN BY YOUR BROWSER: CHECKED HERE', 44, 716, '#5b6680', 20);
+    } else mono('NOTHING DRAWN YET', 44, 390, '#5b6680', 28);
+    mono(`${matchMedia('(pointer: coarse)').matches ? 'TAP' : 'CLICK OR PRESS E'} TO DRAW`, 44, 780, '#ffc24a', 26);
+    ftex.needsUpdate = true;
+  };
+  const fCommit = () => { if (fNext || fAsking) return; fAsking = true; fDraw(); FAIR.commit('Quantum Hall · Platform world').then(c => { fNext = c; fAsking = false; fDraw(); }); };
+  let gems = [], shownGem = -1;
+  const fairSt = station('fair', 55, inner => {
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3 * 820 / 1024), new THREE.MeshBasicMaterial({ map: ftex })); scr.position.set(0, 2.55, 0); inner.add(scr);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.3 * 820 / 1024 + 0.1, 0.06), pedMat); back.position.set(0, 2.55, -0.04); inner.add(back);
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 1.0, 10), pedMat); post.position.set(0, 0.9, -0.05); inner.add(post);
+    const shapes = [new THREE.BoxGeometry(0.34, 0.34, 0.34), new THREE.OctahedronGeometry(0.28), new THREE.IcosahedronGeometry(0.28), new THREE.DodecahedronGeometry(0.3)];
+    gems = shapes.map((geo, i) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: TIER[i][1], emissive: TIER[i][1], emissiveIntensity: 0.6, metalness: 0.3, roughness: 0.25 })); m.position.set(1.55, 1.35, 0.5); m.visible = false; inner.add(m); return m; });
+    const gl = new THREE.PointLight(0xffffff, 0.6, 3, 2); gl.position.set(1.55, 1.6, 1.0); inner.add(gl); gems.light = gl;
+    updates.push((dt, t) => { const m = gems[shownGem]; if (m) { m.rotation.y += dt * (reduceMotion ? 0 : 1.2); m.rotation.x += dt * (reduceMotion ? 0 : 0.5); m.position.y = 1.35 + 0.08 * Math.sin(t * 1.8); } });
+    inner.updateMatrixWorld(true); fairWorld = inner.localToWorld(new THREE.Vector3(0, 2.55 + 2.3 * 820 / 1024 / 2, 0));
+  }, { eyebrow: 'FOR GAMES AND GIVEAWAYS', at: [5.0, KEY_Z - 1], labelY: 0.95, standOff: 4.4 });
+  fairSt.act = async () => {
+    if (fBusy || !fNext) return;
+    const c = fNext; fNext = null; fBusy = true; fLast = null; fOk = null; fNote = ''; fDraw();
+    const r = await FAIR.draw(c, FD); fBusy = false;
+    if (!r) fNote = 'THE DRAW API DIDN\'T ANSWER: NOTHING DRAWN. TRY AGAIN';
+    else {
+      fLast = { ...r, tier: r.result[0] }; gems.forEach((m, i) => { m.visible = i === fLast.tier; }); shownGem = fLast.tier; gems.light.color.set(TIER[fLast.tier][1]); fDraw();
+      fOk = await FAIR.verify(fLast, FD);
+    }
+    fDraw(); fCommit();
+  };
+  fairSt.actVerb = () => 'Draw'; fairSt.actLift = -0.6;
+  fDraw(); fCommit();   // one commitment per visit to the world, asked for as you step in
 
   // 5. The key, floating over the middle: 32 bytes around a slowly turning band
   const keyBytes = new Uint8Array(32); crypto.getRandomValues(keyBytes);
@@ -6399,19 +6486,20 @@ function buildPlatformWorld() {
     for (const y of [3.66, 4.14]) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.012, 6, 128), gold); r.rotation.x = Math.PI / 2; r.position.y = y; inner.add(r); }
     const sub = textSprite([['QES-256 · 32 BYTES · ILLUSTRATION', '600 30px "IBM Plex Mono", monospace', '#8e99b0']], 1024, 70, 3.2); sub.position.y = 3.3; inner.add(sub);
     updates.push(dt => { band.rotation.y += dt * 0.25; });
-  }, { at: [9.4, KEY_Z], noPedestal: true, labelY: 6.25, eyebrow: 'THE RESULT', standOff: 5.5 });
+  }, { at: [9.4, KEY_Z], noPedestal: true, labelY: 6.25, eyebrow: 'AND KEYS', standOff: 5.5 });
   keySt.group.children.forEach(o => { if (o !== keySt.group.children[0]) o.position.y += SHAFT_Y - 3.9; });   // up to the shaft's height (the label stays put)
   keySt.center.set(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
   const keyWorld = new THREE.Vector3(keySt.group.position.x, SHAFT_Y, keySt.group.position.z);
 
   // the bit stream draws a key: it leaves the cryostat's chip, loops once round the cryostat (the bow), runs right
-  // along the shaft, drops in square notches to Cloudflare, the Pi and the Enclave (the teeth), and ends in the key
+  // along the shaft, drops in square notches to the seed pool and the Pi (the teeth), and ends in the key; a branch
+  // leaves the shaft after the Pi and drops to the draw station
   const qp = qs.group.position, BOW_R = 1.9, bowC = new THREE.Vector3(qp.x, SHAFT_Y, qp.z);
   const along = new THREE.Vector3().subVectors(keyWorld, bowC).setY(0).normalize(), up = new THREE.Vector3(0, 1, 0);
   const pts = [chipWorld.clone()];
   for (let deg = -90; deg <= 360; deg += 15) { const t = THREE.MathUtils.degToRad(deg); pts.push(bowC.clone().addScaledVector(along, Math.cos(t) * BOW_R).addScaledVector(up, Math.sin(t) * BOW_R)); }
   const shaftAt = p => { const k = new THREE.Vector3().subVectors(p, bowC).dot(along); return bowC.clone().addScaledVector(along, k).setY(SHAFT_Y); };
-  for (const A of [cfWorld, piWorld, enWorld]) {   // a notch: along the shaft, straight down to the station, across, and back up
+  for (const A of [poolWorld, piWorld]) {   // a notch: along the shaft, straight down to the station, across, and back up
     const W = 0.65, top = shaftAt(A), low = new THREE.Vector3(top.x, A.y, top.z).lerp(A, 0.85);
     pts.push(top.clone().addScaledVector(along, -W - 0.5), top.clone().addScaledVector(along, -W), low.clone().addScaledVector(along, -W),
       low.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W), top.clone().addScaledVector(along, W + 0.5));
@@ -6420,15 +6508,17 @@ function buildPlatformWorld() {
   const path = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
   ws.add(new THREE.Mesh(new THREE.TubeGeometry(path, 900, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
   const bitMats = [0, 1].map(b => new THREE.SpriteMaterial({ map: bitTex(String(b)), transparent: true, depthWrite: false }));
-  const bits = [];
-  for (let i = 0; i < 170; i++) {   // the path is long: more bits, so the key reads as a line of them
-    const b = new THREE.Sprite(bitMats[Math.random() < 0.5 ? 0 : 1]); b.scale.setScalar(0.24);
-    b.userData.u = i / 170; ws.add(b); bits.push(b);
-  }
+  // the branch: from the end of the Pi's notch along the shaft, then down to the top of the draw station's screen
+  const fTop = shaftAt(fairWorld), bStart = shaftAt(piWorld).addScaledVector(along, 0.65 + 0.5);
+  const branch = new THREE.CatmullRomCurve3([bStart, fTop.clone().addScaledVector(along, -0.9), fTop.clone().addScaledVector(along, -0.15),
+    new THREE.Vector3(fTop.x, (fTop.y + fairWorld.y) / 2, fTop.z).lerp(fairWorld, 0.5), fairWorld.clone()], false, 'centripetal');
+  ws.add(new THREE.Mesh(new THREE.TubeGeometry(branch, 200, 0.02, 6, false), new THREE.MeshBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.4 })));
+  const bits = [], spawn = (curve, n, len) => { for (let i = 0; i < n; i++) { const b = new THREE.Sprite(bitMats[Math.random() < 0.5 ? 0 : 1]); b.scale.setScalar(0.24); b.userData = { u: i / n, curve, speed: 0.02 * path.getLength() / len }; ws.add(b); bits.push(b); } };
+  spawn(path, 150, path.getLength()); spawn(branch, 26, branch.getLength());   // the path is long: more bits, so the key reads as a line of them
   updates.push(dt => {
     for (const b of bits) {
-      b.userData.u = (b.userData.u + dt * (reduceMotion ? 0.006 : 0.02)) % 1;
-      b.position.copy(path.getPointAt(b.userData.u));
+      b.userData.u = (b.userData.u + dt * (reduceMotion ? 0.3 : 1) * b.userData.speed) % 1;
+      b.position.copy(b.userData.curve.getPointAt(b.userData.u));
       if (b.userData.u < 0.004) b.material = bitMats[Math.random() < 0.5 ? 0 : 1];   // a fresh measurement
     }
   });
