@@ -907,7 +907,7 @@ const ATRIUM = { x: 0, z: -4, r: 2.4 };
 const LIFT = { x: 6.6, z: -4, r: 1.15 };   // the glass lift, set against the east wall; its door faces +z on every floor
 const FLOORS = [
   { id: 'b2', short: 'Recluda', tag: 'B2', name: 'Recluda', y: -18, h: 9, x0: -8, x1: 8, z0: -11, z1: 5.5, atrium: false, lightX: 0, lightsZ: [2.5, -6.5], look: [-0.5, -2.75, 0.17], hello: ['B2 · Recluda. The Gate.', 'A VPN sign-in runs through the glass server room in front of you.'] },
-  { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -8, x1: 8, z0: -11, z1: 5, lightsZ: [1], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },
+  { id: 'b1', short: 'Lab', tag: 'B1', name: 'Cryostat Lab', y: -9, h: 9, x0: -12, x1: 14, z0: -13, z1: 9, lightX: 1, lightsZ: [4, -7], look: [0, -4, 0.2], hello: ['B1 · The Cryostat Lab.', 'Where every key begins. Tap ▶ The source for the story.'] },   // B1 enlarged 2026-11-26 (was x -8…8, z -11…5): an east bay for the chip atlas and QES-KX
   { id: 'l1', short: 'Lobby', tag: 'L1', name: 'Lobby', y: 0, h: 10, x0: -8, x1: 8, z0: -11, z1: 12, lightsZ: [7, -6], look: [0, -0.2, 0.05],
     annex: { x0: -17, x1: -8, z0: 0.6, z1: 9.9, h: 6, door: { z: 5.25, w: 2.4, h: 3.4 } },   // the AI Workers room, through a doorway in the west wall,
     annexE: { x0: 8, x1: 40, z0: -1.4, z1: 11.4, h: 6, door: { z: 5.0, w: 2.4, h: 3.4 } } },   // and across the lobby, the Entropy Room, through the east wall (on the light path to the lift, z 5)
@@ -1771,8 +1771,14 @@ for (const HERE of FLOORS) {
   p.fillStyle = '#8e99b0'; p.font = '600 22px "IBM Plex Mono", monospace'; p.textAlign = 'left'; p.fillText('← GLASS LIFT', 56, 990);
   const W = 2.3, H = W * 1024 / 768, gd = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
   const gz = LIFT.z + LIFT.r + 2.0;
-  gd.position.set(HERE.x1 - 0.08, 2.4, gz); gd.rotation.y = -Math.PI / 2; HERE.g.add(gd);
+  const freestanding = HERE.x1 - LIFT.x > 3, gx = freestanding ? LIFT.x + LIFT.r + 0.35 : HERE.x1 - 0.08;   // B1's east wall is further off: the guide stands beside the lift
+  gd.position.set(gx, 2.4, gz); gd.rotation.y = -Math.PI / 2; HERE.g.add(gd);
   gd.position.x -= 0.06; glassFrame(HERE.g, W, H, gd.position.x, 2.4, gz, -Math.PI / 2, 0.06, 0.07);
+  if (freestanding) {   // a dark back and two legs
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, H + 0.1, W + 0.1), colMat); back.position.set(gx + 0.05, 2.4, gz); HERE.g.add(back);
+    for (const dz of [-W / 2 + 0.15, W / 2 - 0.15]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.4 - H / 2, 0.1), colMat); leg.position.set(gx + 0.05, (2.4 - H / 2) / 2, gz + dz); HERE.g.add(leg); }
+    HERE.blocks = HERE.blocks || []; HERE.blocks.push({ x0: gx - 0.3, x1: gx + 0.4, z0: gz - W / 2 - 0.1, z1: gz + W / 2 + 0.1 });
+  }
 }
 // the banner: "Quantum V^" in the old title's teal gradient, shimmering slowly and brightening as you come closer
 const BANNER = { pos: new THREE.Vector3(0, 7.35, -0.5), w: 7.0 };
@@ -2165,13 +2171,13 @@ function infoPanel(g, { eyebrow, title, body, foot }, x, y, z, ry, w = 3.0) {
   { eyebrow: '1 · COLD', title: 'Colder than deep space', body: 'A dilution refrigerator cools a quantum chip to about 10 mK, a hundredth of a degree above absolute zero, so its qubits can hold quantum states.' },
   { eyebrow: '2 · MEASURE', title: 'Random by physics', body: 'Qubits on IBM Quantum hardware are measured, and each outcome, 0 or 1, is random. Each batch of bits is tied to a verifiable IBM Quantum job ID.' },
   { eyebrow: '3 · KEY', title: 'Into a QES-256 key', body: 'Those bits seed the Quantum V^ generator, which makes 32-byte QES-256 keys. The job IDs show where the seed came from.' }
-].forEach((d, i) => infoPanel(B1.g, d, -5.0 + i * 3.6, 2.5, B1.z0 + 0.06, 0));   // shifted left (2026-11-26) to leave the north-east corner to QES-KX
+].forEach((d, i) => infoPanel(B1.g, d, -4.4 + i * 4.4, 2.5, B1.z0 + 0.06, 0));
 
-/* QES-KX, by the lift on the east wall (moved from the Platform world 2026-11-26): two devices agree a key through a
+/* QES-KX, in the east bay's north end, against the east wall (moved from the Platform world 2026-11-26): two devices agree a key through a
    relay that only ever sees public values. X25519 and ML-KEM-768 secrets are combined with HKDF; the X25519 keys come
    from the quantum-seeded generator (ML-KEM-768's keygen uses its library's own randomness). */
 const KX_STOP = (() => {
-  const S = 0.85, X = 2.2, KXX = 6.5, KXZ = -8.05, mat = colMat;
+  const S = 0.9, X = 2.2, KXX = B1.x1 - 1.4, KXZ = -8.5, mat = colMat;
   const inner = new THREE.Group(); inner.position.set(KXX, 0, KXZ); inner.rotation.y = -Math.PI / 2; inner.scale.setScalar(S); B1.g.add(inner);   // faces west, into the room
   const keyBytes = new Uint8Array(4); crypto.getRandomValues(keyBytes);
   const dev = (x, label) => {
@@ -2228,7 +2234,7 @@ const KX_STOP = (() => {
    temperature and a three-chip comparison. Tap the chip for the next measurement, the panel for the next chip.
    Data: assets/chip-atlas-2026-11-26.json, made from the atlas runs (SteadyWatch quantum_computing/chip_atlas.py). */
 const ATLAS = (() => {
-  const WX = B1.x1 - 0.06, CY = 3.0, PLATE_Z = 1.6, PANEL_Z = 3.9, RY = -Math.PI / 2;   // on the east wall, facing west, south of the lift's floor guide (which ends at z 0.3)
+  const WX = B1.x1 - 0.06, CY = 3.1, PLATE_Z = 0.7, PANEL_Z = 3.55, RY = -Math.PI / 2;   // on the east bay's wall, facing west, clear of the lift as you come from the cryostat
   const H_ = 6.62607015e-34, KB_ = 1.380649e-23;
   const S = { data: null, chip: 0, prop: 0, fade: 1, loading: false };
   const INF = ['#000004', '#320a5e', '#781c6d', '#bc3754', '#ed6925', '#fbb61a', '#fcffa4'];
@@ -2253,12 +2259,12 @@ const ATLAS = (() => {
 
   // the plate: a dark slab with a gold rim; beads and couplers are added when the data arrives
   const g = new THREE.Group(); g.position.set(WX, CY, PLATE_Z); g.rotation.y = RY; B1.g.add(g);
-  const PW = 2.2, PHh = 2.05, U = 0.125;   // plate size, lattice spacing
+  const PW = 2.8, PHh = 2.6, U = 0.16;   // plate size, lattice spacing
   const plate = new THREE.Mesh(new THREE.BoxGeometry(PW, PHh, 0.06), new THREE.MeshStandardMaterial({ color: 0x0b0f18, metalness: 0.6, roughness: 0.4 }));
   plate.position.z = 0.03; g.add(plate);
   const rim = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(PW, PHh, 0.06)), new THREE.LineBasicMaterial({ color: 0xd9a441 })); rim.position.z = 0.03; g.add(rim);
   let beads = null, lines = null, xs = [];
-  const beadGeo = new THREE.SphereGeometry(0.034, 14, 10), beadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const beadGeo = new THREE.SphereGeometry(0.042, 14, 10), beadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const lineMat = new THREE.LineBasicMaterial({ color: 0x3fe0e0, transparent: true, opacity: 0.25 });
   const capC = mk(1024, 96), capP = capC.getContext('2d'), capT = new THREE.CanvasTexture(capC);
   const cap = new THREE.Mesh(new THREE.PlaneGeometry(PW, PW * 96 / 1024), new THREE.MeshBasicMaterial({ map: capT, transparent: true }));
@@ -2266,7 +2272,7 @@ const ATLAS = (() => {
 
   // the panel beside it
   const PC = mk(1024, 1200), pp = PC.getContext('2d'), ptex = new THREE.CanvasTexture(PC); ptex.anisotropy = 8;
-  const PNW = 2.0, PNH = PNW * 1200 / 1024;
+  const PNW = 2.45, PNH = PNW * 1200 / 1024;
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(PNW, PNH), new THREE.MeshBasicMaterial({ map: ptex }));
   panel.position.set(WX, CY, PANEL_Z); panel.rotation.y = RY; B1.g.add(panel);
   glassFrame(B1.g, PNW, PNH, WX - 0.02, CY, PANEL_Z, RY, 0.06, 0.06);
@@ -2377,7 +2383,7 @@ const ATLAS = (() => {
   };
   const chipSt = act('atlas-chip', 'Chip atlas', 'Next measurement', plate, PLATE_Z, () => { S.prop = (S.prop + 1) % PROPS.length; colour(); });
   act('atlas-panel', 'Chip atlas', 'Next chip', panel, PANEL_Z, () => { S.chip = (S.chip + 1) % S.data.chips.length; current.length = 0; buildChip(); colour(); });
-  return { stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + CY, (PLATE_Z + PANEL_Z) / 2), normal: N_, standOff: 4.8, pitch: 0.06 }, S };
+  return { stop: { exhibit: true, floor: FI.b1, center: new THREE.Vector3(WX, B1.y + CY, (PLATE_Z + PANEL_Z) / 2), normal: N_, standOff: 5.6, pitch: 0.06 }, S };
 })();
 /* ---------- The data wall ----------
    Six screens on the west wall (with the measurement record's two in a fourth column), behind the cryostat as you step out of the lift: what the live
@@ -4608,7 +4614,7 @@ const LIGHT_PATHS = (() => {
   { const A = L1.annex, zd = A.door.z, px = AI_LAB.x + 1.3;   // to the AI Workers room: across the lobby, through its doorway, then along the podiums
     add(FI.l1, -PATH_W.main / 2, zd, px, zd); add(FI.l1, px, zd, px, AI_LAB.zs[0] - 0.4); add(FI.l1, px, zd, px, AI_LAB.zs[AI_LAB.zs.length - 1] + 0.4); }
   { const E = L1.annexE; add(FI.l1, X, E.door.z, E.x1 - 6.2, E.door.z); }   // on from the lift branch, through the Entropy Room's doorway, down its aisle to the coin table
-  add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
+  add(FI.b1, X, door, X, 1.6); add(FI.b1, X, 1.6, POOL_RACK.x, 1.6); add(FI.b1, X, 1.6, B1.x1 - 4.2, 1.6);   // east to the chip atlas add(FI.b1, 0, 1.6, 0, front); add(FI.b1, POOL_RACK.x, 1.6, POOL_RACK.x, POOL_RACK.z - 1.2);   // and on to the storage rack
   add(FI.l2, X, door, X, 1.4); add(FI.l2, X, 1.4, -3.6, 1.4); add(FI.l2, -3.6, 1.4, -5.6, 1.4); add(FI.l2, -4.6, 1.4, -4.6, -3.95);   // and along the Recluda devices add(FI.l2, -3.6, 1.4, -3.6, 3.3); add(FI.l2, 3.6, 1.4, 3.6, 3.3);
   add(FI.l3, X, door, X, 0.8); add(FI.l3, X, 0.8, -4.3, 0.8); add(FI.l3, -3.6, 0.8, -3.6, 2.3); add(FI.l3, 3.6, 0.8, 3.6, 2.3); add(FI.l3, 0, 0.8, 0, front);
   add(FI.l3, -4.3, 0.8, -4.3, -7.3); add(FI.l3, -4.3, -7.3, 0, -7.3);
